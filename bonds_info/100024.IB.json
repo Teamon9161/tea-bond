@@ -1,0 +1,15 @@
+{
+    "bond_code": "100024.IB",
+    "mkt": "IB",
+    "abbr": "10附息国债24",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0328,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2010-08-05",
+    "maturity_date": "2020-08-05",
+    "day_count": "ACT/ACT"
+}

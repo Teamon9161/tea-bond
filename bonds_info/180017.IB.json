@@ -1,0 +1,15 @@
+{
+    "bond_code": "180017.IB",
+    "mkt": "IB",
+    "abbr": "18附息国债17",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0397,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2018-07-23",
+    "maturity_date": "2048-07-23",
+    "day_count": "ACT/ACT"
+}

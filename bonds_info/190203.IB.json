@@ -1,0 +1,15 @@
+{
+    "bond_code": "190203.IB",
+    "mkt": "IB",
+    "abbr": "19国开03",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.033,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 1,
+    "carry_date": "2019-02-01",
+    "maturity_date": "2024-02-01",
+    "day_count": "ACT/ACT"
+}

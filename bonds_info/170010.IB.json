@@ -1,0 +1,15 @@
+{
+    "bond_code": "170010.IB",
+    "mkt": "IB",
+    "abbr": "17附息国债10",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0352,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2017-05-04",
+    "maturity_date": "2027-05-04",
+    "day_count": "ACT/ACT"
+}

@@ -1,0 +1,15 @@
+{
+    "bond_code": "130247.IB",
+    "mkt": "IB",
+    "abbr": "13国开47",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0504,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 1,
+    "carry_date": "2013-10-24",
+    "maturity_date": "2023-10-24",
+    "day_count": "ACT/ACT"
+}

@@ -1,0 +1,15 @@
+{
+    "bond_code": "110244.IB",
+    "mkt": "IB",
+    "abbr": "11国开44",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.049,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 1,
+    "carry_date": "2011-08-09",
+    "maturity_date": "2021-08-09",
+    "day_count": "ACT/ACT"
+}

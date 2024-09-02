@@ -1,0 +1,15 @@
+{
+    "bond_code": "090007.IB",
+    "mkt": "IB",
+    "abbr": "09附息国债07",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0302,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2009-05-07",
+    "maturity_date": "2019-05-07",
+    "day_count": "ACT/ACT"
+}

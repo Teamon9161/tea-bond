@@ -1,0 +1,15 @@
+{
+    "bond_code": "210210.IB",
+    "mkt": "IB",
+    "abbr": "21国开10",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0341,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 1,
+    "carry_date": "2021-06-07",
+    "maturity_date": "2031-06-07",
+    "day_count": "ACT/ACT"
+}

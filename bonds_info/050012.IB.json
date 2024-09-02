@@ -1,0 +1,15 @@
+{
+    "bond_code": "050012.IB",
+    "mkt": "IB",
+    "abbr": "05国债12",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0365,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2005-11-15",
+    "maturity_date": "2020-11-15",
+    "day_count": "ACT/ACT"
+}

@@ -1,0 +1,15 @@
+{
+    "bond_code": "210004.IB",
+    "mkt": "IB",
+    "abbr": "21附息国债04",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0284,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 1,
+    "carry_date": "2021-04-08",
+    "maturity_date": "2024-04-08",
+    "day_count": "ACT/ACT"
+}

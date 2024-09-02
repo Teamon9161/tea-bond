@@ -1,0 +1,15 @@
+{
+    "bond_code": "170215.IB",
+    "mkt": "IB",
+    "abbr": "17国开15",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0424,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 1,
+    "carry_date": "2017-08-24",
+    "maturity_date": "2027-08-24",
+    "day_count": "ACT/ACT"
+}

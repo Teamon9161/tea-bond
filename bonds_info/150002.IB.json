@@ -1,0 +1,15 @@
+{
+    "bond_code": "150002.IB",
+    "mkt": "IB",
+    "abbr": "15附息国债02",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0336,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 1,
+    "carry_date": "2015-01-22",
+    "maturity_date": "2022-01-22",
+    "day_count": "ACT/ACT"
+}

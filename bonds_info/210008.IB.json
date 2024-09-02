@@ -1,0 +1,15 @@
+{
+    "bond_code": "210008.IB",
+    "mkt": "IB",
+    "abbr": "21附息国债08",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0257,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 1,
+    "carry_date": "2021-05-20",
+    "maturity_date": "2023-05-20",
+    "day_count": "ACT/ACT"
+}

@@ -1,0 +1,15 @@
+{
+    "bond_code": "090023.IB",
+    "mkt": "IB",
+    "abbr": "09附息国债23",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0344,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2009-09-17",
+    "maturity_date": "2019-09-17",
+    "day_count": "ACT/ACT"
+}

@@ -1,0 +1,15 @@
+{
+    "bond_code": "080018.IB",
+    "mkt": "IB",
+    "abbr": "08国债18",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0368,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2008-09-22",
+    "maturity_date": "2018-09-22",
+    "day_count": "ACT/ACT"
+}
