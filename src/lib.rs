@@ -177,8 +177,6 @@ impl TfEvaluator {
     pub fn with_clean_price(self) -> Result<Self> {
         if self.clean_price.is_none() {
             let mut out = self.with_dirty_price()?.with_accrued_interest()?;
-            dbg!(&out.dirty_price);
-            dbg!(&out.accrued_interest);
             out.clean_price = Some(out.dirty_price.unwrap() - out.accrued_interest.unwrap());
             Ok(out)
         } else {
@@ -209,16 +207,19 @@ impl TfEvaluator {
     /// 计算转换因子
     pub fn with_cf(self) -> Result<Self> {
         if self.cf.is_none() {
-            let mut out = self
-                .with_remain_cp_num()?
-                .with_deliver_cp_dates()?
-                .with_deliver_date()?;
+            let mut out = self.with_deliver_cp_dates()?;
             let deliver_date = out.deliver_date.unwrap(); // 交割日
             let (_deliver_pre_cp_date, deliver_next_cp_date) =
                 out.bond.bond.get_nearest_cp_date(deliver_date)?;
+            let remain_cp_num_after_deliver = out
+                .bond
+                .bond
+                .remain_cp_num(deliver_date, Some(deliver_next_cp_date))?;
             let month_num_from_dlv2next_cp = utils::month_delta(deliver_date, deliver_next_cp_date);
+            dbg!(&remain_cp_num_after_deliver);
+            dbg!(&month_num_from_dlv2next_cp);
             out.cf = Some(future::calc_cf(
-                out.remain_cp_num.unwrap(),
+                remain_cp_num_after_deliver,
                 out.bond.bond.cp_rate_1st,
                 out.bond.bond.inst_freq,
                 month_num_from_dlv2next_cp,
@@ -553,13 +554,13 @@ mod tests {
         assert_approx_eq(evaluator.dirty_price, 100.63595079737546);
         assert_approx_eq(evaluator.clean_price, 99.99779145671612);
         assert_approx_eq(evaluator.duration, 8.48901852420599);
-        assert_approx_eq(evaluator.cf, 0.958);
+        assert_approx_eq(evaluator.cf, 0.9725);
+        assert_approx_eq(evaluator.net_basis_spread, 2.754997002624549);
+        assert_approx_eq(evaluator.f_b_spread, -2.6449867440816694);
         assert_approx_eq(evaluator.deliver_accrued_interest, 0.7921978);
         assert_approx_eq(evaluator.deliver_cost, 100.63595079737546);
         assert_approx_eq(evaluator.future_dirty_price, 103.3909478);
-        assert_approx_eq(evaluator.f_b_spread, 2.754997002624549);
         assert_approx_eq(evaluator.basis_spread, -2.6009585432838946);
-        assert_approx_eq(evaluator.net_basis_spread, -2.6449867440816694);
         assert_approx_eq(evaluator.carry, 0.04402820079777488);
         assert_approx_eq(evaluator.irr, 0.4758187440261421);
         assert_approx_eq(evaluator.future_ytm, 0.023684304298184574);

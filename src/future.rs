@@ -95,26 +95,26 @@ fn cffex_tb_cf_formula(n: i32, c: f64, f: f64, x: i32, r: Option<f64>) -> f64 {
 
 /// 根据中金所公式计算转换因子
 ///
-/// b_remaining_cp_times_after_dlv:交割券剩余付息次数,缴款日之后
+/// remaining_cp_times_after_dlv:交割券剩余付息次数,缴款日之后
 ///
-/// b_cp_rate:交割券的票面利率
+/// cp_rate:交割券的票面利率
 ///
-/// b_inst_freq:交割券的年付息次数
+/// inst_freq:交割券的年付息次数
 ///
 /// month_number_to_next_cp_after_dlv:交割月到下个付息日之间的月份数
 ///
 /// fictitious_cp_rate:虚拟券票面利率,默认值为3%
 pub fn calc_cf(
-    b_remaining_cp_times_after_dlv: i32,
-    b_cp_rate: f64,
-    b_inst_freq: i32,
+    remaining_cp_times_after_dlv: i32,
+    cp_rate: f64,
+    inst_freq: i32,
     month_number_to_next_cp_after_dlv: i32,
     fictitious_cp_rate: Option<f64>,
 ) -> f64 {
     cffex_tb_cf_formula(
-        b_remaining_cp_times_after_dlv,
-        b_cp_rate,
-        b_inst_freq as f64,
+        remaining_cp_times_after_dlv,
+        cp_rate,
+        inst_freq as f64,
         month_number_to_next_cp_after_dlv,
         fictitious_cp_rate,
     )

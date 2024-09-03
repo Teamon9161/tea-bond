@@ -297,7 +297,6 @@ impl Bond {
         let (pre_cp_date, next_cp_date) =
             cp_dates.unwrap_or_else(|| self.get_nearest_cp_date(date).unwrap());
         let remain_days = ACTUAL.count_days(date, next_cp_date) as f64;
-        dbg!(&date, &next_cp_date, &remain_days);
         let n = remain_cp_num.unwrap_or_else(|| self.remain_cp_num(date, None).unwrap());
         // TODO: take day_count into account
         if n <= 1 {
