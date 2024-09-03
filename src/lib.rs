@@ -3,9 +3,10 @@ pub mod day_counter;
 mod future;
 mod utils;
 
-use anyhow::Result;
+use anyhow::{ensure, Result};
 pub use bond::{Bond, CouponType, InterestType, Market};
 use chrono::NaiveDate;
+use day_counter::{DayCountRule, ACTUAL};
 pub use future::{Future, FutureType};
 use std::sync::Arc;
 
@@ -45,23 +46,47 @@ pub struct TfEvaluator {
     pub future: FuturePrice,
     pub bond: BondYtm,
     pub capital_rate: f64,
-    pub reinvest_rate: f64, // 再投资收益率
+    pub reinvest_rate: Option<f64>, // 再投资收益率
+
+    // 可能需要计算的字段
+    pub clean_price: Option<f64>, // 债券净价
 
     // 需要计算的字段
     pub accrued_interest: Option<f64>,            // 应计利息
+    pub deliver_accrued_interest: Option<f64>,    // 国债期货交割应计利息
     pub cf: Option<f64>,                          // 转换因子
     pub dirty_price: Option<f64>,                 // 债券全价
-    pub clean_price: Option<f64>,                 // 债券净价
+    pub future_dirty_price: Option<f64>,          // 期货全价
+    pub deliver_cost: Option<f64>,                // 交割成本
+    pub basis_spread: Option<f64>,                // 基差
+    pub f_b_spread: Option<f64>,                  // 期现价差
+    pub carry: Option<f64>,                       // 持有收益
+    pub net_basis_spread: Option<f64>,            // 净基差
     pub duration: Option<f64>,                    // 修正久期
     pub irr: Option<f64>,                         // 内部收益率
+    pub deliver_date: Option<NaiveDate>,          // 期货配对缴款日
     pub cp_dates: Option<(NaiveDate, NaiveDate)>, // 前一付息日和下一付息日
-    pub remain_cp_times: Option<i32>,             // 剩余付息次数
+    pub deliver_cp_dates: Option<(NaiveDate, NaiveDate)>, // 交割日的前一付息日和下一付息日
+    pub remain_cp_num: Option<i32>,               // 债券剩余付息次数
+    pub remain_days_to_deliver: Option<i32>,      // 到交割的剩余天数
+    pub remain_cp_to_deliver: Option<f64>,        // 到交割的期间付息
+    pub remain_cp_to_deliver_wm: Option<f64>,     // 加权平均到交割的期间付息
+    pub future_ytm: Option<f64>,                  // 推断的期货收益率
 }
 
 impl TfEvaluator {
+    #[inline]
+    /// 计算期货配对缴款日
+    pub fn with_deliver_date(mut self) -> Result<Self> {
+        if self.deliver_date.is_none() {
+            self.deliver_date = Some(self.future.future.paydate()?);
+        }
+        Ok(self)
+    }
+
     /// 计算前一付息日和下一付息日
     #[inline]
-    pub fn with_nearest_cp_date(mut self) -> Result<Self> {
+    pub fn with_nearest_cp_dates(mut self) -> Result<Self> {
         if self.cp_dates.is_none() {
             let bond = &self.bond.bond;
             let (pre_cp_date, next_cp_date) = bond.get_nearest_cp_date(self.date)?;
@@ -70,12 +95,40 @@ impl TfEvaluator {
         Ok(self)
     }
 
+    /// 计算交割日的前一付息日和下一付息日
+    #[inline]
+    pub fn with_deliver_cp_dates(self) -> Result<Self> {
+        if self.deliver_cp_dates.is_none() {
+            let mut out = self.with_deliver_date()?;
+            let (pre_cp_date, next_cp_date) = out
+                .bond
+                .bond
+                .get_nearest_cp_date(out.deliver_date.unwrap())?;
+            out.deliver_cp_dates = Some((pre_cp_date, next_cp_date));
+            Ok(out)
+        } else {
+            Ok(self)
+        }
+    }
+
+    /// 计算到交割的剩余天数
+    #[inline]
+    pub fn with_remain_days_to_deliver(self) -> Result<Self> {
+        if self.remain_days_to_deliver.is_none() {
+            let mut out = self.with_deliver_date()?;
+            out.remain_days_to_deliver =
+                Some(ACTUAL.count_days(out.date, out.deliver_date.unwrap()) as i32);
+            Ok(out)
+        } else {
+            Ok(self)
+        }
+    }
     /// 计算剩余付息次数
     #[inline]
-    pub fn with_remain_cp_times(self) -> Result<Self> {
-        if self.remain_cp_times.is_none() {
-            let mut out = self.with_nearest_cp_date()?;
-            out.remain_cp_times = Some(
+    pub fn with_remain_cp_num(self) -> Result<Self> {
+        if self.remain_cp_num.is_none() {
+            let mut out = self.with_nearest_cp_dates()?;
+            out.remain_cp_num = Some(
                 out.bond
                     .bond
                     .remain_cp_num(out.date, Some(out.cp_dates.unwrap().1))?,
@@ -85,11 +138,12 @@ impl TfEvaluator {
             Ok(self)
         }
     }
+
     /// 计算应计利息
     #[inline]
     pub fn with_accrued_interest(self) -> Result<Self> {
         if self.accrued_interest.is_none() {
-            let mut out = self.with_nearest_cp_date()?;
+            let mut out = self.with_nearest_cp_dates()?;
             out.accrued_interest = Some(
                 out.bond
                     .bond
@@ -101,16 +155,16 @@ impl TfEvaluator {
         }
     }
 
-    /// 计算全价
+    /// 计算债券全价
     #[inline]
     pub fn with_dirty_price(self) -> Result<Self> {
         if self.dirty_price.is_none() {
-            let mut out = self.with_remain_cp_times()?;
+            let mut out = self.with_remain_cp_num()?;
             out.dirty_price = Some(out.bond.bond.calc_dirty_price_with_ytm(
                 out.bond.ytm,
                 out.date,
-                None,
-                out.remain_cp_times,
+                out.cp_dates,
+                out.remain_cp_num,
             )?);
             Ok(out)
         } else {
@@ -118,11 +172,13 @@ impl TfEvaluator {
         }
     }
 
-    /// 计算净价
+    /// 计算债券净价
     #[inline]
     pub fn with_clean_price(self) -> Result<Self> {
         if self.clean_price.is_none() {
             let mut out = self.with_dirty_price()?.with_accrued_interest()?;
+            dbg!(&out.dirty_price);
+            dbg!(&out.accrued_interest);
             out.clean_price = Some(out.dirty_price.unwrap() - out.accrued_interest.unwrap());
             Ok(out)
         } else {
@@ -134,11 +190,15 @@ impl TfEvaluator {
     #[inline]
     pub fn with_duration(self) -> Result<Self> {
         if self.duration.is_none() {
-            let mut out = self.with_dirty_price()?.with_accrued_interest()?;
+            let mut out = self
+                .with_dirty_price()?
+                .with_remain_cp_num()?
+                .with_accrued_interest()?;
             out.duration = Some(out.bond.bond.calc_duration(
                 out.bond.ytm,
                 out.date,
-                Some(out.cp_dates.unwrap().1),
+                out.cp_dates,
+                out.remain_cp_num,
             )?);
             Ok(out)
         } else {
@@ -149,17 +209,16 @@ impl TfEvaluator {
     /// 计算转换因子
     pub fn with_cf(self) -> Result<Self> {
         if self.cf.is_none() {
-            let mut out = self.with_remain_cp_times()?;
-            let remain_cp_times = out
-                .bond
-                .bond
-                .remain_cp_num(out.date, Some(out.cp_dates.unwrap().1))?;
-            let deliver_date = out.future.future.paydate()?; // 交割日
-            let (_pre_deliver_cp_date, next_deliver_cp_date) =
+            let mut out = self
+                .with_remain_cp_num()?
+                .with_deliver_cp_dates()?
+                .with_deliver_date()?;
+            let deliver_date = out.deliver_date.unwrap(); // 交割日
+            let (_deliver_pre_cp_date, deliver_next_cp_date) =
                 out.bond.bond.get_nearest_cp_date(deliver_date)?;
-            let month_num_from_dlv2next_cp = utils::month_delta(deliver_date, next_deliver_cp_date);
+            let month_num_from_dlv2next_cp = utils::month_delta(deliver_date, deliver_next_cp_date);
             out.cf = Some(future::calc_cf(
-                remain_cp_times,
+                out.remain_cp_num.unwrap(),
                 out.bond.bond.cp_rate_1st,
                 out.bond.bond.inst_freq,
                 month_num_from_dlv2next_cp,
@@ -171,11 +230,338 @@ impl TfEvaluator {
         }
     }
 
+    /// 计算基差
+    ///
+    /// 基差=现券净价-期货价格*转换因子
+    #[inline]
+    pub fn with_basis_spread(self) -> Result<Self> {
+        if self.basis_spread.is_none() {
+            let mut out = self.with_cf()?.with_clean_price()?;
+            out.basis_spread = Some(out.clean_price.unwrap() - out.future.price * out.cf.unwrap());
+            Ok(out)
+        } else {
+            Ok(self)
+        }
+    }
+
+    /// 计算国债期货交割应计利息
+    ///
+    /// 国债期货交割应计利息=区间付息* (国债期货交割缴款日 - 国债期货交割前一付息日) / (国债期货交割下一付息日 - 国债期货交割前一付息日)
+    ///
+    /// 按中金所发布公式, 计算结果四舍五入至小数点后7位
+    pub fn with_deliver_accrued_interest(self) -> Result<Self> {
+        if self.deliver_accrued_interest.is_none() {
+            let mut out = self.with_deliver_cp_dates()?;
+            let coupon = out.bond.bond.get_coupon();
+            let deliver_date = out.future.future.paydate()?; // 交割日
+            let (deliver_pre_cp_date, deliver_next_cp_date) = out.deliver_cp_dates.unwrap();
+            let deliver_accrued_interest = coupon
+                * ACTUAL.count_days(deliver_pre_cp_date, deliver_date) as f64
+                / ACTUAL.count_days(deliver_pre_cp_date, deliver_next_cp_date) as f64;
+            out.deliver_accrued_interest = Some((deliver_accrued_interest * 1e7).round() / 1e7);
+            Ok(out)
+        } else {
+            Ok(self)
+        }
+    }
+
+    /// 计算期货全价（发票价格)
+    #[inline]
+    pub fn with_future_dirty_price(self) -> Result<Self> {
+        if self.future_dirty_price.is_none() {
+            let mut out = self.with_cf()?.with_deliver_accrued_interest()?;
+            out.future_dirty_price =
+                Some(out.future.price * out.cf.unwrap() + out.deliver_accrued_interest.unwrap());
+            Ok(out)
+        } else {
+            Ok(self)
+        }
+    }
+
+    /// 计算期间付息
+    pub fn with_remain_cp_to_deliver(self) -> Result<Self> {
+        if self.remain_cp_to_deliver.is_none() {
+            let mut out = self.with_deliver_date()?.with_nearest_cp_dates()?;
+            let deliver_date = out.deliver_date.unwrap();
+            // 计算期间付息次数
+            let n = out.bond.bond.remain_cp_num_until(
+                out.date,
+                deliver_date,
+                Some(out.cp_dates.unwrap().1),
+            )?;
+            if n != 0 {
+                let coupon = out.bond.bond.get_coupon();
+                let remain_cp_dates = out.bond.bond.remain_cp_dates_until(
+                    out.date,
+                    deliver_date,
+                    Some(out.cp_dates.unwrap().1),
+                )?;
+                ensure!(remain_cp_dates.len() == n as usize, "implement error");
+                out.remain_cp_to_deliver = Some(coupon * n as f64);
+                // 加权平均期间付息,按每个付息日到结算日的年化剩余天数加权的实际付息
+                out.remain_cp_to_deliver_wm = Some(
+                    remain_cp_dates.into_iter().fold(0., |acc, d| {
+                        acc + ACTUAL.count_days(d, deliver_date) as f64 / 365.
+                    }) * coupon,
+                );
+            } else {
+                out.remain_cp_to_deliver = Some(0.);
+                out.remain_cp_to_deliver_wm = Some(0.);
+            }
+            Ok(out)
+        } else {
+            Ok(self)
+        }
+    }
+
+    /// 计算交割成本
+    ///
+    /// 交割成本=国债全价-期间付息
+    pub fn with_deliver_cost(self) -> Result<Self> {
+        if self.deliver_cost.is_none() {
+            let mut out = self.with_dirty_price()?.with_remain_cp_to_deliver()?;
+            out.deliver_cost = Some(out.dirty_price.unwrap() - out.remain_cp_to_deliver.unwrap());
+            Ok(out)
+        } else {
+            Ok(self)
+        }
+    }
+
+    /// 计算期限价差
+    ///
+    /// 期现价差=期货全价(发票价格)-交割成本
+    pub fn with_f_b_spread(self) -> Result<Self> {
+        if self.f_b_spread.is_none() {
+            let mut out = self.with_future_dirty_price()?.with_deliver_cost()?;
+            out.f_b_spread = Some(out.future_dirty_price.unwrap() - out.deliver_cost.unwrap());
+            Ok(out)
+        } else {
+            Ok(self)
+        }
+    }
+
+    /// 计算持有收益
+    ///
+    /// 持有收益 = (交割日应计-交易日应计 + 期间付息) + 资金成本率*(加权平均期间付息-债券全价*剩余天数/365)
+    pub fn with_carry(self) -> Result<Self> {
+        if self.carry.is_none() {
+            let mut out = self
+                .with_accrued_interest()?
+                .with_dirty_price()?
+                .with_deliver_accrued_interest()?
+                .with_remain_days_to_deliver()?
+                .with_remain_cp_to_deliver()?;
+            let remain_days_to_deliver = out.remain_days_to_deliver.unwrap() as f64;
+            let left_hand_side = out.deliver_accrued_interest.unwrap()
+                - out.accrued_interest.unwrap()
+                + out.remain_cp_to_deliver.unwrap();
+            let right_hand_side = out.capital_rate
+                * (out.remain_cp_to_deliver_wm.unwrap()
+                    - out.dirty_price.unwrap() * remain_days_to_deliver / 365.);
+            out.carry = Some(left_hand_side + right_hand_side);
+            Ok(out)
+        } else {
+            Ok(self)
+        }
+    }
+    /// 计算净基差
+    ///
+    /// 净基差=基差-持有收益
+    pub fn with_net_basis_spread(self) -> Result<Self> {
+        if self.net_basis_spread.is_none() {
+            let mut out = self.with_basis_spread()?.with_carry()?;
+            out.net_basis_spread = Some(out.basis_spread.unwrap() - out.carry.unwrap());
+            Ok(out)
+        } else {
+            Ok(self)
+        }
+    }
+
+    /// 计算内部收益率IRR
+    pub fn with_irr(self) -> Result<Self> {
+        if self.irr.is_none() {
+            let mut out = self
+                .with_future_dirty_price()?
+                .with_remain_days_to_deliver()?
+                .with_remain_cp_to_deliver()?;
+            if let Some(reinvest_rate) = out.reinvest_rate {
+                // 如果定义了利息再投资利率则需要将使用加权平均期间付息乘以该再投资利率
+                let irr = (out.future_dirty_price.unwrap()
+                    + out.remain_cp_to_deliver.unwrap()
+                    + out.remain_cp_to_deliver_wm.unwrap() * reinvest_rate)
+                    / out.dirty_price.unwrap()
+                    - 1.;
+                let irr = irr * 365. / out.remain_days_to_deliver.unwrap() as f64;
+                out.irr = Some(irr);
+            } else {
+                // QB: irr=(发票价格+期间付息-现券全价)/(现券全价*剩余天数/365-加权平均期间付息)
+                out.irr = Some(
+                    (out.future_dirty_price.unwrap() + out.remain_cp_to_deliver.unwrap()
+                        - out.dirty_price.unwrap())
+                        / (out.dirty_price.unwrap() * out.remain_days_to_deliver.unwrap() as f64
+                            / 365.
+                            - out.remain_cp_to_deliver_wm.unwrap()),
+                );
+            }
+            Ok(out)
+        } else {
+            Ok(self)
+        }
+    }
+
+    /// 计算期货隐含收益率
+    pub fn with_future_ytm(self) -> Result<Self> {
+        if self.future_ytm.is_none() {
+            let mut out = self.with_cf()?.with_deliver_date()?;
+            let deliver_date = out.deliver_date.unwrap();
+            let accrued_interest = out.bond.bond.calc_accrued_interest(deliver_date, None)?;
+            let tmp_dirty_price = out.future.price * out.cf.unwrap() + accrued_interest;
+            out.future_ytm = Some(out.bond.bond.calc_ytm_with_price(
+                tmp_dirty_price,
+                deliver_date,
+                None,
+                None,
+            )?);
+            Ok(out)
+        } else {
+            Ok(self)
+        }
+    }
+
+    #[inline]
     pub fn calc_all(self) -> Result<Self> {
-        self.with_remain_cp_times()?
+        self.with_remain_cp_num()?
             .with_dirty_price()?
             .with_clean_price()?
             .with_duration()?
-            .with_cf()
+            .with_cf()?
+            .with_future_dirty_price()?
+            .with_f_b_spread()?
+            .with_net_basis_spread()?
+            .with_irr()?
+            .with_future_ytm()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn assert_approx_eq(a: Option<f64>, b: f64) {
+        assert!((a.unwrap() - b).abs() < 1e-10, "{} != {}", a.unwrap(), b);
+    }
+
+    fn get_bond() -> Bond {
+        let json_str = r#"
+        {
+            "bond_code": "240006.IB",
+            "mkt": "IB",
+            "abbr": "24附息国债06",
+            "par_value": 100.0,
+            "cp_type": "Coupon_Bear",
+            "interest_type": "Fixed",
+            "cp_rate_1st": 0.0228,
+            "base_rate": null,
+            "rate_spread": null,
+            "inst_freq": 1,
+            "carry_date": "2024-03-25",
+            "maturity_date": "2031-03-25",
+            "day_count": "ACT/ACT"
+        }
+        "#;
+
+        let bond: Bond = serde_json::from_str(json_str).unwrap();
+        return bond;
+    }
+
+    fn get_evaluator() -> TfEvaluator {
+        let bond = get_bond();
+        let future = Future::new("T2409");
+        let future_price = FuturePrice {
+            future: future.into(),
+            price: 105.5,
+        };
+        let bond_ytm = BondYtm {
+            bond: bond.into(),
+            ytm: 2.115 / 100.,
+        };
+        TfEvaluator {
+            date: NaiveDate::from_ymd_opt(2024, 8, 12).unwrap(),
+            future: future_price,
+            bond: bond_ytm,
+            capital_rate: 1.9 / 100.,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_calc_all() {
+        let evaluator = get_evaluator().calc_all().unwrap();
+        assert_approx_eq(evaluator.clean_price, 101.00322640481077);
+        assert_approx_eq(evaluator.dirty_price, 101.87774695275598);
+        assert_approx_eq(evaluator.accrued_interest, 0.8745205479452056);
+        assert_approx_eq(evaluator.duration, 6.040420842016215);
+        assert_approx_eq(evaluator.cf, 0.958);
+        assert_approx_eq(evaluator.deliver_accrued_interest, 1.0993973);
+        assert_approx_eq(evaluator.deliver_cost, 101.87774695275598);
+        assert_approx_eq(evaluator.future_dirty_price, 102.1683973);
+        assert_approx_eq(evaluator.f_b_spread, 0.29065034724402494);
+        assert_approx_eq(evaluator.basis_spread, -0.06577359518922776);
+        assert_approx_eq(evaluator.net_basis_spread, -0.09973424062570677);
+        assert_approx_eq(evaluator.carry, 0.033960645436479);
+        assert_approx_eq(evaluator.irr, 0.02892556681284581);
+        assert_approx_eq(evaluator.future_ytm, 0.021018009246774893);
+    }
+
+    #[test]
+    fn test_without_cp_before_deliver_date_calc() {
+        let bond_str = r#"
+            {
+                "bond_code": "230026.IB",
+                "mkt": "IB",
+                "abbr": "23附息国债26",
+                "par_value": 100.0,
+                "cp_type": "Coupon_Bear",
+                "interest_type": "Fixed",
+                "cp_rate_1st": 0.0267,
+                "base_rate": null,
+                "rate_spread": null,
+                "inst_freq": 2,
+                "carry_date": "2023-11-25",
+                "maturity_date": "2033-11-25",
+                "day_count": "ACT/ACT"
+            }
+        "#;
+        let bond: Bond = serde_json::from_str(bond_str).unwrap();
+        let future = Future::new("T2403");
+        let future_price = FuturePrice {
+            future: future.into(),
+            price: 105.5,
+        };
+        let bond_ytm = BondYtm {
+            bond: bond.into(),
+            ytm: 2.67 / 100.,
+        };
+        let evaluator = TfEvaluator {
+            date: NaiveDate::from_ymd_opt(2024, 2, 20).unwrap(),
+            future: future_price,
+            bond: bond_ytm,
+            ..Default::default()
+        };
+        let evaluator = evaluator.calc_all().unwrap();
+        dbg!(&evaluator);
+        assert_approx_eq(evaluator.accrued_interest, 0.6381593406593407);
+        assert_approx_eq(evaluator.dirty_price, 100.63595079737546);
+        assert_approx_eq(evaluator.clean_price, 99.99779145671612);
+        assert_approx_eq(evaluator.duration, 8.48901852420599);
+        assert_approx_eq(evaluator.cf, 0.958);
+        assert_approx_eq(evaluator.deliver_accrued_interest, 0.7921978);
+        assert_approx_eq(evaluator.deliver_cost, 100.63595079737546);
+        assert_approx_eq(evaluator.future_dirty_price, 103.3909478);
+        assert_approx_eq(evaluator.f_b_spread, 2.754997002624549);
+        assert_approx_eq(evaluator.basis_spread, -2.6009585432838946);
+        assert_approx_eq(evaluator.net_basis_spread, -2.6449867440816694);
+        assert_approx_eq(evaluator.carry, 0.04402820079777488);
+        assert_approx_eq(evaluator.irr, 0.4758187440261421);
+        assert_approx_eq(evaluator.future_ytm, 0.023684304298184574);
     }
 }
