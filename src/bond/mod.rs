@@ -1,50 +1,16 @@
-use crate::day_counter::{BondDayCount, DayCountRule, ACTUAL};
+mod bond_ytm;
+mod enums;
+mod impl_traits;
+mod io;
+
+pub use bond_ytm::BondYtm;
+pub use enums::{BondDayCount, CouponType, InterestType, Market};
+
+use crate::day_counter::{DayCountRule, ACTUAL};
 use anyhow::{bail, ensure, Result};
 use chrono::{Datelike, Duration, Months, NaiveDate};
-use serde::Deserializer;
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
-pub enum CouponType {
-    /// 附息债券
-    #[serde(alias = "Coupon_Bear")]
-    #[default]
-    CouponBear,
-    /// 零息债券
-    #[serde(alias = "Zero_Coupon")]
-    ZeroCoupon,
-    /// 一次性付息
-    #[serde(alias = "One_Time")]
-    OneTime,
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
-pub enum InterestType {
-    /// 固定利率
-    Fixed,
-    /// 浮动利率
-    #[default]
-    Floating,
-    /// 累进利率
-    Progressive,
-    /// 零息
-    Zero,
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
-pub enum Market {
-    /// 银行间
-    #[default]
-    IB,
-    /// 上交所
-    SSE,
-    /// 上交所（同义词）
-    SH,
-    /// 深交所
-    SZE,
-    /// 深交所（同义词）
-    SZ,
-}
+use impl_traits::str_to_date;
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Bond {
@@ -64,39 +30,6 @@ pub struct Bond {
     pub maturity_date: NaiveDate, // 到期日
     pub day_count: BondDayCount,     // 计息基准, 如A/365F
 }
-
-impl Default for Bond {
-    fn default() -> Self {
-        Bond {
-            bond_code: "".to_string(),
-            mkt: Market::default(),
-            abbr: "".to_string(),
-            par_value: 100.0,
-            cp_type: CouponType::default(),
-            interest_type: InterestType::default(),
-            cp_rate_1st: 0.03,
-            base_rate: None,
-            rate_spread: None,
-            inst_freq: 1,
-            carry_date: NaiveDate::from_ymd_opt(2019, 6, 15).unwrap(),
-            maturity_date: NaiveDate::from_ymd_opt(2024, 6, 15).unwrap(),
-            day_count: BondDayCount::default(),
-        }
-    }
-}
-
-#[inline]
-/// 将字符串转换为日期
-///
-/// 仅用于从json文件反序列化日期
-fn str_to_date<'de, D>(deserializer: D) -> std::result::Result<NaiveDate, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let date_str = String::deserialize(deserializer)?;
-    NaiveDate::parse_from_str(&date_str, "%Y-%m-%d").map_err(serde::de::Error::custom)
-}
-
 impl Bond {
     #[inline]
     /// 债券代码，不包含交易所后缀
@@ -231,7 +164,6 @@ impl Bond {
     }
 
     /// 获得剩余的付息日期列表(不包含until_date)
-    ///
     pub fn remain_cp_dates_until(
         &self,
         date: NaiveDate,
@@ -357,6 +289,7 @@ impl Bond {
             _ => bail!("Unsupported interest type: {:?}", self.interest_type),
         }
     }
+
     /// 麦考利久期
     pub fn calc_macaulay_duration(
         &self,

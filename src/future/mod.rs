@@ -1,3 +1,9 @@
+mod future_price;
+mod future_type;
+
+pub use future_price::FuturePrice;
+pub use future_type::FutureType;
+
 use anyhow::{bail, Result};
 use chrono::{Datelike, Duration, NaiveDate, Weekday};
 use std::sync::Arc;
@@ -10,19 +16,12 @@ pub struct Future {
 }
 
 impl Default for Future {
+    #[inline]
     fn default() -> Self {
         Self {
             code: Arc::from("T2412"),
         }
     }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum FutureType {
-    TS,
-    TF,
-    T,
-    TL,
 }
 
 impl Future {
@@ -31,6 +30,23 @@ impl Future {
         Self {
             code: Arc::from(code.as_ref()),
         }
+    }
+
+    #[inline]
+    /// 判断是否是可交割券
+    ///
+    /// delivery_date: 可以传入已计算过的期货配对缴款日避免重复计算
+    pub fn is_deliverable(
+        &self,
+        carry_date: NaiveDate,
+        maturity_date: NaiveDate,
+        delivery_date: Option<NaiveDate>,
+    ) -> Result<bool> {
+        Ok(self.future_type()?.is_deliverable(
+            delivery_date.unwrap_or_else(|| self.deliver_date().unwrap()),
+            carry_date,
+            maturity_date,
+        ))
     }
 
     /// 计算期货合约的最后交易日
@@ -58,7 +74,7 @@ impl Future {
     ///
     /// 交割日为3天,其中第2天为缴款日,即最后交易日的第2个交易日,最后交易日一定为周五,所以缴款日一定是一个周二
     #[inline]
-    pub fn paydate(&self) -> Result<NaiveDate> {
+    pub fn deliver_date(&self) -> Result<NaiveDate> {
         let last_trading_date = self.last_trading_date()?;
         Ok(last_trading_date + Duration::days(4))
     }
@@ -104,6 +120,7 @@ fn cffex_tb_cf_formula(n: i32, c: f64, f: f64, x: i32, r: Option<f64>) -> f64 {
 /// month_number_to_next_cp_after_dlv:交割月到下个付息日之间的月份数
 ///
 /// fictitious_cp_rate:虚拟券票面利率,默认值为3%
+#[inline]
 pub fn calc_cf(
     remaining_cp_times_after_dlv: i32,
     cp_rate: f64,

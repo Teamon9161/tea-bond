@@ -1,5 +1,4 @@
 use chrono::{Datelike, NaiveDate};
-use serde::{Deserialize, Serialize};
 
 pub const ACTUAL: Actual = Actual {};
 pub const THIRTY: Thirty = Thirty {};
@@ -55,30 +54,6 @@ impl DayCountRule for Business {
 
         business_days
     }
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
-/// 计息基准
-pub enum BondDayCount {
-    // 实际天数/实际天数
-    #[serde(alias = "ACT/ACT")]
-    #[default]
-    ActAct,
-    // 实际天数/365
-    #[serde(alias = "A/365")]
-    Act365,
-    // 实际天数/360
-    #[serde(alias = "A/360")]
-    Act360,
-    #[serde(alias = "T/365")]
-    Thirty365,
-    #[serde(alias = "T/360")]
-    Thirty360,
-    Bus,
-    #[serde(alias = "BUSIB")]
-    BusIB,
-    #[serde(alias = "BUSSSE")]
-    BusSSE,
 }
 
 #[cfg(test)]
