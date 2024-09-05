@@ -158,7 +158,7 @@ mod tests {
                 },
                 ..Default::default()
             };
-            let evaluator = evaluator.calc_all().unwrap();
+            let evaluator = evaluator.with_cf().unwrap();
             assert_approx_eq(evaluator.cf, *expect_cf);
         }
     }
