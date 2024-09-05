@@ -9,6 +9,7 @@ use chrono::NaiveDate;
 
 #[derive(Clone, smart_default::SmartDefault)]
 pub struct TfEvaluator {
+    // 传入的字段
     pub date: NaiveDate,
     pub future: FuturePrice,
     pub bond: BondYtm,

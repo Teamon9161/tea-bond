@@ -8,9 +8,6 @@ pub fn month_delta(from_date: NaiveDate, to_date: NaiveDate) -> i32 {
     let to_date_year = to_date.year();
     let month_delta =
         (to_date_year - from_date_year) * 12 + (to_date_month as i32 - from_date_month as i32);
-    // if to_date.day() < from_date.day() {
-    //     month_delta -= 1;
-    // }
     month_delta
 }
 

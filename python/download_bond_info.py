@@ -36,8 +36,9 @@ def get_payment_type(typ: str):
         raise ValueError(msg)
 
 
-def fetch_symbols(symbols: list[str], *, save: bool = True):
-    symbols = [s for s in symbols if not (save_folder / f"{s}.json").exists()]
+def fetch_symbols(symbols: list[str], *, save: bool = True, skip: bool = True):
+    if skip:
+        symbols = [s for s in symbols if not (save_folder / f"{s}.json").exists()]
     data = w.wss(
         symbols,
         "sec_name,carrydate,maturitydate,interesttype,couponrate,paymenttype,actualbenchmark,coupon,interestfrequency,latestpar",
