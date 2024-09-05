@@ -164,10 +164,7 @@ impl TfEvaluator {
     #[inline]
     pub fn with_duration(self) -> Result<Self> {
         if self.duration.is_none() {
-            let mut out = self
-                .with_dirty_price()?
-                .with_remain_cp_num()?
-                .with_accrued_interest()?;
+            let mut out = self.with_remain_cp_num()?;
             out.duration = Some(out.bond.bond.calc_duration(
                 out.bond.ytm,
                 out.date,
@@ -291,7 +288,7 @@ impl TfEvaluator {
 
     /// 计算交割成本
     ///
-    /// 交割成本=国债全价-期间付息
+    /// 交割成本=债券全价-期间付息
     pub fn with_deliver_cost(self) -> Result<Self> {
         if self.deliver_cost.is_none() {
             let mut out = self.with_dirty_price()?.with_remain_cp_to_deliver()?;
@@ -302,7 +299,7 @@ impl TfEvaluator {
         }
     }
 
-    /// 计算期限价差
+    /// 计算期现价差
     ///
     /// 期现价差=期货全价(发票价格)-交割成本
     pub fn with_f_b_spread(self) -> Result<Self> {

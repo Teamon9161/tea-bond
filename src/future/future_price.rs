@@ -1,7 +1,7 @@
 use super::Future;
 use std::sync::Arc;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FuturePrice {
     pub future: Arc<Future>,
     pub price: f64,

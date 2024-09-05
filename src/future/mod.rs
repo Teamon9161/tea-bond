@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 const CFFEX_DEFAULT_CP_RATE: f64 = 0.03;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Future {
     pub code: Arc<str>,
 }

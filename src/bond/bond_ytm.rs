@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::Bond;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BondYtm {
     pub bond: Arc<Bond>,
     pub ytm: f64,

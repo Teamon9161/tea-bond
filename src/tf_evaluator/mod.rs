@@ -1,5 +1,6 @@
 mod evaluator;
 mod impl_traits;
+mod update_with_new_info;
 
 pub use evaluator::TfEvaluator;
 
@@ -11,7 +12,7 @@ mod tests {
         assert!((a.unwrap() - b).abs() < 1e-10, "{} != {}", a.unwrap(), b);
     }
 
-    fn get_bond() -> Bond {
+    fn get_evaluator() -> TfEvaluator {
         let json_str = r#"
         {
             "bond_code": "240006.IB",
@@ -31,11 +32,6 @@ mod tests {
         "#;
 
         let bond: Bond = serde_json::from_str(json_str).unwrap();
-        return bond;
-    }
-
-    fn get_evaluator() -> TfEvaluator {
-        let bond = get_bond();
         let future = Future::new("T2409");
         let future_price = FuturePrice {
             future: future.into(),
@@ -74,8 +70,7 @@ mod tests {
         assert_approx_eq(evaluator.future_ytm, 0.021018009246774893);
     }
 
-    #[test]
-    fn test_without_cp_before_deliver_date_calc() {
+    fn get_evaluator_without_cp_before_deliver_date() -> TfEvaluator {
         let bond_str = r#"
             {
                 "bond_code": "230026.IB",
@@ -103,14 +98,20 @@ mod tests {
             bond: bond.into(),
             ytm: 2.67 / 100.,
         };
-        let evaluator = TfEvaluator {
-            date: NaiveDate::from_ymd_opt(2024, 2, 20).unwrap(),
-            future: future_price,
-            bond: bond_ytm,
-            capital_rate: 1.9 / 100.,
-            ..Default::default()
-        };
-        let evaluator = evaluator.calc_all().unwrap();
+        get_evaluator().calc_all().unwrap().update_with_new_info(
+            NaiveDate::from_ymd_opt(2024, 2, 20).unwrap(),
+            bond_ytm,
+            future_price,
+            1.9 / 100.,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_without_cp_before_deliver_date_calc() {
+        let evaluator = get_evaluator_without_cp_before_deliver_date()
+            .calc_all()
+            .unwrap();
         assert!(evaluator.is_deliverable().unwrap());
         assert_approx_eq(evaluator.accrued_interest, 0.6381593406593407);
         assert_approx_eq(evaluator.dirty_price, 100.63595079737546);
@@ -129,6 +130,85 @@ mod tests {
     }
 
     #[test]
+    fn test_2_inst_freq_with_cp_before_deliver_date() {
+        let evaluator = get_evaluator_without_cp_before_deliver_date()
+            .calc_all()
+            .unwrap();
+        let bond_ytm = evaluator.bond.clone();
+        let future = Future::new("T2406");
+        let future_price = FuturePrice {
+            future: future.into(),
+            price: 103.58,
+        };
+        let evaluator = evaluator
+            .update_with_new_info(
+                NaiveDate::from_ymd_opt(2024, 2, 20).unwrap(),
+                bond_ytm,
+                future_price,
+                1.9 / 100.,
+                None,
+            )
+            .calc_all()
+            .unwrap();
+        assert!(evaluator.is_deliverable().unwrap());
+        assert_approx_eq(evaluator.accrued_interest, 0.6381593406593407);
+        assert_approx_eq(evaluator.dirty_price, 100.63595079737546);
+        assert_approx_eq(evaluator.clean_price, 99.99779145671612);
+        assert_approx_eq(evaluator.duration, 8.48901852420599);
+        assert_approx_eq(evaluator.cf, 0.9731);
+        assert_approx_eq(evaluator.basis_spread, -0.795906543283877);
+        assert_approx_eq(evaluator.carry, 0.24924742988075288);
+        assert_approx_eq(evaluator.net_basis_spread, -1.0451539731646298);
+        assert_approx_eq(evaluator.f_b_spread, 1.666877602624524);
+        assert_approx_eq(evaluator.deliver_accrued_interest, 0.1741304);
+        assert_approx_eq(evaluator.deliver_cost, 99.30095079737546);
+        assert_approx_eq(evaluator.future_dirty_price, 100.96782839999999);
+        assert_approx_eq(evaluator.irr, 0.050940117037820136);
+        assert_approx_eq(evaluator.future_ytm, 0.025745910924140546);
+    }
+
+    #[test]
+    fn test_2_inst_freq_with_2cps_before_deliver_date() {
+        let evaluator = get_evaluator_without_cp_before_deliver_date()
+            .calc_all()
+            .unwrap();
+        let bond_ytm = BondYtm {
+            bond: evaluator.bond.bond.clone(),
+            ytm: 2.26 / 100.,
+        };
+        let future = Future::new("T2412");
+        let future_price = FuturePrice {
+            future: future.into(),
+            price: 104.745,
+        };
+        let evaluator = evaluator
+            .update_with_new_info(
+                NaiveDate::from_ymd_opt(2024, 4, 23).unwrap(),
+                bond_ytm,
+                future_price,
+                1.9 / 100.,
+                None,
+            )
+            .calc_all()
+            .unwrap();
+        assert!(evaluator.is_deliverable().unwrap());
+        assert_approx_eq(evaluator.accrued_interest, 1.1002747252747254);
+        assert_approx_eq(evaluator.dirty_price, 104.6157328976577);
+        assert_approx_eq(evaluator.clean_price, 103.51545817238296);
+        assert_approx_eq(evaluator.duration, 8.360691052983789);
+        assert_approx_eq(evaluator.cf, 0.9743);
+        assert_approx_eq(evaluator.basis_spread, 1.4624046723829593);
+        assert_approx_eq(evaluator.carry, 0.45174629893566354);
+        assert_approx_eq(evaluator.net_basis_spread, 1.0106583734472958);
+        assert_approx_eq(evaluator.f_b_spread, 0.26958580234230567);
+        assert_approx_eq(evaluator.deliver_accrued_interest, 0.1622652);
+        assert_approx_eq(evaluator.deliver_cost, 101.94573289765769);
+        assert_approx_eq(evaluator.future_dirty_price, 102.2153187);
+        assert_approx_eq(evaluator.irr, 0.00400090103229304);
+        assert_approx_eq(evaluator.future_ytm, 0.024131859300099628);
+    }
+
+    #[test]
     fn test_cf_with_cffex() {
         let bond_vec = vec![
             "240006", "210009", "240013", "240013", "210017", "210017", "210017", "240017",
@@ -141,24 +221,27 @@ mod tests {
         let cf_vec = vec![
             0.958, 1.0012, 0.9469, 0.9486, 0.9929, 0.9932, 0.9934, 0.9241, 0.9258, 0.9274,
         ];
+        let mut evaluator = TfEvaluator::default();
         for ((code, future), expect_cf) in bond_vec.iter().zip(future_vec.iter()).zip(cf_vec.iter())
         {
             let bond = Bond::read_json(&format!("{}.IB", code), None).unwrap();
             let future = Future::new(future);
-            let evaluator = TfEvaluator {
-                date: NaiveDate::from_ymd_opt(2024, 9, 4).unwrap(),
-                bond: BondYtm {
-                    bond: bond.into(),
-                    ytm: f64::NAN,
-                },
-                capital_rate: f64::NAN,
-                future: FuturePrice {
-                    future: future.into(),
-                    price: f64::NAN,
-                },
-                ..Default::default()
-            };
-            let evaluator = evaluator.with_cf().unwrap();
+            evaluator = evaluator
+                .update_with_new_info(
+                    NaiveDate::from_ymd_opt(2024, 9, 4).unwrap(),
+                    BondYtm {
+                        bond: bond.into(),
+                        ytm: f64::NAN,
+                    },
+                    FuturePrice {
+                        future: future.into(),
+                        price: f64::NAN,
+                    },
+                    f64::NAN,
+                    None,
+                )
+                .with_cf()
+                .unwrap();
             assert_approx_eq(evaluator.cf, *expect_cf);
         }
     }

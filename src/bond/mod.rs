@@ -125,12 +125,12 @@ impl Bond {
     pub fn remain_cp_num(&self, date: NaiveDate, next_cp_date: Option<NaiveDate>) -> Result<i32> {
         let mut next_cp_date =
             next_cp_date.unwrap_or_else(|| self.get_nearest_cp_date(date).unwrap().1);
-        let mut cp_num = 1;
+        let mut cp_num = 0;
         let offset = self.get_cp_offset()?;
         // TODO: 数据是否确实存在到期日不同于发行日的情况？如果存在，是后延还是提前？
         // 当下一付息日正好等于到期日时，目前正好返回1，也是正确的
-        let maturity_date = self.maturity_date - Duration::days(3); // 减去3天避免节假日导致的计算偏差
-        while next_cp_date < maturity_date {
+        let maturity_date = self.maturity_date + Duration::days(3); // 减去3天避免节假日导致的计算偏差
+        while next_cp_date <= maturity_date {
             cp_num += 1;
             next_cp_date = next_cp_date + offset;
         }
@@ -152,10 +152,8 @@ impl Bond {
             // TODO: 检查等于的情况是否正确
             return Ok(0);
         }
-        let mut cp_num = 1;
+        let mut cp_num = 0;
         let offset = self.get_cp_offset()?;
-        // TODO: 数据是否确实存在到期日不同于发行日的情况？如果存在，是后延还是提前？
-        // 当下一付息日正好等于到期日时，目前正好返回1，也是正确的
         while next_cp_date < until_date {
             cp_num += 1;
             next_cp_date = next_cp_date + offset;
@@ -175,7 +173,7 @@ impl Bond {
         if next_cp_date >= until_date {
             return Ok(vec![]);
         }
-        let mut cp_dates = vec![next_cp_date];
+        let mut cp_dates = vec![];
         let offset = self.get_cp_offset()?;
         while next_cp_date < until_date {
             cp_dates.push(next_cp_date);

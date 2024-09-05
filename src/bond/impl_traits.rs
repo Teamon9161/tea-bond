@@ -36,3 +36,12 @@ where
     let date_str = String::deserialize(deserializer)?;
     NaiveDate::parse_from_str(&date_str, "%Y-%m-%d").map_err(serde::de::Error::custom)
 }
+
+impl Eq for Bond {}
+
+impl PartialEq for Bond {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.bond_code == other.bond_code
+    }
+}
