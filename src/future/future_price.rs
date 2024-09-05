@@ -15,3 +15,10 @@ impl Default for FuturePrice {
         }
     }
 }
+
+impl FuturePrice {
+    #[inline]
+    pub fn with_price(self, price: f64) -> Self {
+        FuturePrice { price, ..self }
+    }
+}

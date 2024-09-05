@@ -16,3 +16,10 @@ impl Default for BondYtm {
         }
     }
 }
+
+impl BondYtm {
+    #[inline]
+    pub fn with_ytm(self, ytm: f64) -> Self {
+        BondYtm { ytm, ..self }
+    }
+}
