@@ -17,6 +17,15 @@ impl Bond {
     /// assert_eq!(bond.cp_rate_1st, 0.0228)
     /// ```
     pub fn read_json(code: &str, path: Option<&Path>) -> Result<Self> {
+        let code: std::sync::Arc<str> = if !code.contains('.') {
+            eprintln!(
+                "code doesn't contain market type, use IB as default: {}",
+                code
+            );
+            format!("{}.IB", code).into()
+        } else {
+            code.into()
+        };
         let bond = if let Some(path) = path {
             let file = File::open(path)?;
             serde_json::from_reader(BufReader::new(file))?
