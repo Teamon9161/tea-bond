@@ -106,6 +106,7 @@ if __name__ == "__main__":
 
     # symbols = ["019733.SH"]
     # symbols = ["020647.SH"]
-    symbols = get_all_symbols()
+    symbols = ["019638.SH"]
+    # symbols = get_all_symbols()
 
     fetch_symbols(symbols, save=True, skip=False)
