@@ -55,6 +55,8 @@ pub enum BondDayCount {
     // 实际天数/360
     #[serde(alias = "A/360")]
     Act360,
+    #[serde(alias = "A/365F")]
+    Act365F,
     #[serde(alias = "T/365")]
     Thirty365,
     #[serde(alias = "T/360")]
