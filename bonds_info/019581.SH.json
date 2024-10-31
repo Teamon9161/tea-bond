@@ -1,0 +1,15 @@
+{
+    "bond_code": "019581.SH",
+    "mkt": "SH",
+    "abbr": "17国债26",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0437,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2017-11-20",
+    "maturity_date": "2067-11-20",
+    "day_count": "A/365F"
+}

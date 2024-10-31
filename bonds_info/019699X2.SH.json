@@ -1,0 +1,15 @@
+{
+    "bond_code": "019699X2.SH",
+    "mkt": "SH",
+    "abbr": "23国债06(续2)",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.028,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 1,
+    "carry_date": "2023-03-25",
+    "maturity_date": "2030-03-25",
+    "day_count": "A/365F"
+}

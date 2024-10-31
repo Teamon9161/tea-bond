@@ -31,6 +31,10 @@ def get_interest_type(typ: str):
 def get_payment_type(typ: str):
     if typ == "附息":
         return "Coupon_Bear"
+    elif typ == "到期一次还本付息":
+        return "One_Time"
+    elif typ == "贴现":
+        return "Zero_Coupon"
     else:
         msg = f"Unknown payment type: {typ}"
         raise ValueError(msg)
@@ -54,7 +58,12 @@ def fetch_symbols(symbols: list[str], *, save: bool = True, skip: bool = True):
         m["cp_rate_1st"] = float(Decimal(str(data[4][i])) / 100)  # 票面利率
         m["base_rate"] = None
         m["rate_spread"] = None
-        m["inst_freq"] = int(data[8][i])  # 年付息次数
+        if m["cp_type"] == "Coupon_Bear":
+            m["inst_freq"] = int(data[8][i])  # 年付息次数
+        elif m["cp_type"] == "One_Time":
+            m["inst_freq"] = 1
+        elif m["cp_type"] == "Zero_Coupon":
+            m["inst_freq"] = 0
         m["carry_date"] = data[1][i].strftime("%Y-%m-%d")  # 起息日
         m["maturity_date"] = data[2][i].strftime("%Y-%m-%d")  # 到期日
         m["day_count"] = data[6][i]  # 实际基准
@@ -74,8 +83,9 @@ def login():
 
 def get_all_symbols():
     sector_ids = (
-        "a101010101000000",  # 国债银行间
-        "a101010104000000",  # 政策性银行债
+        # "a101010101000000",  # 国债银行间
+        # "a101010104000000",  # 政策性银行债
+        "a101010201000000",  # 上交所国债
     )
     res = []
     names = []
@@ -92,6 +102,10 @@ def get_all_symbols():
 if __name__ == "__main__":
     login()
     # symbols = ["220003.IB", "220021.IB", "220006.IB", "220010.IB"]
-    symbols = ["240006.IB"]
+    # symbols = ["240006.IB"]
 
-    fetch_symbols(symbols, save=False)
+    # symbols = ["019733.SH"]
+    # symbols = ["020647.SH"]
+    symbols = get_all_symbols()
+
+    fetch_symbols(symbols, save=True, skip=False)

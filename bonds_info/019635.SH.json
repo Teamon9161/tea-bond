@@ -1,0 +1,15 @@
+{
+    "bond_code": "019635.SH",
+    "mkt": "SH",
+    "abbr": "20特国01",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0241,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 1,
+    "carry_date": "2020-06-19",
+    "maturity_date": "2025-06-19",
+    "day_count": "A/365F"
+}

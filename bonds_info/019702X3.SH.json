@@ -1,0 +1,15 @@
+{
+    "bond_code": "019702X3.SH",
+    "mkt": "SH",
+    "abbr": "23国债09(续3)",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0319,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2023-04-15",
+    "maturity_date": "2053-04-15",
+    "day_count": "A/365F"
+}

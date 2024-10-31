@@ -1,0 +1,15 @@
+{
+    "bond_code": "019541.SH",
+    "mkt": "SH",
+    "abbr": "16国债13",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.037,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2016-05-23",
+    "maturity_date": "2066-05-23",
+    "day_count": "A/365F"
+}

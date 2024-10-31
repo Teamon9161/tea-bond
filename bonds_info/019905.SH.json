@@ -1,0 +1,15 @@
+{
+    "bond_code": "019905.SH",
+    "mkt": "SH",
+    "abbr": "09国债05",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0402,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2009-04-09",
+    "maturity_date": "2039-04-09",
+    "day_count": "A/365F"
+}

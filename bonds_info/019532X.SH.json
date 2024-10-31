@@ -1,0 +1,15 @@
+{
+    "bond_code": "019532X.SH",
+    "mkt": "SH",
+    "abbr": "16国债04(续发)",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0285,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2016-01-28",
+    "maturity_date": "2026-01-28",
+    "day_count": "A/365F"
+}

@@ -1,0 +1,15 @@
+{
+    "bond_code": "019508.SH",
+    "mkt": "SH",
+    "abbr": "15国债08",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0409,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2015-04-27",
+    "maturity_date": "2035-04-27",
+    "day_count": "A/365F"
+}

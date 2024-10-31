@@ -1,0 +1,15 @@
+{
+    "bond_code": "019429.SH",
+    "mkt": "SH",
+    "abbr": "14国债29",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0377,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2014-12-18",
+    "maturity_date": "2024-12-18",
+    "day_count": "A/365F"
+}

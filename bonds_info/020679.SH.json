@@ -1,0 +1,15 @@
+{
+    "bond_code": "020679.SH",
+    "mkt": "SH",
+    "abbr": "24贴债58",
+    "par_value": 100.0,
+    "cp_type": "Zero_Coupon",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.012352,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 0,
+    "carry_date": "2024-09-30",
+    "maturity_date": "2024-12-30",
+    "day_count": "A/365F"
+}

@@ -1,0 +1,15 @@
+{
+    "bond_code": "019112.SH",
+    "mkt": "SH",
+    "abbr": "11国债12",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0448,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2011-05-26",
+    "maturity_date": "2061-05-26",
+    "day_count": "A/365F"
+}

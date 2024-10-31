@@ -1,0 +1,15 @@
+{
+    "bond_code": "019920.SH",
+    "mkt": "SH",
+    "abbr": "09国债20",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.04,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2009-08-27",
+    "maturity_date": "2029-08-27",
+    "day_count": "A/365F"
+}

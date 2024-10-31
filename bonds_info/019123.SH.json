@@ -1,0 +1,15 @@
+{
+    "bond_code": "019123.SH",
+    "mkt": "SH",
+    "abbr": "11国债23",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0433,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2011-11-10",
+    "maturity_date": "2061-11-10",
+    "day_count": "A/365F"
+}

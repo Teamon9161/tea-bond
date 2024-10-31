@@ -1,0 +1,15 @@
+{
+    "bond_code": "019735X.SH",
+    "mkt": "SH",
+    "abbr": "24国债04(续发)",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0235,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2024-02-25",
+    "maturity_date": "2034-02-25",
+    "day_count": "A/365F"
+}

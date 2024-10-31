@@ -1,0 +1,15 @@
+{
+    "bond_code": "019609X.SH",
+    "mkt": "SH",
+    "abbr": "18国债27(续发)",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0325,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2018-11-22",
+    "maturity_date": "2028-11-22",
+    "day_count": "A/365F"
+}

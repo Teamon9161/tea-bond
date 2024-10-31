@@ -1,0 +1,15 @@
+{
+    "bond_code": "019003.SH",
+    "mkt": "SH",
+    "abbr": "10国债03",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0408,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2010-03-01",
+    "maturity_date": "2040-03-01",
+    "day_count": "A/365F"
+}

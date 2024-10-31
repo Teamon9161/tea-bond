@@ -1,0 +1,15 @@
+{
+    "bond_code": "010609.SH",
+    "mkt": "SH",
+    "abbr": "06国债(9)",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.037,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2006-06-26",
+    "maturity_date": "2026-06-26",
+    "day_count": "A/365F"
+}

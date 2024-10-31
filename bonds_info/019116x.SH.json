@@ -1,0 +1,15 @@
+{
+    "bond_code": "019116x.SH",
+    "mkt": "SH",
+    "abbr": "11国债16(续发)",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.045,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2011-06-23",
+    "maturity_date": "2041-06-23",
+    "day_count": "A/365F"
+}

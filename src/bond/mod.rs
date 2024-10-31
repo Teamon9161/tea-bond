@@ -30,6 +30,7 @@ pub struct Bond {
     pub maturity_date: NaiveDate, // 到期日
     pub day_count: BondDayCount,     // 计息基准, 如A/365F
 }
+
 impl Bond {
     #[inline]
     /// 债券代码，不包含交易所后缀

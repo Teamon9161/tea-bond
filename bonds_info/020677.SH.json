@@ -1,0 +1,15 @@
+{
+    "bond_code": "020677.SH",
+    "mkt": "SH",
+    "abbr": "24贴债56",
+    "par_value": 100.0,
+    "cp_type": "Zero_Coupon",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.013408,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 0,
+    "carry_date": "2024-09-23",
+    "maturity_date": "2025-03-24",
+    "day_count": "A/365F"
+}
