@@ -1,0 +1,15 @@
+{
+    "bond_code": "019318.SH",
+    "mkt": "SH",
+    "abbr": "13国债18",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0408,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 2,
+    "carry_date": "2013-08-22",
+    "maturity_date": "2023-08-22",
+    "day_count": "A/365F"
+}

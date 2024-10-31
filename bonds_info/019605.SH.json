@@ -1,0 +1,15 @@
+{
+    "bond_code": "019605.SH",
+    "mkt": "SH",
+    "abbr": "18国债23",
+    "par_value": 100.0,
+    "cp_type": "Coupon_Bear",
+    "interest_type": "Fixed",
+    "cp_rate_1st": 0.0329,
+    "base_rate": null,
+    "rate_spread": null,
+    "inst_freq": 1,
+    "carry_date": "2018-10-18",
+    "maturity_date": "2023-10-18",
+    "day_count": "A/365F"
+}
