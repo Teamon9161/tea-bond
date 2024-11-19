@@ -12,7 +12,7 @@ use chrono::{Datelike, Duration, Months, NaiveDate};
 use impl_traits::str_to_date;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Bond {
     pub bond_code: String,           // 债券代码
     pub mkt: Market,                 // 市场

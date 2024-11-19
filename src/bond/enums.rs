@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq, Clone, Copy)]
 pub enum CouponType {
     /// 附息债券
     #[serde(alias = "Coupon_Bear")]
@@ -14,7 +14,7 @@ pub enum CouponType {
     OneTime,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq, Clone, Copy)]
 pub enum InterestType {
     /// 固定利率
     Fixed,
@@ -27,7 +27,7 @@ pub enum InterestType {
     Zero,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq, Clone, Copy)]
 pub enum Market {
     /// 银行间
     #[default]
@@ -42,7 +42,7 @@ pub enum Market {
     SZ,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq, Clone, Copy)]
 /// 计息基准
 pub enum BondDayCount {
     // 实际天数/实际天数
