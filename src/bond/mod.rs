@@ -43,6 +43,7 @@ impl Bond {
     }
 
     #[inline]
+    /// 是否为零息债券
     pub fn is_zero_coupon(&self) -> bool {
         self.cp_type == CouponType::ZeroCoupon
     }
@@ -68,7 +69,9 @@ impl Bond {
     }
 
     #[inline]
-    /// 获取区间付息
+    /// 获取区间付息（单个付息周期的利息金额）
+    ///
+    /// 区间付息 = 票面利率 * 面值 / 年付息次数
     pub fn get_coupon(&self) -> f64 {
         self.cp_rate_1st * self.par_value / self.inst_freq as f64
     }
