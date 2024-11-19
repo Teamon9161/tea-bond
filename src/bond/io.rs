@@ -27,6 +27,7 @@ impl Bond {
             code.into()
         };
         let bond = if let Some(path) = path {
+            let path = PathBuf::from(path).join(format!("{}.json", code));
             let file = File::open(path)?;
             serde_json::from_reader(BufReader::new(file))?
         } else {
