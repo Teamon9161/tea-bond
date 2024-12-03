@@ -43,6 +43,35 @@ pub struct TfEvaluator {
 
 impl TfEvaluator {
     #[inline]
+    pub fn new(date: NaiveDate, future: FuturePrice, bond: BondYtm, capital_rate: f64) -> Self {
+        Self {
+            date,
+            future,
+            bond,
+            capital_rate,
+            ..Default::default()
+        }
+    }
+
+    #[inline]
+    pub fn new_with_reinvest_rate(
+        date: NaiveDate,
+        future: FuturePrice,
+        bond: BondYtm,
+        capital_rate: f64,
+        reinvest_rate: f64,
+    ) -> Self {
+        Self {
+            date,
+            future,
+            bond,
+            capital_rate,
+            reinvest_rate: Some(reinvest_rate),
+            ..Default::default()
+        }
+    }
+
+    #[inline]
     /// 判断债券是否是期货的可交割券
     pub fn is_deliverable(&self) -> Result<bool> {
         self.future.future.is_deliverable(
