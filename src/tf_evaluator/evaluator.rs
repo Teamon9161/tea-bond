@@ -43,6 +43,7 @@ pub struct TfEvaluator {
 
 impl TfEvaluator {
     #[inline]
+    /// 判断债券是否是期货的可交割券
     pub fn is_deliverable(&self) -> Result<bool> {
         self.future.future.is_deliverable(
             self.bond.bond.carry_date,
