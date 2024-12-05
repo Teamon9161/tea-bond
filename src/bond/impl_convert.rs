@@ -82,11 +82,11 @@ impl TryFrom<&PathBuf> for Bond {
     }
 }
 
-impl<S: TryInto<Bond, Error = Error>> TryFrom<(S, f64)> for BondYtm {
-    type Error = Error;
+impl<S: TryInto<Bond>> TryFrom<(S, f64)> for BondYtm {
+    type Error = S::Error;
 
     #[inline]
-    fn try_from(t: (S, f64)) -> Result<Self> {
+    fn try_from(t: (S, f64)) -> core::result::Result<Self, Self::Error> {
         Ok(Self {
             bond: Arc::new(t.0.try_into()?),
             ytm: t.1,

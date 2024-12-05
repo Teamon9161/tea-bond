@@ -89,20 +89,11 @@ mod tests {
             }
         "#;
         let bond: Bond = serde_json::from_str(bond_str).unwrap();
-        let future = Future::new("T2403");
-        let future_price = FuturePrice {
-            future: future.into(),
-            price: 105.5,
-        };
-        let bond_ytm = BondYtm {
-            bond: bond.into(),
-            ytm: 2.67 / 100.,
-        };
         get_evaluator().calc_all().unwrap().update_with_new_info(
             NaiveDate::from_ymd_opt(2024, 2, 20).unwrap(),
-            bond_ytm,
-            future_price,
-            1.9 / 100.,
+            ("T2403", 105.5),
+            (bond, 0.0267),
+            0.019,
             None,
         )
     }
@@ -135,17 +126,12 @@ mod tests {
             .calc_all()
             .unwrap();
         let bond_ytm = evaluator.bond.clone();
-        let future = Future::new("T2406");
-        let future_price = FuturePrice {
-            future: future.into(),
-            price: 103.58,
-        };
         let evaluator = evaluator
             .update_with_new_info(
                 NaiveDate::from_ymd_opt(2024, 2, 20).unwrap(),
+                ("T2406", 103.58),
                 bond_ytm,
-                future_price,
-                1.9 / 100.,
+                0.019,
                 None,
             )
             .calc_all()
@@ -172,21 +158,13 @@ mod tests {
         let evaluator = get_evaluator_without_cp_before_deliver_date()
             .calc_all()
             .unwrap();
-        let bond_ytm = BondYtm {
-            bond: evaluator.bond.bond.clone(),
-            ytm: 2.26 / 100.,
-        };
-        let future = Future::new("T2412");
-        let future_price = FuturePrice {
-            future: future.into(),
-            price: 104.745,
-        };
+        let bond = evaluator.bond.bond.clone();
         let evaluator = evaluator
             .update_with_new_info(
                 NaiveDate::from_ymd_opt(2024, 4, 23).unwrap(),
-                bond_ytm,
-                future_price,
-                1.9 / 100.,
+                ("T2412", 104.745),
+                (bond, 0.0226),
+                0.019,
                 None,
             )
             .calc_all()
@@ -224,19 +202,11 @@ mod tests {
         let mut evaluator = TfEvaluator::default();
         for ((code, future), expect_cf) in bond_vec.iter().zip(future_vec.iter()).zip(cf_vec.iter())
         {
-            let bond = Bond::read_json(&format!("{}.IB", code), None).unwrap();
-            let future = Future::new(future);
             evaluator = evaluator
                 .update_with_new_info(
                     NaiveDate::from_ymd_opt(2024, 9, 4).unwrap(),
-                    BondYtm {
-                        bond: bond.into(),
-                        ytm: f64::NAN,
-                    },
-                    FuturePrice {
-                        future: future.into(),
-                        price: f64::NAN,
-                    },
+                    (*future, f64::NAN),
+                    (format!("{}.IB", code), f64::NAN),
                     f64::NAN,
                     None,
                 )

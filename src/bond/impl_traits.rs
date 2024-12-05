@@ -18,8 +18,8 @@ impl Default for Bond {
             base_rate: None,
             rate_spread: None,
             inst_freq: 1,
-            carry_date: NaiveDate::from_ymd_opt(2019, 6, 15).unwrap(),
-            maturity_date: NaiveDate::from_ymd_opt(2024, 6, 15).unwrap(),
+            carry_date: NaiveDate::default(),
+            maturity_date: NaiveDate::default(),
             day_count: BondDayCount::default(),
         }
     }

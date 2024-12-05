@@ -1,4 +1,7 @@
+use std::fmt::Debug;
+
 use crate::{BondYtm, FuturePrice, TfEvaluator};
+// use anyhow::Error;
 use chrono::NaiveDate;
 
 impl TfEvaluator {
@@ -6,11 +9,36 @@ impl TfEvaluator {
     ///
     /// 此函数会根据输入的新信息更新评估器的各个字段，
     /// 并根据变化情况决定是否保留原有的计算结果。
-    pub fn update_with_new_info(
+    #[inline]
+    pub fn update_with_new_info<B: TryInto<BondYtm>>(
         self,
         date: NaiveDate,
-        bond: BondYtm,
+        future: impl Into<FuturePrice>,
+        bond: B,
+        capital_rate: f64,
+        reinvest_rate: Option<f64>,
+    ) -> Self
+    where
+        B::Error: Debug,
+    {
+        self.update_with_new_info_impl(
+            date,
+            future.into(),
+            bond.try_into().unwrap(),
+            capital_rate,
+            reinvest_rate,
+        )
+    }
+
+    /// 根据新的日期、债券和期货信息更新评估器
+    ///
+    /// 此函数会根据输入的新信息更新评估器的各个字段，
+    /// 并根据变化情况决定是否保留原有的计算结果。
+    fn update_with_new_info_impl(
+        self,
+        date: NaiveDate,
         future: FuturePrice,
+        bond: BondYtm,
         capital_rate: f64,
         reinvest_rate: Option<f64>,
     ) -> Self {

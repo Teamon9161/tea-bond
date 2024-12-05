@@ -15,7 +15,7 @@
 ### <b>隐含回购利率（IRR）:</b>
 - 如果交割日前没有利息支付，计算公式如下
 <center>
-<img src="./doc/irr3.jpg"/>
+<img src="./doc/irr3.JPG"/>
 </center>
 where:  
 
@@ -28,7 +28,7 @@ P——债券在交易日的净价；
 
 - 如果交割日前有利息支付
 <center>
-<img src="./doc/irr1.jpg"/>
+<img src="./doc/irr1.JPG"/>
 </center>
 
 where:  
@@ -45,7 +45,7 @@ reinv——再投资年化收益率。
 其中reinv为IRR时
 
 <center>
-<img src="./doc/irr2.jpg"/>
+<img src="./doc/irr2.JPG"/>
 </center>
 
 ### <b>Reference:</b>
