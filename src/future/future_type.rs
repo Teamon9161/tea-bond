@@ -34,10 +34,10 @@ impl FutureType {
         match self {
             // 2年期国债期货
             // 发行期限不高于5年，合约到期月份首日剩余期限为1.5-2.25年的记账式附息国债
-            FutureType::TS => issue_year <= 5 && remain_year >= 1.5 && remain_year <= 2.25,
+            FutureType::TS => issue_year <= 5 && (1.5..=2.25).contains(&remain_year),
             // 5年期国债期货
             // 发行期限不高于7年、合约到期月份首日剩余期限为4-5.25年的记账式附息国债
-            FutureType::TF => issue_year <= 7 && remain_year >= 4.0 && remain_year <= 5.25,
+            FutureType::TF => issue_year <= 7 && (4.0..=5.25).contains(&remain_year),
             // 10年期国债期货
             // 发行期限不高于10年、合约到期月份首日剩余期限不低于6.5年的记账式附息国债
             FutureType::T => issue_year <= 10 && remain_year >= 6.5,

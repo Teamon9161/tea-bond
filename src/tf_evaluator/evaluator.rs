@@ -4,7 +4,7 @@ use crate::{
     future::{calc_cf, FuturePrice},
     utils::month_delta,
 };
-use anyhow::{ensure, Error, Result};
+use anyhow::{ensure, Result};
 use chrono::NaiveDate;
 
 #[derive(Clone, smart_default::SmartDefault)]

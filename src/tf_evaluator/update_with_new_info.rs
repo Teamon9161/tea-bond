@@ -66,21 +66,21 @@ impl TfEvaluator {
         };
 
         // 如果债券、日期和债券ytm不变，则全价不变
-        let dirty_price = if &self.bond == &bond && !date_chg {
+        let dirty_price = if self.bond == bond && !date_chg {
             self.dirty_price
         } else {
             None
         };
 
         // 如果债券、日期、债券ytm不变，则净价不变
-        let clean_price = if &self.bond == &bond && !date_chg {
+        let clean_price = if self.bond == bond && !date_chg {
             self.clean_price
         } else {
             None
         };
 
         // 如果债券、日期和债券ytm不变，则久期不变
-        let duration = if &self.bond == &bond && !date_chg {
+        let duration = if self.bond == bond && !date_chg {
             self.duration
         } else {
             None
