@@ -1,5 +1,6 @@
 mod future_price;
 mod future_type;
+mod impls;
 
 pub use future_price::FuturePrice;
 pub use future_type::FutureType;

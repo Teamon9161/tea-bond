@@ -18,6 +18,14 @@ impl Default for FuturePrice {
 
 impl FuturePrice {
     #[inline]
+    pub fn new(future: impl Into<Future>, price: f64) -> Self {
+        FuturePrice {
+            future: Arc::new(future.into()),
+            price,
+        }
+    }
+
+    #[inline]
     pub fn with_price(self, price: f64) -> Self {
         FuturePrice { price, ..self }
     }

@@ -4,7 +4,7 @@ use crate::{
     future::{calc_cf, FuturePrice},
     utils::month_delta,
 };
-use anyhow::{ensure, Result};
+use anyhow::{ensure, Error, Result};
 use chrono::NaiveDate;
 
 #[derive(Clone, smart_default::SmartDefault)]
@@ -43,11 +43,16 @@ pub struct TfEvaluator {
 
 impl TfEvaluator {
     #[inline]
-    pub fn new(date: NaiveDate, future: FuturePrice, bond: BondYtm, capital_rate: f64) -> Self {
+    pub fn new(
+        date: NaiveDate,
+        future: impl Into<FuturePrice>,
+        bond: impl Into<BondYtm>,
+        capital_rate: f64,
+    ) -> Self {
         Self {
             date,
-            future,
-            bond,
+            future: future.into(),
+            bond: bond.into(),
             capital_rate,
             ..Default::default()
         }
@@ -56,15 +61,15 @@ impl TfEvaluator {
     #[inline]
     pub fn new_with_reinvest_rate(
         date: NaiveDate,
-        future: FuturePrice,
-        bond: BondYtm,
+        future: impl Into<FuturePrice>,
+        bond: impl Into<BondYtm>,
         capital_rate: f64,
         reinvest_rate: f64,
     ) -> Self {
         Self {
             date,
-            future,
-            bond,
+            future: future.into(),
+            bond: bond.into(),
             capital_rate,
             reinvest_rate: Some(reinvest_rate),
             ..Default::default()
