@@ -86,6 +86,8 @@ def fetch_symbols(
 
 
 def login():
+    if w.isConnected():
+        return
     login_res = w.start(waitTime=8)
     if login_res.ErrorCode != 0:
         msg = f"Failed to login to Wind: {login_res.ErrorMsg}"
