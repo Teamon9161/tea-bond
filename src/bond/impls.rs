@@ -14,12 +14,21 @@ impl TryFrom<&str> for Bond {
     }
 }
 
-impl TryFrom<String> for Bond {
+impl TryFrom<usize> for Bond {
     type Error = Error;
 
     #[inline]
-    fn try_from(s: String) -> Result<Self> {
-        Self::read_json(s, None)
+    fn try_from(s: usize) -> Result<Self> {
+        s.to_string().try_into()
+    }
+}
+
+impl TryFrom<i32> for Bond {
+    type Error = Error;
+
+    #[inline]
+    fn try_from(s: i32) -> Result<Self> {
+        s.to_string().try_into()
     }
 }
 
@@ -28,7 +37,16 @@ impl TryFrom<&String> for Bond {
 
     #[inline]
     fn try_from(s: &String) -> Result<Self> {
-        Self::read_json(s, None)
+        s.as_str().try_into()
+    }
+}
+
+impl TryFrom<String> for Bond {
+    type Error = Error;
+
+    #[inline]
+    fn try_from(s: String) -> Result<Self> {
+        s.as_str().try_into()
     }
 }
 
@@ -37,7 +55,7 @@ impl TryFrom<Cow<'_, str>> for Bond {
 
     #[inline]
     fn try_from(s: Cow<'_, str>) -> Result<Self> {
-        Self::read_json(s, None)
+        s.as_ref().try_into()
     }
 }
 
