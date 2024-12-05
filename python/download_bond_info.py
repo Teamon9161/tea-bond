@@ -7,8 +7,8 @@ from pathlib import Path
 
 from WindPy import w
 
-save_folder = Path("bonds_info")
-save_folder.mkdir(exist_ok=True)
+default_save_folder = Path("bonds_info")
+default_save_folder.mkdir(exist_ok=True)
 
 
 def save_json(path: Path | str, data: dict) -> None:
@@ -40,7 +40,17 @@ def get_payment_type(typ: str):
         raise ValueError(msg)
 
 
-def fetch_symbols(symbols: list[str], *, save: bool = True, skip: bool = True):
+def fetch_symbols(
+    symbols: list[str],
+    *,
+    save: bool = True,
+    skip: bool = True,
+    save_folder: Path | str | None = None,
+):
+    if save_folder is None:
+        save_folder = default_save_folder
+    if isinstance(save_folder, str):
+        save_folder = Path(save_folder)
     if skip:
         symbols = [s for s in symbols if not (save_folder / f"{s}.json").exists()]
     data = w.wss(
@@ -106,7 +116,8 @@ if __name__ == "__main__":
 
     # symbols = ["019733.SH"]
     # symbols = ["020647.SH"]
-    symbols = ["019727.SH"]
+    # symbols = ["019727.SH"]
+    symbols = ["2400006.IB"]
     # symbols = get_all_symbols()
 
-    fetch_symbols(symbols, save=True, skip=True)
+    fetch_symbols(symbols, save=0, skip=True)
