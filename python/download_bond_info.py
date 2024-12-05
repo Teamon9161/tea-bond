@@ -86,7 +86,7 @@ def fetch_symbols(
 
 
 def login():
-    if w.isConnected():
+    if w.isconnected():
         return
     login_res = w.start(waitTime=8)
     if login_res.ErrorCode != 0:
