@@ -8,7 +8,8 @@ from pathlib import Path
 from WindPy import w
 
 default_save_folder = Path("bonds_info")
-default_save_folder.mkdir(exist_ok=True)
+if not default_save_folder.exists():
+    default_save_folder.mkdir()
 
 
 def save_json(path: Path | str, data: dict) -> None:
