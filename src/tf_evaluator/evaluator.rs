@@ -383,6 +383,7 @@ impl TfEvaluator {
     pub fn with_irr(self) -> Result<Self> {
         if self.irr.is_none() {
             let mut out = self
+                .with_dirty_price()?
                 .with_future_dirty_price()?
                 .with_remain_days_to_deliver()?
                 .with_remain_cp_to_deliver()?;
