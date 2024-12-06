@@ -14,6 +14,7 @@ const CFFEX_DEFAULT_CP_RATE: f64 = 0.03;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Future {
     pub code: Arc<str>,
+    pub market: Option<Arc<str>>,
 }
 
 impl Default for Future {
@@ -21,6 +22,7 @@ impl Default for Future {
     fn default() -> Self {
         Self {
             code: Arc::from("T2412"),
+            market: None,
         }
     }
 }
@@ -28,8 +30,18 @@ impl Default for Future {
 impl Future {
     #[inline]
     pub fn new(code: impl AsRef<str>) -> Self {
-        Self {
-            code: Arc::from(code.as_ref()),
+        let code = code.as_ref();
+        if code.contains('.') {
+            let (market, code) = code.split_once('.').unwrap();
+            Self {
+                code: Arc::from(code),
+                market: Some(Arc::from(market)),
+            }
+        } else {
+            Self {
+                code: Arc::from(code),
+                market: None,
+            }
         }
     }
 
