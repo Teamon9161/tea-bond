@@ -1,0 +1,27 @@
+[package]
+name = "pybond"
+version = "0.2.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "pybond"
+crate-type = ["cdylib"]
+
+[features]
+default = []
+numpy = ["dep:numpy", "tevec/ndarray"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = [
+    "chrono",
+    "extension-module",
+    "abi3-py38",
+    # "experimental-inspect",
+    "multiple-pymethods",
+] }
+tea-bond = { git = "https://github.com/teamon9161/tea-bond.git", branch = "master" }
+chrono = "0.4"
+numpy = { version = "0.23", optional = true }
+tevec = { version = "0.4" }
+# ndarray = { version = "0.16", optional = true }

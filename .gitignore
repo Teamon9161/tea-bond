@@ -1,1 +1,5 @@
 /target
+
+data/
+bonds_info/
+*.pyd
