@@ -33,11 +33,11 @@ impl Bond {
             serde_json::from_reader(BufReader::new(file))?
         } else {
             let path = if let Ok(path) = std::env::var("BONDS_INFO_PATH") {
-                PathBuf::from(path)
+                PathBuf::from(path).join(format!("{}.json", code))
             } else {
-                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!("bonds_info/{}.json", code))
             };
-            let file = File::open(path.join(format!("bonds_info/{}.json", code)))?;
+            let file = File::open(path)?;
             serde_json::from_reader(BufReader::new(file))?
         };
         Ok(bond)
