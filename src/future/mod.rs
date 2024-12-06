@@ -31,8 +31,7 @@ impl Future {
     #[inline]
     pub fn new(code: impl AsRef<str>) -> Self {
         let code = code.as_ref();
-        if code.contains('.') {
-            let (market, code) = code.split_once('.').unwrap();
+        if let Some((code, market)) = code.split_once('.') {
             Self {
                 code: Arc::from(code),
                 market: Some(Arc::from(market)),
