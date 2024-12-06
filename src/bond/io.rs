@@ -32,7 +32,7 @@ impl Bond {
             let file = File::open(path)?;
             serde_json::from_reader(BufReader::new(file))?
         } else {
-            let path = if let Ok(path) = std::env::var("BOND_INFO_PATH") {
+            let path = if let Ok(path) = std::env::var("BONDS_INFO_PATH") {
                 PathBuf::from(path)
             } else {
                 PathBuf::from(env!("CARGO_MANIFEST_DIR"))
