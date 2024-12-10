@@ -20,7 +20,8 @@ pyo3 = { version = "0.23", features = [
     # "experimental-inspect",
     "multiple-pymethods",
 ] }
-tea-bond = { git = "https://github.com/teamon9161/tea-bond.git", branch = "master" }
+#tea-bond = { git = "https://github.com/teamon9161/tea-bond.git", branch = "master" }
+tea-bond = { path = ".." }
 chrono = "0.4"
 numpy = { version = "0.23", optional = true }
 tevec = { version = "0.4" }

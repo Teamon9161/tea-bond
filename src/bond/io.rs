@@ -1,5 +1,5 @@
 use super::Bond;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use std::{
     fs::File,
     io::BufReader,
@@ -29,7 +29,6 @@ impl Bond {
         };
         let path = if let Some(path) = path {
             PathBuf::from(path).join(format!("{}.json", code))
-
         } else {
             if let Ok(path) = std::env::var("BONDS_INFO_PATH") {
                 PathBuf::from(path).join(format!("{}.json", code))
@@ -37,7 +36,8 @@ impl Bond {
                 PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!("bonds_info/{}.json", code))
             }
         };
-        let file = File::open(&path).map_err(|_| anyhow!("Read bond {} error: Can not open {:?}", code, &path))?;
+        let file = File::open(&path)
+            .map_err(|_| anyhow!("Read bond {} error: Can not open {:?}", code, &path))?;
         let bond = serde_json::from_reader(BufReader::new(file))?;
         Ok(bond)
     }
