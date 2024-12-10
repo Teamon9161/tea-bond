@@ -1,6 +1,10 @@
-from pybond import Future, TfEvaluator
-
-# bond = Bond(240012)
+from pybond import Bond, TfEvaluator
+try:
+    bond = Bond(240012, "C://code")
+except ValueError as e:
+    print(type(e))
+    print(str(e))
+    print(e.args)
 
 te = TfEvaluator(
     "T2412.CFE", 240013, "2024-11-19", 106.675, 0.02085, capital_rate=0.018

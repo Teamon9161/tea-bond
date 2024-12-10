@@ -24,15 +24,18 @@ class Bond(_BondRS):
         else:
             try:
                 cls = super().__new__(cls, code, path)
-            except ValueError as _e:
-                from .download import fetch_symbols, login
-
-                if "." not in code:
-                    code = code + ".IB"
-                print("Downloading bond info for ", code)
-                login()
-                fetch_symbols([code], save=True, save_folder=bonds_info_path)
-                cls = super().__new__(cls, code, bonds_info_path)
+            except Exception as e:
+                print(type(e))
+                print(str(e))
+                print(e.args)
+                # from .download import fetch_symbols, login
+                #
+                # if "." not in code:
+                #     code = code + ".IB"
+                # print("Downloading bond info for ", code)
+                # login()
+                # fetch_symbols([code], save=True, save_folder=bonds_info_path)
+                # cls = super().__new__(cls, code, bonds_info_path)
             return cls
 
 

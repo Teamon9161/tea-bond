@@ -533,6 +533,13 @@ impl PyTfEvaluator {
             Ok(self.0.future_ytm.unwrap())
         }
     }
+
+    /// Sets the conversion factor
+    #[setter]
+    fn set_cf(&mut self, cf: f64) -> PyResult<()> {
+        self.0.cf = Some(cf);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
