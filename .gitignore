@@ -3,3 +3,4 @@
 data/
 bonds_info/
 *.pyd
+.idea/
