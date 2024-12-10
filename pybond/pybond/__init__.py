@@ -23,7 +23,7 @@ class Bond(_BondRS):
         code = str(code)
         path = bonds_info_path if path is None else path
         try:
-            cls = super().__new__(cls, code, bonds_info_path)
+            cls = super().__new__(cls, code, path)
         except ValueError as e:
             if "Read bond" in e.args[0]:
                 from .download import fetch_symbols, login
@@ -32,8 +32,8 @@ class Bond(_BondRS):
                     code = code + ".IB"
                 print("Downloading bond info for ", code)
                 login()
-                fetch_symbols([code], save=True, save_folder=bonds_info_path)
-                cls = super().__new__(cls, code, bonds_info_path)
+                fetch_symbols([code], save=True, save_folder=path)
+                cls = super().__new__(cls, code, path)
         return cls
 
 

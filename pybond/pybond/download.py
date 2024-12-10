@@ -81,6 +81,8 @@ def fetch_symbols(
 
         print(m)
         if save:
+            if not save_folder.exists():
+                save_folder.mkdir(parents=True)
             path = save_folder / f"{symbol}.json"
             save_json(path, m)
 
