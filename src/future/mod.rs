@@ -68,8 +68,16 @@ impl Future {
     /// 获取年月部分
     pub fn last_trading_date(&self) -> Result<NaiveDate> {
         let yymm = self.code.replace(|c: char| c.is_alphabetic(), "");
-        let yyyy = format!("20{}", &yymm[0..2]);
-        let mm = &yymm[2..];
+        let yyyy = if let Some(yy) = yymm.get(0..2) {
+            format!("20{}", yy)
+        } else {
+            bail!("Can not extract year from future code: {}", self.code);
+        };
+        let mm = if let Some(mm) = yymm.get(2..) {
+            mm
+        } else {
+            bail!("Can not extract month from future code: {}", self.code);
+        };
         // 构造交割月的第一天
         let begin_day_of_month = NaiveDate::from_ymd_opt(yyyy.parse()?, mm.parse()?, 1).unwrap();
         // 第2个周五,月初首日的第0-6天不需要计算
