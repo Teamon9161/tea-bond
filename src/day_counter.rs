@@ -1,7 +1,12 @@
 use chrono::{Datelike, NaiveDate};
 
+/// Represents the Actual/Actual day count convention.
 pub const ACTUAL: Actual = Actual {};
+
+/// Represents the Thirty/360 day count convention.
 pub const THIRTY: Thirty = Thirty {};
+
+/// Represents the Business day count convention.
 pub const BUSINESS: Business = Business {};
 
 /// 计算两个日期之间的天数，不同规则有不同实现
@@ -9,20 +14,25 @@ pub trait DayCountRule {
     fn count_days(&self, start: NaiveDate, end: NaiveDate) -> i64;
 }
 
+/// Represents the Actual day count convention.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Actual {}
 
 impl DayCountRule for Actual {
+    /// Calculates the number of days between two dates using the Actual day count convention.
     #[inline]
     fn count_days(&self, start: NaiveDate, end: NaiveDate) -> i64 {
         (end - start).num_days()
     }
 }
 
+/// Represents the Thirty/360 day count convention.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Thirty {}
 
 impl DayCountRule for Thirty {
+    /// Calculates the number of days between two dates using the Thirty/360 day count convention.
+    /// Assumes each month has 30 days and a year has 360 days.
     #[inline]
     fn count_days(&self, start: NaiveDate, end: NaiveDate) -> i64 {
         360 * (end.year() as i64 - start.year() as i64)
@@ -31,10 +41,13 @@ impl DayCountRule for Thirty {
     }
 }
 
+/// Represents the Business day count convention.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Business {}
 
 impl DayCountRule for Business {
+    /// Calculates the number of business days (Monday to Friday) between two dates.
+    /// Excludes weekends (Saturday and Sunday).
     #[inline]
     fn count_days(&self, start: NaiveDate, end: NaiveDate) -> i64 {
         let total_days = (end - start).num_days();

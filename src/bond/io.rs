@@ -16,6 +16,7 @@ impl Bond {
     /// assert_eq!(bond.code(), "240006");
     /// assert_eq!(bond.cp_rate_1st, 0.0228)
     /// ```
+    #[allow(clippy::collapsible_else_if)]
     pub fn read_json(code: impl AsRef<str>, path: Option<&Path>) -> Result<Self> {
         let code = code.as_ref();
         let code: std::sync::Arc<str> = if !code.contains('.') {

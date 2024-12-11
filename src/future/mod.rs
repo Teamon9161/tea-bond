@@ -103,13 +103,7 @@ impl Future {
     pub fn future_type(&self) -> Result<FutureType> {
         let code = self.code.as_ref();
         let typ = code.replace(|c: char| c.is_numeric(), "");
-        match typ.as_str() {
-            "T" => Ok(FutureType::T),
-            "TF" => Ok(FutureType::TF),
-            "TS" => Ok(FutureType::TS),
-            "TL" => Ok(FutureType::TL),
-            _ => bail!("Invalid future type: {}", typ),
-        }
+        typ.parse()
     }
 }
 

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+use anyhow::bail;
 use chrono::{Datelike, NaiveDate};
 
 #[derive(Debug, Copy, Clone)]
@@ -19,6 +21,20 @@ fn remain_year(delivery_date: NaiveDate, maturity_date: NaiveDate) -> f64 {
     let month_diff = maturity_date.month() as i32 - delivery_date.month() as i32;
     let date_diff = maturity_date.day() as i32 - 1; // 规定为于期货到期月首日的差值
     year_diff as f64 + month_diff as f64 / 12.0 + date_diff as f64 / 365.0
+}
+
+impl FromStr for FutureType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "T" => Ok(FutureType::T),
+            "TF" => Ok(FutureType::TF),
+            "TS" => Ok(FutureType::TS),
+            "TL" => Ok(FutureType::TL),
+            _ => bail!("Invalid future type: {}", s),
+        }
+    }
 }
 
 impl FutureType {
