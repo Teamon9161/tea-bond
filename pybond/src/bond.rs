@@ -41,9 +41,14 @@ impl PyBond {
     #[new]
     #[pyo3(signature = (code, path))]
     pub fn new(code: &str, path: Option<PathBuf>) -> PyResult<Self> {
-        Bond::read_json(code, path.as_deref())
-            .map(|bond| bond.into())
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+        use crate::utils::get_bond_from_code;
+        if let Ok(bond) = get_bond_from_code(code, path.as_deref()) {
+            Ok(bond)
+        } else {
+            Bond::read_json(code, path.as_deref())
+                .map(|bond| bond.into())
+                .map_err(|e| PyValueError::new_err(e.to_string()))
+        }
     }
 
     fn __repr__(&self) -> String {

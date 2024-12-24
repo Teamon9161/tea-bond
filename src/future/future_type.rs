@@ -1,6 +1,6 @@
-use std::str::FromStr;
 use anyhow::bail;
 use chrono::{Datelike, NaiveDate};
+use std::str::FromStr;
 
 #[derive(Debug, Copy, Clone)]
 pub enum FutureType {
