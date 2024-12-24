@@ -24,6 +24,12 @@ def save_json(path: Path | str, data: dict) -> None:
 def get_interest_type(typ: str):
     if typ == "固定利率":
         return "Fixed"
+    elif typ == "浮动利率":
+        return "Floating"
+    elif typ == "累进利率":
+        return "Progressive"
+    elif typ == "零息":
+        return "Zero"
     else:
         msg = f"Unknown interest type: {typ}"
         raise ValueError(msg)
@@ -87,12 +93,23 @@ def fetch_symbols(
             save_json(path, m)
 
 
+IS_LOGIN = False
+
+
 def login():
+    global IS_LOGIN
     if w.isconnected():
         return
+    if IS_LOGIN:
+        import time
+
+        time.sleep(0.2)
+        login()
+    IS_LOGIN = True
     login_res = w.start(waitTime=8)
+    IS_LOGIN = False
     if login_res.ErrorCode != 0:
-        msg = f"Failed to login to Wind: {login_res.ErrorMsg}"
+        msg = f"Failed to login to Wind: {login_res.ErrorCode}"
         raise RuntimeError(msg)
 
 

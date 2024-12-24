@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from .download import login as wind_login
 from .pybond import Bond as _BondRS
 from .pybond import Future
 from .pybond import TfEvaluator as _TfEvaluatorRS
@@ -44,4 +45,4 @@ class TfEvaluator(_TfEvaluatorRS):
         return super().__new__(cls, future, bond, *args, **kwargs)
 
 
-__all__ = ["Bond", "Future", "TfEvaluator"]
+__all__ = ["Bond", "Future", "TfEvaluator", "wind_login"]
