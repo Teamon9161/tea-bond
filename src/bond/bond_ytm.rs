@@ -1,17 +1,17 @@
 use super::Bond;
+use super::CachedBond;
 use anyhow::{Error, Result};
-use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BondYtm {
-    pub bond: Arc<Bond>,
+    pub bond: CachedBond,
     pub ytm: f64,
 }
 
 impl Default for BondYtm {
     fn default() -> Self {
         BondYtm {
-            bond: Arc::new(Bond::default()),
+            bond: Bond::default().into(),
             ytm: f64::NAN,
         }
     }
@@ -21,7 +21,7 @@ impl BondYtm {
     #[inline]
     pub fn new(bond: impl Into<Bond>, ytm: f64) -> Self {
         BondYtm {
-            bond: Arc::new(bond.into()),
+            bond: CachedBond::from_bond(bond.into()),
             ytm,
         }
     }

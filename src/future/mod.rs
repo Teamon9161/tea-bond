@@ -5,23 +5,23 @@ mod impls;
 pub use future_price::FuturePrice;
 pub use future_type::FutureType;
 
+use crate::SmallStr;
 use anyhow::{bail, Result};
 use chrono::{Datelike, Duration, NaiveDate, Weekday};
-use std::sync::Arc;
 
 const CFFEX_DEFAULT_CP_RATE: f64 = 0.03;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Future {
-    pub code: Arc<str>,
-    pub market: Option<Arc<str>>,
+    pub code: SmallStr,
+    pub market: Option<SmallStr>,
 }
 
 impl Default for Future {
     #[inline]
     fn default() -> Self {
         Self {
-            code: Arc::from("T2412"),
+            code: "T2412".into(),
             market: None,
         }
     }
@@ -33,12 +33,12 @@ impl Future {
         let code = code.as_ref();
         if let Some((code, market)) = code.split_once('.') {
             Self {
-                code: Arc::from(code),
-                market: Some(Arc::from(market)),
+                code: code.into(),
+                market: Some(market.into()),
             }
         } else {
             Self {
-                code: Arc::from(code),
+                code: code.into(),
                 market: None,
             }
         }
@@ -101,8 +101,7 @@ impl Future {
 
     #[inline]
     pub fn future_type(&self) -> Result<FutureType> {
-        let code = self.code.as_ref();
-        let typ = code.replace(|c: char| c.is_numeric(), "");
+        let typ = self.code.replace(|c: char| c.is_numeric(), "");
         typ.parse()
     }
 }

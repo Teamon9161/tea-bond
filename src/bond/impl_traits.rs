@@ -8,9 +8,9 @@ use serde::{Deserialize, Deserializer};
 impl Default for Bond {
     fn default() -> Self {
         Bond {
-            bond_code: "".to_string(),
+            bond_code: "".into(),
             mkt: Market::default(),
-            abbr: "".to_string(),
+            abbr: "".into(),
             par_value: 100.0,
             cp_type: CouponType::default(),
             interest_type: InterestType::default(),

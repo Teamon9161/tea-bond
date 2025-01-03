@@ -1,4 +1,4 @@
-use std::{ops::Deref, path::PathBuf, sync::Arc};
+use std::{ops::Deref, path::PathBuf};
 
 use crate::utils::{extract_date, extract_date2};
 use chrono::NaiveDate;
@@ -8,12 +8,12 @@ use tea_bond::*;
 
 #[pyclass(name = "Bond", subclass)]
 #[derive(PartialEq, Eq, Clone)]
-pub struct PyBond(pub Arc<Bond>);
+pub struct PyBond(pub CachedBond);
 
 impl From<Bond> for PyBond {
     #[inline]
     fn from(bond: Bond) -> Self {
-        Self(Arc::new(bond))
+        Self(bond.into())
     }
 }
 
@@ -41,14 +41,7 @@ impl PyBond {
     #[new]
     #[pyo3(signature = (code, path))]
     pub fn new(code: &str, path: Option<PathBuf>) -> PyResult<Self> {
-        use crate::utils::get_bond_from_code;
-        if let Ok(bond) = get_bond_from_code(code, path.as_deref()) {
-            Ok(bond)
-        } else {
-            Bond::read_json(code, path.as_deref())
-                .map(|bond| bond.into())
-                .map_err(|e| PyValueError::new_err(e.to_string()))
-        }
+        crate::utils::get_bond_from_code(code, path.as_deref())
     }
 
     fn __repr__(&self) -> String {

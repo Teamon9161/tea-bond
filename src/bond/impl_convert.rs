@@ -1,5 +1,6 @@
-use super::bond_ytm::BondYtm;
 use super::Bond;
+use super::{bond_ytm::BondYtm, CachedBond};
+use crate::SmallStr;
 use anyhow::{Error, Result};
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
@@ -50,6 +51,15 @@ impl TryFrom<String> for Bond {
     }
 }
 
+impl TryFrom<SmallStr> for Bond {
+    type Error = Error;
+
+    #[inline]
+    fn try_from(s: SmallStr) -> Result<Self> {
+        s.as_str().try_into()
+    }
+}
+
 impl TryFrom<Cow<'_, str>> for Bond {
     type Error = Error;
 
@@ -88,7 +98,7 @@ impl<S: TryInto<Bond>> TryFrom<(S, f64)> for BondYtm {
     #[inline]
     fn try_from(t: (S, f64)) -> core::result::Result<Self, Self::Error> {
         Ok(Self {
-            bond: Arc::new(t.0.try_into()?),
+            bond: t.0.try_into()?.into(),
             ytm: t.1,
         })
     }
@@ -99,6 +109,18 @@ impl TryFrom<(Arc<Bond>, f64)> for BondYtm {
 
     #[inline]
     fn try_from(t: (Arc<Bond>, f64)) -> Result<Self> {
+        Ok(Self {
+            bond: t.0.into(),
+            ytm: t.1,
+        })
+    }
+}
+
+impl TryFrom<(CachedBond, f64)> for BondYtm {
+    type Error = Error;
+
+    #[inline]
+    fn try_from(t: (CachedBond, f64)) -> Result<Self> {
         Ok(Self {
             bond: t.0,
             ytm: t.1,

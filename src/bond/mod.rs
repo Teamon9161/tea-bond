@@ -1,13 +1,16 @@
 mod bond_ytm;
+mod cached_bond;
 mod enums;
 mod impl_convert;
 mod impl_traits;
 mod io;
 
 pub use bond_ytm::BondYtm;
+pub use cached_bond::{free_bond_dict, CachedBond};
 pub use enums::{BondDayCount, CouponType, InterestType, Market};
 
 use crate::day_counter::{DayCountRule, ACTUAL};
+use crate::SmallStr;
 use anyhow::{bail, ensure, Result};
 use chrono::{Datelike, Duration, Months, NaiveDate};
 use impl_traits::str_to_date;
@@ -15,9 +18,9 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Bond {
-    pub bond_code: String,           // 债券代码
+    pub bond_code: SmallStr,         // 债券代码
     pub mkt: Market,                 // 市场
-    pub abbr: String,                // 债券简称
+    pub abbr: SmallStr,              // 债券简称
     pub par_value: f64,              // 债券面值
     pub cp_type: CouponType,         // 息票品种
     pub interest_type: InterestType, // 息票利率类型
@@ -41,6 +44,12 @@ impl Bond {
         } else {
             &self.bond_code
         }
+    }
+
+    #[inline]
+    /// 债券代码，包含交易所后缀
+    pub fn bond_code(&self) -> &str {
+        &self.bond_code
     }
 
     #[inline]

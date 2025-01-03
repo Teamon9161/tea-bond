@@ -1542,6 +1542,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "compact_str",
+ "parking_lot",
  "serde",
  "serde_json",
  "smart-default",

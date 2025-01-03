@@ -1,14 +1,13 @@
-use std::{borrow::Cow, path::Path, sync::LazyLock};
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
+use std::{borrow::Cow, path::Path};
 
 use crate::bond::PyBond;
 use crate::future::PyFuture;
 use chrono::NaiveDate;
-use parking_lot::Mutex;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyList, PyTuple};
-use tea_bond::{Bond, Future};
+use tea_bond::{CachedBond, Future};
 
 /// Extract a NaiveDate from a Python object. Accepts either a Python date object or a date string.
 pub fn extract_date(dt: &Bound<'_, PyAny>) -> PyResult<NaiveDate> {
@@ -60,33 +59,11 @@ pub fn get_future(future: &Bound<'_, PyAny>) -> PyResult<PyFuture> {
     }
 }
 
-// dict to cache bonds
-static BOND_DICT: LazyLock<Mutex<HashMap<String, Arc<Bond>>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
-
 /// Helper function to create a PyBond from a bond code string
 pub(crate) fn get_bond_from_code(bond_code: &str, path: Option<&Path>) -> PyResult<PyBond> {
-    {
-        // check if bond is already in BOND_DICT
-        let bond_dict = BOND_DICT.lock();
-        if let Some(bond) = bond_dict.get(bond_code) {
-            return Ok(PyBond(bond.clone()));
-        }
-    }
-    let bond_rs = Bond::read_json(bond_code, path).map_err(|e| {
-        PyValueError::new_err(format!(
-            "Can not read bond {} from default path, {}",
-            bond_code, e
-        ))
-    })?;
-    let bond_rs = Arc::new(bond_rs);
-    {
-        // insert bond to BOND_DICT
-        BOND_DICT
-            .lock()
-            .insert(bond_code.to_string(), bond_rs.clone());
-    }
-    Ok(PyBond(bond_rs))
+    CachedBond::new(bond_code, path)
+        .map(PyBond)
+        .map_err(|e| PyValueError::new_err(e.to_string()))
 }
 
 /// Extract a PyBond from a Python object. Accepts a PyBond object, bond code string, or bond code integer.
