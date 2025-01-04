@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq, Clone, Copy)]
@@ -40,6 +42,21 @@ pub enum Market {
     SZE,
     /// 深交所（同义词）
     SZ,
+}
+
+impl FromStr for Market {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "IB" => Ok(Market::IB),
+            "SSE" => Ok(Market::SSE),
+            "SH" => Ok(Market::SH),
+            "SZE" => Ok(Market::SZE),
+            "SZ" => Ok(Market::SZ),
+            _ => anyhow::bail!("Unknown market: {}", s),
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq, Clone, Copy)]

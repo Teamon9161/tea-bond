@@ -1,10 +1,11 @@
 mod bond_ytm;
 mod cached_bond;
+#[cfg(feature = "download")]
+mod download;
 mod enums;
 mod impl_convert;
 mod impl_traits;
 mod io;
-
 pub use bond_ytm::BondYtm;
 pub use cached_bond::{free_bond_dict, CachedBond};
 pub use enums::{BondDayCount, CouponType, InterestType, Market};
@@ -13,10 +14,10 @@ use crate::day_counter::{DayCountRule, ACTUAL};
 use crate::SmallStr;
 use anyhow::{bail, ensure, Result};
 use chrono::{Datelike, Duration, Months, NaiveDate};
-use impl_traits::str_to_date;
-use serde::Deserialize;
+use impl_traits::{deserialize_date, serialize_date};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Bond {
     pub bond_code: SmallStr,         // 债券代码
     pub mkt: Market,                 // 市场
@@ -28,9 +29,15 @@ pub struct Bond {
     pub base_rate: Option<f64>,      // 基准利率, 浮动付息债券适用
     pub rate_spread: Option<f64>,    // 固定利差, 浮动付息债券适用
     pub inst_freq: i32,              // 年付息次数
-    #[serde(deserialize_with = "str_to_date")]
+    #[serde(
+        deserialize_with = "deserialize_date",
+        serialize_with = "serialize_date"
+    )]
     pub carry_date: NaiveDate, // 起息日
-    #[serde(deserialize_with = "str_to_date")]
+    #[serde(
+        deserialize_with = "deserialize_date",
+        serialize_with = "serialize_date"
+    )]
     pub maturity_date: NaiveDate, // 到期日
     pub day_count: BondDayCount,     // 计息基准, 如A/365F
 }

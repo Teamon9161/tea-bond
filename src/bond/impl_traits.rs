@@ -29,12 +29,23 @@ impl Default for Bond {
 /// 将字符串转换为日期
 ///
 /// 仅用于从json文件反序列化日期
-pub(super) fn str_to_date<'de, D>(deserializer: D) -> std::result::Result<NaiveDate, D::Error>
+pub(super) fn deserialize_date<'de, D>(deserializer: D) -> std::result::Result<NaiveDate, D::Error>
 where
     D: Deserializer<'de>,
 {
     let date_str = String::deserialize(deserializer)?;
     NaiveDate::parse_from_str(&date_str, "%Y-%m-%d").map_err(serde::de::Error::custom)
+}
+
+#[inline]
+pub(super) fn serialize_date<S>(
+    date: &NaiveDate,
+    serializer: S,
+) -> std::result::Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(&date.format("%Y-%m-%d").to_string())
 }
 
 impl Eq for Bond {}

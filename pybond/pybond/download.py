@@ -65,6 +65,7 @@ def fetch_symbols(
         "sec_name,carrydate,maturitydate,interesttype,couponrate,paymenttype,actualbenchmark,coupon,interestfrequency,latestpar",
         f"tradeDate={date.today()}",
     ).Data
+    returns = []
     for i, symbol in enumerate(symbols):
         m = {"bond_code": symbol}
         m["mkt"] = symbol.split(".")[1].upper()
@@ -84,30 +85,31 @@ def fetch_symbols(
         m["carry_date"] = data[1][i].strftime("%Y-%m-%d")  # 起息日
         m["maturity_date"] = data[2][i].strftime("%Y-%m-%d")  # 到期日
         m["day_count"] = data[6][i]  # 实际基准
-
+        returns.append(m)
         print(m)
         if save:
             if not save_folder.exists():
                 save_folder.mkdir(parents=True)
             path = save_folder / f"{symbol}.json"
             save_json(path, m)
+        return returns
 
 
-IS_LOGIN = False
+WAIT_LOGIN = False
 
 
 def login():
-    global IS_LOGIN
+    global WAIT_LOGIN
     if w.isconnected():
         return
-    if IS_LOGIN:
+    if WAIT_LOGIN:
         import time
 
         time.sleep(0.2)
         login()
-    IS_LOGIN = True
+    WAIT_LOGIN = True
     login_res = w.start(waitTime=8)
-    IS_LOGIN = False
+    WAIT_LOGIN = False
     if login_res.ErrorCode != 0:
         msg = f"Failed to login to Wind: {login_res.ErrorCode}"
         raise RuntimeError(msg)

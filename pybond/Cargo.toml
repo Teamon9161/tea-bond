@@ -9,21 +9,23 @@ name = "pybond"
 crate-type = ["cdylib"]
 
 [features]
-default = []
+default = ["download"]
 numpy = ["dep:numpy", "tevec/ndarray"]
+download = ["tea-bond/download"]
 
 [dependencies]
 pyo3 = { version = "0.23", features = [
     "chrono",
     "extension-module",
     "abi3-py38",
+    "anyhow",
     # "experimental-inspect",
     "multiple-pymethods",
 ] }
 #tea-bond = { git = "https://github.com/teamon9161/tea-bond.git", branch = "master" }
 tea-bond = { path = ".." }
-chrono = "0.4"
+chrono = { version = "0.4", default-features = false }
 numpy = { version = "0.23", optional = true }
-tevec = { version = "0.5.0" }
+tevec = { version = "0.5.0", optional = true }
 parking_lot = "0.12"
 # ndarray = { version = "0.16", optional = true }

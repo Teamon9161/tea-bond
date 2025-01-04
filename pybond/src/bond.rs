@@ -2,7 +2,6 @@ use std::{ops::Deref, path::PathBuf};
 
 use crate::utils::{extract_date, extract_date2};
 use chrono::NaiveDate;
-use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use tea_bond::*;
 
@@ -25,6 +24,14 @@ impl Deref for PyBond {
     }
 }
 
+#[cfg(feature = "download")]
+#[pyfunction]
+pub fn download_bond_from_china_money(code: &str) -> PyResult<PyBond> {
+    let rt = tea_bond::export::tokio::runtime::Runtime::new()?;
+    let bond = rt.block_on(async { Bond::download(code).await })?;
+    Ok(bond.into())
+}
+
 #[pymethods]
 impl PyBond {
     /// Create a new Bond instance
@@ -40,8 +47,25 @@ impl PyBond {
     ///     ValueError: If bond data cannot be read or parsed
     #[new]
     #[pyo3(signature = (code, path))]
-    pub fn new(code: &str, path: Option<PathBuf>) -> PyResult<Self> {
+    fn new(code: &str, path: Option<PathBuf>) -> PyResult<Self> {
         crate::utils::get_bond_from_code(code, path.as_deref())
+    }
+
+    /// Save the bond data to a file.
+    ///
+    /// Args:
+    ///     path (Optional[PathBuf]): The path where the bond data will be saved.
+    ///                               If not provided, the default path will be used.
+    ///
+    /// Returns:
+    ///     None
+    ///
+    /// Raises:
+    ///     IOError: If the bond data cannot be saved to the specified path.
+    #[pyo3(signature = (path=None))]
+    fn save(&self, path: Option<PathBuf>) -> PyResult<()> {
+        let path = Bond::get_save_path(self.bond_code(), path.as_deref());
+        self.0.save(path).map_err(Into::into)
     }
 
     fn __repr__(&self) -> String {
@@ -162,17 +186,13 @@ impl PyBond {
     /// 最后一个计息年度的天数
     #[getter]
     pub fn last_cp_year_days(&self) -> PyResult<i64> {
-        self.0
-            .get_last_cp_year_days()
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+        Ok(self.0.get_last_cp_year_days()?)
     }
 
     /// 获取上一付息日和下一付息日
     pub fn nearest_cp_date(&self, date: &Bound<'_, PyAny>) -> PyResult<(NaiveDate, NaiveDate)> {
         let date = extract_date(date)?;
-        self.0
-            .get_nearest_cp_date(date)
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+        Ok(self.0.get_nearest_cp_date(date)?)
     }
 
     /// 剩余的付息次数
@@ -184,9 +204,7 @@ impl PyBond {
     ) -> PyResult<i32> {
         let date = extract_date(date)?;
         let next_cp_date: Option<NaiveDate> = next_cp_date.map(extract_date).transpose()?;
-        self.0
-            .remain_cp_num(date, next_cp_date)
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+        Ok(self.0.remain_cp_num(date, next_cp_date)?)
     }
 
     /// 剩余的付息次数直到指定日期
@@ -200,9 +218,7 @@ impl PyBond {
         let date = extract_date(date)?;
         let until_date = extract_date(until_date)?;
         let next_cp_date: Option<NaiveDate> = next_cp_date.map(extract_date).transpose()?;
-        self.0
-            .remain_cp_num_until(date, until_date, next_cp_date)
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+        Ok(self.0.remain_cp_num_until(date, until_date, next_cp_date)?)
     }
 
     /// 剩余的付息日期列表（不包含指定日期）
@@ -216,9 +232,9 @@ impl PyBond {
         let date = extract_date(date)?;
         let until_date = extract_date(until_date)?;
         let next_cp_date: Option<NaiveDate> = next_cp_date.map(extract_date).transpose()?;
-        self.0
-            .remain_cp_dates_until(date, until_date, next_cp_date)
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+        Ok(self
+            .0
+            .remain_cp_dates_until(date, until_date, next_cp_date)?)
     }
 
     /// 计算应计利息
@@ -232,9 +248,7 @@ impl PyBond {
     ) -> PyResult<f64> {
         let calculating_date = extract_date(calculating_date)?;
         let cp_dates: Option<(NaiveDate, NaiveDate)> = cp_dates.map(extract_date2).transpose()?;
-        self.0
-            .calc_accrued_interest(calculating_date, cp_dates)
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+        Ok(self.0.calc_accrued_interest(calculating_date, cp_dates)?)
     }
 
     /// 通过ytm计算债券全价
@@ -249,9 +263,9 @@ impl PyBond {
         let date = extract_date(date)?;
         let cp_dates: Option<(NaiveDate, NaiveDate)> = cp_dates.map(extract_date2).transpose()?;
         let remain_cp_num: Option<i32> = remain_cp_num.map(|d| d.extract()).transpose()?;
-        self.0
-            .calc_dirty_price_with_ytm(ytm, date, cp_dates, remain_cp_num)
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+        Ok(self
+            .0
+            .calc_dirty_price_with_ytm(ytm, date, cp_dates, remain_cp_num)?)
     }
 
     /// 通过债券全价计算ytm
@@ -266,9 +280,9 @@ impl PyBond {
         let date = extract_date(date)?;
         let cp_dates: Option<(NaiveDate, NaiveDate)> = cp_dates.map(extract_date2).transpose()?;
         let remain_cp_num: Option<i32> = remain_cp_num.map(|d| d.extract()).transpose()?;
-        self.0
-            .calc_ytm_with_price(dirty_price, date, cp_dates, remain_cp_num)
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+        Ok(self
+            .0
+            .calc_ytm_with_price(dirty_price, date, cp_dates, remain_cp_num)?)
     }
 
     /// 计算麦考利久期
@@ -283,9 +297,9 @@ impl PyBond {
         let date = extract_date(date)?;
         let cp_dates: Option<(NaiveDate, NaiveDate)> = cp_dates.map(extract_date2).transpose()?;
         let remain_cp_num: Option<i32> = remain_cp_num.map(|d| d.extract()).transpose()?;
-        self.0
-            .calc_macaulay_duration(ytm, date, cp_dates, remain_cp_num)
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+        Ok(self
+            .0
+            .calc_macaulay_duration(ytm, date, cp_dates, remain_cp_num)?)
     }
 
     /// 计算修正久期
@@ -300,8 +314,6 @@ impl PyBond {
         let date = extract_date(date)?;
         let cp_dates: Option<(NaiveDate, NaiveDate)> = cp_dates.map(extract_date2).transpose()?;
         let remain_cp_num: Option<i32> = remain_cp_num.map(|d| d.extract()).transpose()?;
-        self.0
-            .calc_duration(ytm, date, cp_dates, remain_cp_num)
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+        Ok(self.0.calc_duration(ytm, date, cp_dates, remain_cp_num)?)
     }
 }
