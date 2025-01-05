@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-
-from .download import login as wind_login
+from importlib.util import find_spec
 from .pybond import Bond as _BondRS
-from .pybond import Future, download_bond_from_china_money
+from .pybond import Future, download_bond
 from .pybond import TfEvaluator as _TfEvaluatorRS
+
+WIND_AVAILABLE = find_spec("WindPy") is not None
+if WIND_AVAILABLE:
+    from .download import login as wind_login
 
 if os.environ.get("BONDS_INFO_PATH") is not None:
     bonds_info_environ_flag = True
@@ -20,11 +23,11 @@ if not bonds_info_path.exists():
 
 
 class Bond(_BondRS):
-    def __new__(cls, code: str | int, path: str | None = None):
+    def __new__(cls, code: str | int, path: str | Path | None = None):
         code = str(code)
         if "." not in code:
             code = code + ".IB"
-        path = bonds_info_path if path is None else path
+        path = bonds_info_path if path is None else Path(path)
         if (path / (code + ".json")).exists():
             return super().__new__(cls, code, path)
         else:
@@ -59,10 +62,8 @@ class Bond(_BondRS):
             AssertionError: If the code is not in the correct format or if the source is invalid.
         """
         if source is None:
-            from importlib.util import find_spec
-
             # 优先从wind下载
-            source = "wind" if find_spec("WindPy") is not None else "china_money"
+            source = "wind" if WIND_AVAILABLE else "china_money"
         assert "." in code, "code should be in the format of XXXXXX.YY"
         assert source in ("wind", "china_money")
         if source == "wind":
@@ -74,7 +75,7 @@ class Bond(_BondRS):
         else:
             # let rust side handle the download
             print(f"download {code} from china money")
-            bond = download_bond_from_china_money(code)
+            bond = download_bond(code)
             if save:
                 bond.save(path)
             return bond

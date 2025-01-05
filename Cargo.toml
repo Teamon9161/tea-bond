@@ -6,7 +6,7 @@ exclude = ["pybond/**"]
 
 [features]
 default = ["download"]
-download = ["reqwest", "tokio"]
+download = ["reqwest", "tokio", "rand"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -16,5 +16,9 @@ smart-default = "0.7"
 chrono = "0.4"
 anyhow = "1"
 parking_lot = "0.12"
-reqwest = { version = "0.12", optional = true, features = ["json"] }
+reqwest = { version = "0.12", optional = true, features = [
+    "json",
+    "rustls-tls",
+] }
 tokio = { version = "1", features = ["full"], optional = true }
+rand = { version = "0.8", optional = true }

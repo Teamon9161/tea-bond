@@ -1,15 +1,16 @@
 from datetime import date
+from pathlib import Path
 
 class Bond:
     """A class representing a bond instrument."""
 
-    def __init__(self, code: str | int, path: str = "") -> None:
+    def __init__(self, code: str | int, path: str | Path | None = None) -> None:
         """
         Create a new Bond instance.
 
         Args:
             code: Bond code
-            path: Path to directory containing bond data. Defaults to ""
+            path: Path to directory containing bond data. Defaults to None
 
         Raises:
             ValueError: If bond data cannot be read or parsed

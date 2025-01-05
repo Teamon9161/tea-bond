@@ -11,12 +11,10 @@ impl Bond {
     pub fn get_save_path(code: &str, path: Option<&Path>) -> PathBuf {
         if let Some(path) = path {
             PathBuf::from(path).join(format!("{}.json", code))
+        } else if let Ok(path) = std::env::var("BONDS_INFO_PATH") {
+            PathBuf::from(path).join(format!("{}.json", code))
         } else {
-            if let Ok(path) = std::env::var("BONDS_INFO_PATH") {
-                PathBuf::from(path).join(format!("{}.json", code))
-            } else {
-                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!("bonds_info/{}.json", code))
-            }
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!("bonds_info/{}.json", code))
         }
     }
 
@@ -50,7 +48,7 @@ impl Bond {
                 let rt = tokio::runtime::Runtime::new()?;
                 let bond = rt.block_on(async { Self::download(&code).await })?;
                 bond.save(&path)?;
-                return Ok(bond);
+                Ok(bond)
             }
             #[cfg(not(feature = "download"))]
             bail!("Read bond {} error: Can not open {:?}", code, &path)

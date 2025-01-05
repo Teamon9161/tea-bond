@@ -16,7 +16,7 @@ use tf_evaluator::PyTfEvaluator;
 #[pymodule]
 fn pybond(m: &Bound<'_, PyModule>) -> PyResult<()> {
     #[cfg(feature = "download")]
-    m.add_function(wrap_pyfunction!(bond::download_bond_from_china_money, m)?)?;
+    m.add_function(wrap_pyfunction!(bond::download_bond, m)?)?;
     m.add_class::<PyBond>()?;
     m.add_class::<PyFuture>()?;
     m.add_class::<PyTfEvaluator>()?;

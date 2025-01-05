@@ -26,7 +26,7 @@ impl Deref for PyBond {
 
 #[cfg(feature = "download")]
 #[pyfunction]
-pub fn download_bond_from_china_money(code: &str) -> PyResult<PyBond> {
+pub fn download_bond(code: &str) -> PyResult<PyBond> {
     let rt = tea_bond::export::tokio::runtime::Runtime::new()?;
     let bond = rt.block_on(async { Bond::download(code).await })?;
     Ok(bond.into())

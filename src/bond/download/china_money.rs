@@ -1,13 +1,14 @@
-use super::{Bond, BondDayCount, CouponType, InterestType, Market};
+use crate::bond::{Bond, BondDayCount, CouponType, InterestType};
 use crate::SmallStr;
 use anyhow::{anyhow, bail, Result};
 
-const IB_SEARCH_URL: &'static str =
+const IB_SEARCH_URL: &str =
     "https://iftp.chinamoney.com.cn/ses/rest/cm-u-notice-ses-cn/queryBondOrEnty";
-const IB_BOND_DETAIL_URL: &'static str =
+const IB_BOND_DETAIL_URL: &str =
     "https://iftp.chinamoney.com.cn/ags/ms/cm-u-bond-md/BondDetailInfo";
 
-const USER_AGENT: &'static str = "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36";
+// const USER_AGENT: &'static str = "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36";
+// const USER_AGENT: &'static str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 fn ib_get_coupon_interest_type(typ: &str) -> Result<(CouponType, InterestType)> {
     match typ {
@@ -35,30 +36,14 @@ fn ib_get_inst_freq(cp_type: CouponType, freq: &str) -> Result<i32> {
 }
 
 impl Bond {
-    pub async fn download(code: &str) -> Result<Bond> {
-        println!("Download bond: {}", code);
-        let (code, market) = if let Some((code, market)) = code.split_once(".") {
-            (code, market.parse()?)
-        } else {
-            (code, Market::IB)
-        };
-        match market {
-            Market::IB => Self::ib_download_from_china_money(code).await,
-            market => bail!(
-                "Download bond from Market {:#?} is not supported yet",
-                market
-            ),
-        }
-    }
-
     pub async fn ib_download_from_china_money(code: &str) -> Result<Bond> {
         let client = reqwest::ClientBuilder::new()
-            .user_agent(USER_AGENT)
+            .use_rustls_tls()
+            // .user_agent(USER_AGENT)
             .build()?;
         // search bond defined code using code
         let url = format!("{}?searchValue={}&verify=false", IB_SEARCH_URL, code);
-        let search_res: serde_json::Value =
-            client.post(url).send().await.unwrap().json().await.unwrap();
+        let search_res: serde_json::Value = client.post(url).send().await?.json().await?;
         // println!("{:#?}", search_res);
         let data = &search_res["data"]
             .get("bondOrEntyResult")
@@ -94,7 +79,7 @@ impl Bond {
             let (cp_type, interest_type) =
                 ib_get_coupon_interest_type(info["couponType"].as_str().unwrap())?;
             let (base_rate, rate_spread) = if let InterestType::Floating = interest_type {
-                bail!("Get base rate & rate spread for floating bond is not implemented yet");
+                bail!("Get base rate & rate spread for floating bond in IB is not implemented yet");
             } else {
                 (None, None)
             };
@@ -129,14 +114,14 @@ impl Bond {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[tokio::test]
-//     async fn test_ib_download() -> Result<()> {
-//         let bond = Bond::download("249946.IB").await?;
-//         dbg!(bond);
-//         Ok(())
-//     }
-// }
+    #[tokio::test]
+    async fn test_ib_download() -> Result<()> {
+        let bond = Bond::download("249946.IB").await?;
+        dbg!(bond);
+        Ok(())
+    }
+}
