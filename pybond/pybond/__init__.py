@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from importlib.util import find_spec
+from pathlib import Path
+
 from .pybond import Bond as _BondRS
 from .pybond import Future, download_bond
 from .pybond import TfEvaluator as _TfEvaluatorRS
@@ -41,21 +42,24 @@ class Bond(_BondRS):
         """
         Download bond information from a specified source.
 
-        This method downloads bond information for a given bond code from either Wind or China Money.
+        This method downloads bond information for a given bond code from either Wind or Rust.
         If no source is specified, it defaults to Wind if the WindPy module is available; otherwise,
-        it falls back to China Money.
+        it falls back to Rust.
+
+        If the source is 'rust', the method will download IB bond information from China Money and
+        SH bond information from SSE (Shanghai Stock Exchange).
 
         Args:
             code (str): The bond code in the format 'XXXXXX.YY'. The code must include a dot.
             path (str | None): The directory path where the downloaded bond information should be saved.
                               If None, the default path is used.
             source (str | None): The source from which to download the bond information. Valid options are
-                                'wind' or 'china_money'. If None, the source is automatically determined.
+                                'wind' or 'rust'. If None, the source is automatically determined.
             save (bool): Whether to save the downloaded bond information to the specified path.
                         Defaults to True.
 
         Returns:
-            Bond: The downloaded bond object if the source is 'china_money' and save is False.
+            Bond: The downloaded bond object if the source is 'rust' and save is False.
                   Otherwise, returns None.
 
         Raises:
@@ -63,9 +67,9 @@ class Bond(_BondRS):
         """
         if source is None:
             # 优先从wind下载
-            source = "wind" if WIND_AVAILABLE else "china_money"
+            source = "wind" if WIND_AVAILABLE else "rust"
         assert "." in code, "code should be in the format of XXXXXX.YY"
-        assert source in ("wind", "china_money")
+        assert source in ("wind", "rust")
         if source == "wind":
             from .download import fetch_symbols, login
 
@@ -74,7 +78,7 @@ class Bond(_BondRS):
             fetch_symbols([code], save=save, save_folder=path)
         else:
             # let rust side handle the download
-            print(f"download {code} from china money")
+            print(f"download {code}")
             bond = download_bond(code)
             if save:
                 bond.save(path)
