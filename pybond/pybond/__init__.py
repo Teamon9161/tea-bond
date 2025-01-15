@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from datetime import date
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -25,6 +26,20 @@ if not bonds_info_path.exists():
 
 class Bond(_BondRS):
     def __new__(cls, code: str | int, path: str | Path | None = None):
+        """
+        Create a new Bond instance.
+
+        Args:
+            code (str | int): The bond code. If no extension is provided, '.IB' will be appended.
+            path (str | Path | None): Path to the bond info file. If None, uses default bonds_info_path.
+
+        Returns:
+            Bond: A new Bond instance, either loaded from existing JSON file or downloaded.
+
+        Note:
+            If a JSON file for the bond code doesn't exist at the specified path,
+            the bond info will be downloaded automatically.
+        """
         code = str(code)
         if "." not in code:
             code = code + ".IB"
@@ -83,6 +98,64 @@ class Bond(_BondRS):
             if save:
                 bond.save(path)
             return bond
+
+    def accrued_interest(
+        self, date: date, cp_dates: tuple[date, date] | None = None
+    ) -> float:
+        """
+        计算应计利息
+
+        银行间和交易所的计算规则不同,银行间是算头不算尾,而交易所是算头又算尾
+        """
+        return self.calc_accrued_interest(date, cp_dates=cp_dates)
+
+    def dirty_price(
+        self,
+        ytm: float,
+        date: date,
+        cp_dates: tuple[date, date] | None = None,
+        remain_cp_num: int | None = None,
+    ) -> float:
+        """通过ytm计算债券全价"""
+        return self.calc_dirty_price_with_ytm(
+            ytm, date, cp_dates=cp_dates, remain_cp_num=remain_cp_num
+        )
+
+    def clean_price(
+        self,
+        ytm: float,
+        date: date,
+        cp_dates: tuple[date, date] | None = None,
+        remain_cp_num: int | None = None,
+    ) -> float:
+        """通过ytm计算债券净价"""
+        return self.calc_clean_price_with_ytm(
+            ytm, date, cp_dates=cp_dates, remain_cp_num=remain_cp_num
+        )
+
+    def macaulay_duration(
+        self,
+        ytm: float,
+        date: date,
+        cp_dates: tuple[date, date] | None = None,
+        remain_cp_num: int | None = None,
+    ) -> float:
+        """计算麦考利久期"""
+        return self.calc_macaulay_duration(
+            ytm, date, cp_dates=cp_dates, remain_cp_num=remain_cp_num
+        )
+
+    def duration(
+        self,
+        ytm: float,
+        date: date,
+        cp_dates: tuple[date, date] | None = None,
+        remain_cp_num: int | None = None,
+    ) -> float:
+        """计算修正久期"""
+        return self.calc_duration(
+            ytm, date, cp_dates=cp_dates, remain_cp_num=remain_cp_num
+        )
 
 
 class TfEvaluator(_TfEvaluatorRS):

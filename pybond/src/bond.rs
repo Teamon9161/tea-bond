@@ -268,6 +268,23 @@ impl PyBond {
             .calc_dirty_price_with_ytm(ytm, date, cp_dates, remain_cp_num)?)
     }
 
+    /// 通过ytm计算债券净价
+    #[pyo3(signature = (ytm, date, cp_dates=None, remain_cp_num=None))]
+    pub fn calc_clean_price_with_ytm(
+        &self,
+        ytm: f64,
+        date: &Bound<'_, PyAny>,
+        cp_dates: Option<&Bound<'_, PyAny>>,
+        remain_cp_num: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<f64> {
+        let date = extract_date(date)?;
+        let cp_dates: Option<(NaiveDate, NaiveDate)> = cp_dates.map(extract_date2).transpose()?;
+        let remain_cp_num: Option<i32> = remain_cp_num.map(|d| d.extract()).transpose()?;
+        Ok(self
+            .0
+            .calc_clean_price_with_ytm(ytm, date, cp_dates, remain_cp_num)?)
+    }
+
     /// 通过债券全价计算ytm
     #[pyo3(signature = (dirty_price, date, cp_dates=None, remain_cp_num=None))]
     pub fn calc_ytm_with_price(

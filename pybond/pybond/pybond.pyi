@@ -108,23 +108,32 @@ class Bond:
     ) -> list[date]:
         """剩余的付息日期列表(不包含指定日期)"""
 
-    def calc_accrued_interest(
-        self, calculating_date: date, cp_dates: tuple[date, date] | None = None
-    ) -> float:
-        """
-        计算应计利息
+    # def calc_accrued_interest(
+    #     self, calculating_date: date, cp_dates: tuple[date, date] | None = None
+    # ) -> float:
+    #     """
+    #     计算应计利息
 
-        银行间和交易所的计算规则不同,银行间是算头不算尾,而交易所是算头又算尾
-        """
+    #     银行间和交易所的计算规则不同,银行间是算头不算尾,而交易所是算头又算尾
+    #     """
 
-    def calc_dirty_price_with_ytm(
-        self,
-        ytm: float,
-        date: date,
-        cp_dates: tuple[date, date] | None = None,
-        remain_cp_num: int | None = None,
-    ) -> float:
-        """通过ytm计算债券全价"""
+    # def calc_dirty_price_with_ytm(
+    #     self,
+    #     ytm: float,
+    #     date: date,
+    #     cp_dates: tuple[date, date] | None = None,
+    #     remain_cp_num: int | None = None,
+    # ) -> float:
+    #     """通过ytm计算债券全价"""
+
+    # def calc_clean_price_with_ytm(
+    #     self,
+    #     ytm: float,
+    #     date: date,
+    #     cp_dates: tuple[date, date] | None = None,
+    #     remain_cp_num: int | None = None,
+    # ) -> float:
+    #     """通过ytm计算债券净价"""
 
     def calc_ytm_with_price(
         self,
@@ -135,23 +144,23 @@ class Bond:
     ) -> float:
         """通过债券全价计算ytm"""
 
-    def calc_macaulay_duration(
-        self,
-        ytm: float,
-        date: date,
-        cp_dates: tuple[date, date] | None = None,
-        remain_cp_num: int | None = None,
-    ) -> float:
-        """计算麦考利久期"""
+    # def calc_macaulay_duration(
+    #     self,
+    #     ytm: float,
+    #     date: date,
+    #     cp_dates: tuple[date, date] | None = None,
+    #     remain_cp_num: int | None = None,
+    # ) -> float:
+    #     """计算麦考利久期"""
 
-    def calc_duration(
-        self,
-        ytm: float,
-        date: date,
-        cp_dates: tuple[date, date] | None = None,
-        remain_cp_num: int | None = None,
-    ) -> float:
-        """计算修正久期"""
+    # def calc_duration(
+    #     self,
+    #     ytm: float,
+    #     date: date,
+    #     cp_dates: tuple[date, date] | None = None,
+    #     remain_cp_num: int | None = None,
+    # ) -> float:
+    #     """计算修正久期"""
 
 class Future:
     """A class representing a treasury futures contract."""

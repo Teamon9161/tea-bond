@@ -245,8 +245,11 @@ impl Bond {
     ) -> Result<f64> {
         let inst_freq = self.inst_freq as f64;
         let coupon = self.get_coupon();
-        let (pre_cp_date, next_cp_date) =
-            cp_dates.unwrap_or_else(|| self.get_nearest_cp_date(date).unwrap());
+        let (pre_cp_date, next_cp_date) = if let Some(cp_dates) = cp_dates {
+            cp_dates
+        } else {
+            self.get_nearest_cp_date(date)?
+        };
         let remain_days = ACTUAL.count_days(date, next_cp_date) as f64;
         let n = remain_cp_num.unwrap_or_else(|| self.remain_cp_num(date, None).unwrap());
         // TODO: take day_count into account
@@ -264,6 +267,27 @@ impl Bond {
             let discount_factor = (1. + ytm / inst_freq).powf(remain_days / ty + (n - 1) as f64);
             Ok(self.par_value / discount_factor + coupon_cf)
         }
+    }
+
+    /// 通过ytm计算债券净价
+    pub fn calc_clean_price_with_ytm(
+        &self,
+        ytm: f64,
+        date: NaiveDate,
+        cp_dates: Option<(NaiveDate, NaiveDate)>,
+        remain_cp_num: Option<i32>,
+    ) -> Result<f64> {
+        let cp_dates = if let Some(cd) = cp_dates {
+            cd
+        } else {
+            self.get_nearest_cp_date(date)?
+        };
+        let remain_cp_num =
+            remain_cp_num.unwrap_or_else(|| self.remain_cp_num(date, None).unwrap());
+        let dirty_price =
+            self.calc_dirty_price_with_ytm(ytm, date, Some(cp_dates), Some(remain_cp_num))?;
+        let accrued_interest = self.calc_accrued_interest(date, Some(cp_dates))?;
+        Ok(dirty_price - accrued_interest)
     }
 
     /// 通过债券全价计算ytm
