@@ -5,12 +5,14 @@ type FfiDateTime = NaiveDateTime;
 
 #[no_mangle]
 pub extern "C" fn build_datetime_ns(val: i64) -> *mut c_void {
+    // panic!("xxx");
     let dt = Utc.timestamp_nanos(val).naive_utc();
     Box::into_raw(Box::new(dt)) as *mut c_void
 }
 
 #[no_mangle]
 pub extern "C" fn build_datetime_from_utc_ns(val: i64) -> *mut c_void {
+    // panic!("xxx");
     let dt = Local.timestamp_nanos(val).naive_local();
     Box::into_raw(Box::new(dt)) as *mut c_void
 }

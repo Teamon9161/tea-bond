@@ -3,16 +3,24 @@
 # bond = Bond.download("250002.IB", save=False)
 # print(bond)
 from numba import njit
-
-from pybond.nb import Bond
-
+from datetime import date, time
+from pybond.nb import Bond, DateTime
+from numba.types import string
+# from hftbacktest import Backtester
 
 @njit
 def test():
-    bond = Bond("240018")
-    print(bond.duration(0.02, 2024, 12, 16))
+    dt = DateTime(1249512)
+    # dt = date(2024, 12, 10)
+    # dt = time(10, 12, 21)
+    # print(dt)
+    # bond = Bond("240011")
+    # dt = date(2024, 12, 16)
+    # print(bond.duration(0.02, dt))
+    # s = string("240018")
+    # print(s._length, s._kind, s._is_ascii)
 
-
+# Bond(240011).duration(0.02, "2024-12-16")
 test()
 
 # date = "2024-10-20"

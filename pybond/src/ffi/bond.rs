@@ -8,8 +8,9 @@ fn create_date(year: u32, month: u32, day: u32) -> NaiveDate {
 
 #[no_mangle]
 pub extern "C" fn create_bond(code: *const c_char) -> *mut c_void {
-    let code = unsafe { CStr::from_ptr(code) };
-    let bond = CachedBond::new(code.to_str().unwrap(), None).unwrap();
+    let code = unsafe { CStr::from_ptr(code) }.to_str().unwrap();
+    // println!("code: {}", code);
+    let bond = CachedBond::new(code, None).unwrap();
     bond.into_raw() as *mut c_void
 }
 

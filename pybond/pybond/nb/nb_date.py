@@ -107,9 +107,9 @@ def box_date(typ, val, c):
     Box a native date object into a Python datetime.date object.
     """
     date = cgutils.create_struct_proxy(typ)(c.context, c.builder, value=val)
-    year_obj = c.pyapi.long_from_ulong(date.year)
-    month_obj = c.pyapi.long_from_ulong(date.month)
-    day_obj = c.pyapi.long_from_ulong(date.day)
+    year_obj = c.pyapi.long_from_unsigned_int(date.year)
+    month_obj = c.pyapi.long_from_unsigned_int(date.month)
+    day_obj = c.pyapi.long_from_unsigned_int(date.day)
 
     class_obj = c.pyapi.unserialize(c.pyapi.serialize_object(datetime.date))
     date_obj = c.pyapi.call_function_objargs(class_obj, (year_obj, month_obj, day_obj))

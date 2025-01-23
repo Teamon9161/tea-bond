@@ -20,9 +20,10 @@ from numba.extending import (
     unbox,
 )
 
+# from pybond import ffi
 from pybond.ffi import (
-    # build_datetime_from_utc_ns,
-    # build_datetime_ns,
+    build_datetime_from_utc_ns,
+    build_datetime_ns,
     get_datetime_day,
     get_datetime_hour,
     get_datetime_minute,
@@ -154,7 +155,14 @@ def impl_datetime_builder(context, builder, sig, args):
     (val,) = args
     if isinstance(val.type, ir.DoubleType):
         val = builder.fptosi(val, ir.IntType(64))
-    ptr = ir_build_datetime(val, builder)
+    # fnty = ir.FunctionType(ir.PointerType(ir.IntType(8)), [ir.IntType(64)])
+    # build_datetime_ns_fn = cgutils.get_or_insert_function(
+    #     builder.module, fnty, "build_datetime_ns"
+    # )
+    # _ptr = builder.call(build_datetime_ns_fn, [ir.Constant(ir.IntType(64), 0)])
+    build_datetime_fn = ir_build_datetime(val, builder)
+    ptr = builder.inttoptr(ir.Constant(ir.IntType(64), 0), ir.PointerType(ir.IntType(8)))
+    print(ptr.type)
     datetime_struct = cgutils.create_struct_proxy(typ)(context, builder)
     datetime_struct.ptr = ptr
     datetime_struct.val = val

@@ -181,11 +181,11 @@ def box_time(typ, val, c):
     Box a native time object into a Python datetime.time object.
     """
     time = cgutils.create_struct_proxy(typ)(c.context, c.builder, value=val)
-    hour_obj = c.pyapi.long_from_ulong(time.hour)
-    minute_obj = c.pyapi.long_from_ulong(time.minute)
-    second_obj = c.pyapi.long_from_ulong(time.second)
-    microsecond = c.builder.udiv(time.nanosecond, ir.Constant(c.pyapi.ulong, 1000))
-    microsecond_obj = c.pyapi.long_from_ulong(microsecond)
+    hour_obj = c.pyapi.long_from_unsigned_int(time.hour)
+    minute_obj = c.pyapi.long_from_unsigned_int(time.minute)
+    second_obj = c.pyapi.long_from_unsigned_int(time.second)
+    microsecond = c.builder.udiv(time.nanosecond, ir.Constant(time.nanosecond.type, 1000))
+    microsecond_obj = c.pyapi.long_from_unsigned_int(microsecond)
 
     class_obj = c.pyapi.unserialize(c.pyapi.serialize_object(datetime.time))
     time_obj = c.pyapi.call_function_objargs(
