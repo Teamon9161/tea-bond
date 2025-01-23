@@ -17,7 +17,7 @@ download = ["tea-bond/download"]
 pyo3 = { version = "0.23", features = [
     "chrono",
     "extension-module",
-    "abi3-py38",
+    "abi3-py310",
     "anyhow",
     # "experimental-inspect",
     "multiple-pymethods",

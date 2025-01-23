@@ -8,6 +8,7 @@ mod bond;
 mod future;
 mod tf_evaluator;
 mod utils;
+mod ffi;
 
 use bond::PyBond;
 use future::PyFuture;

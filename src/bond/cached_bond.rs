@@ -87,6 +87,15 @@ impl CachedBond {
         Ok(Self(bond_rs))
     }
 
+    pub fn into_raw(self) -> *const Bond {
+        Arc::into_raw(self.0)
+    }
+
+    pub unsafe fn from_raw(ptr: *const Bond) -> Self {
+        let inner = Arc::from_raw(ptr);
+        Self(inner)
+    }
+
     /// Creates a `CachedBond` from a bond (or an `Arc<Bond>`) and caches it.
     ///
     /// If the bond is already cached, it returns the cached instance. Otherwise,
