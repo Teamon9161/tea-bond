@@ -6,6 +6,7 @@ from .nb_datetime import DateTime, DateTimeType, datetime_type
 from .nb_time import Time, TimeType, time_type
 
 __all__ = [
+    "Bond",
     "DateTime",
     "DateTimeType",
     "DateType",
