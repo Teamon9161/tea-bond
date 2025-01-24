@@ -3,11 +3,14 @@ from llvmlite import ir
 from numba import types
 from numba.core import cgutils, utils
 from numba.experimental import jitclass
+from numba.cpython.hashing import _Py_hash_t
 from numba.extending import (
     NativeValue,
     as_numba_type,
     box,
+    intrinsic,
     lower_builtin,
+    lower_getattr,
     make_attribute_wrapper,
     models,
     overload,
@@ -20,14 +23,15 @@ from numba.extending import (
 )
 
 from pybond import Bond
-from pybond.ffi import bond_duration  # , create_bond
+from pybond.ffi import bond_duration, bond_coupon_rate
+from pybond.nb.nb_datetime import DateTimeType  # , create_bond
 
 from .nb_date import DateType
 
 
 class BondType(types.Type):
     def __init__(self):
-        super().__init__(name="DateTime")
+        super().__init__(name="Bond")
 
 
 bond_type = BondType()
@@ -79,13 +83,77 @@ def impl_bond_builder(context, builder, sig, args):
     bond.ptr = ptr
     return bond._getvalue()
 
+@overload_attribute(BondType, "coupon_rate")
+def bond_attr_coupon_rate(bond):
+    def impl(bond):
+        return bond_coupon_rate(bond.ptr)
+    return impl
+
+
+def ir_get_bond_full_code(ptr, context, builder):
+    """根据Bond的指针获取bond的代码(包括交易所信息)"""
+    fn = cgutils.get_or_insert_function(
+        builder.module,
+        ir.FunctionType(ir.PointerType(ir.IntType(8)), [ir.PointerType(ir.IntType(8))]),
+        name="bond_full_code",
+    )
+    cstr = builder.call(fn, [ptr])
+    # 使用 LLVM strlen
+    strlen_fn = cgutils.get_or_insert_function(
+        builder.module,
+        ir.FunctionType(ir.IntType(64), [ir.PointerType(ir.IntType(8))]),
+        name="strlen"
+    )
+    length = builder.call(strlen_fn, [cstr])
+    uni_str = cgutils.create_struct_proxy(types.unicode_type)(context, builder)
+    uni_str.data = cstr
+    uni_str.length = length
+    uni_str.kind = ir.Constant(ir.IntType(32), 1)  # kind=1 is PY_UNICODE_1BYTE_KIND
+    uni_str.is_ascii = ir.Constant(ir.IntType(32), 1)
+    uni_str.meminfo = context.get_constant_null(types.voidptr)
+    # Set hash to -1 to indicate that it should be computed.
+    # We cannot bake in the hash value because of hashseed randomization.
+    uni_str.hash = context.get_constant(_Py_hash_t, -1)
+    uni_str.parent = cgutils.get_null_value(uni_str.parent.type)
+    return uni_str._getvalue()
+
+
+@intrinsic
+def get_bond_full_code(typingctx, bond_ptr):
+    """根据Bond的指针获取bond的代码(包括交易所信息)"""
+    def codegen(context, builder, sig, args):
+        return ir_get_bond_full_code(args[0], context, builder)
+    sig = types.unicode_type(bond_ptr)
+    return sig, codegen
+
+@overload_attribute(BondType, "full_code")
+def get_full_code_attr(bond):
+    if isinstance(bond, BondType):
+        def impl(bond):
+            # 在类型推断时告诉 Numba 这是字符串
+            return get_bond_full_code(bond.ptr)
+        return impl
 
 @overload_method(BondType, "duration")
 def bond_calc_duration(bond, ytm, date):
-    if not isinstance(date, DateType):
+    if not isinstance(date, (DateType, DateTimeType)):
         return
-
     def impl(bond, ytm, date):
         return bond_duration(bond.ptr, ytm, date.year, date.month, date.day)
-
     return impl
+
+
+@box(BondType)
+def box_bond(typ, val, c):
+    """
+    Convert a native Bond structure to python Bond.
+    """
+    bond = cgutils.create_struct_proxy(typ)(c.context, c.builder, value=val)
+    bond_code = ir_get_bond_full_code(bond.ptr, c.context, c.builder)
+    # Call Bond new to create a new Bond object
+    val_obj = c.pyapi.from_native_value(types.unicode_type, bond_code)
+    class_obj = c.pyapi.unserialize(c.pyapi.serialize_object(Bond))
+    res = c.pyapi.call_function_objargs(class_obj, (val_obj,))
+    c.pyapi.decref(val_obj)
+    c.pyapi.decref(class_obj)
+    return res
