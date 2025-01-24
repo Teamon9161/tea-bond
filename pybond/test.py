@@ -11,15 +11,15 @@ dt = datetime.now().timestamp() * 1e9
 
 @njit
 def test(dt):
-    dt = DateTime(dt)
-    print(dt)
-    dr = Duration("1mo3h1m")
-    dt2 = dt - dr
-    print(dt2 > dt)
+    # dt = DateTime(dt)
+    # print(dt)
+    # dr = Duration("1mo3h1m")
+    # dt2 = dt - dr
+    # print(dt2 > dt)
     # dt = DateTime(1249512)
     # dt = date(2024, 12, 10)
     # print(dt)
-    # bond = Bond("240011.IB")
+    bond = Bond("240011.IB")
     # dt = date(2024, 12, 16)
     # print(bond.duration(0.02, dt))
     # s = string("240018")
