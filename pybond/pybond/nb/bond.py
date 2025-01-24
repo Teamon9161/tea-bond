@@ -1,7 +1,7 @@
 import numba as nb
 from llvmlite import ir
 from numba import types
-from numba.core import cgutils
+from numba.core import cgutils, utils
 from numba.experimental import jitclass
 from numba.extending import (
     NativeValue,
@@ -21,8 +21,9 @@ from numba.extending import (
 
 from pybond import Bond
 from pybond.ffi import bond_duration  # , create_bond
-from datetime import date
+
 from .nb_date import DateType
+
 
 class BondType(types.Type):
     def __init__(self):
@@ -57,55 +58,38 @@ class BondModel(models.StructModel):
 
 make_attribute_wrapper(BondType, "ptr", "ptr")
 
-from .ir_utils import ir_build_datetime
 
 @lower_builtin(Bond, types.string)
 def impl_bond_builder(context, builder, sig, args):
     typ = sig.return_type
     (val,) = args
     # Get string data from Numba string
-    # string = context.make_helper(builder, types.string, val)
-    # str_data = string.data  # Pointer to string data
-    # str_len = string.length  # Length of string
-
-    # # Allocate space for null-terminated string
-    # cstr = builder.alloca(
-    #     ir.IntType(8), builder.add(str_len, ir.Constant(ir.IntType(64), 1))
-    # )
-
-    # # Copy string data
-    # cgutils.memcpy(builder, cstr, str_data, str_len)
-
-    # # Add null terminator
-    # null_pos = builder.gep(cstr, [str_len])
-    # builder.store(ir.Constant(ir.IntType(8), 0), null_pos)
-
+    string = context.make_helper(builder, types.string, val)
+    str_data = string.data  # Pointer to string data
+    str_len = string.length  # Length of string
     # Call FFI function with C string
-    # fn = cgutils.get_or_insert_function(
-    #     builder.module,
-    #     ir.FunctionType(ir.PointerType(ir.IntType(8)), [ir.PointerType(ir.IntType(8))]),
-    #     name="create_bond",
-    # )
-    # ptr = builder.call(fn, [cstr])
-    #
     fn = cgutils.get_or_insert_function(
         builder.module,
-        ir.FunctionType(ir.PointerType(ir.IntType(8)), []),
+        # ir.FunctionType(ir.PointerType(ir.IntType(8)), [ir.PointerType(ir.IntType(8))]),
+        ir.FunctionType(
+            ir.PointerType(ir.IntType(8)),
+            [ir.PointerType(ir.IntType(8)), ir.IntType(utils.MACHINE_BITS)],
+        ),
         name="create_bond",
     )
-    ptr = builder.call(fn, [])
+    # ptr = builder.call(fn, [cstr])
+    ptr = builder.call(fn, [str_data, str_len])
     # Create Bond object
     bond = cgutils.create_struct_proxy(typ)(context, builder)
     bond.ptr = ptr
     return bond._getvalue()
 
 
-
-
 @overload_method(BondType, "duration")
 def bond_calc_duration(bond, ytm, date):
     if not isinstance(date, DateType):
         return
+
     def impl(bond, ytm, date):
         return bond_duration(bond.ptr, ytm, date.year, date.month, date.day)
 

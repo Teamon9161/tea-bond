@@ -1,24 +1,23 @@
-# from pybond import Bond, TfEvaluator
-
-# bond = Bond.download("250002.IB", save=False)
-# print(bond)
-from numba import njit
 from datetime import date, time
-from pybond.nb import Bond, DateTime
+
+from numba import njit
 from numba.types import string
-# from hftbacktest import Backtester
+
+from pybond.nb import Bond, DateTime
+
 
 @njit
 def test():
-    dt = DateTime(1249512)
+    # dt = DateTime(1249512)
     # dt = date(2024, 12, 10)
     # dt = time(10, 12, 21)
     # print(dt)
-    # bond = Bond("240011")
+    bond = Bond("240011.IB")
     # dt = date(2024, 12, 16)
     # print(bond.duration(0.02, dt))
     # s = string("240018")
     # print(s._length, s._kind, s._is_ascii)
+
 
 # Bond(240011).duration(0.02, "2024-12-16")
 test()
