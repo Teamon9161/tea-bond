@@ -1,7 +1,7 @@
 use std::ffi::c_void;
 
 use chrono::{Datelike, Local, NaiveDateTime, NaiveTime, TimeZone, Timelike, Utc};
-type FfiDateTime = NaiveDateTime;
+pub type FfiDateTime = NaiveDateTime;
 
 #[no_mangle]
 pub extern "C" fn build_datetime_ns(val: i64) -> *mut c_void {

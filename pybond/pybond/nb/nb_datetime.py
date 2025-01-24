@@ -22,8 +22,10 @@ from numba.extending import (
 
 # from pybond import ffi
 from pybond.ffi import (
-    build_datetime_from_utc_ns,
-    build_datetime_ns,
+    datetime_add_duration,
+    datetime_sub_duration,
+    # build_datetime_from_utc_ns,
+    # build_datetime_ns,
     get_datetime_day,
     get_datetime_hour,
     get_datetime_minute,
@@ -42,6 +44,7 @@ from .ir_utils import (
     ir_local_timestamp_nanos,
     ir_timestamp_nanos,
 )
+from .nb_duration import DurationType
 from .nb_time import Time
 
 
@@ -155,14 +158,7 @@ def impl_datetime_builder(context, builder, sig, args):
     (val,) = args
     if isinstance(val.type, ir.DoubleType):
         val = builder.fptosi(val, ir.IntType(64))
-    # fnty = ir.FunctionType(ir.PointerType(ir.IntType(8)), [ir.IntType(64)])
-    # build_datetime_ns_fn = cgutils.get_or_insert_function(
-    #     builder.module, fnty, "build_datetime_ns"
-    # )
-    # _ptr = builder.call(build_datetime_ns_fn, [ir.Constant(ir.IntType(64), 0)])
-    build_datetime_fn = ir_build_datetime(val, builder)
-    ptr = builder.inttoptr(ir.Constant(ir.IntType(64), 0), ir.PointerType(ir.IntType(8)))
-    print(ptr.type)
+    ptr = ir_build_datetime(val, builder)
     datetime_struct = cgutils.create_struct_proxy(typ)(context, builder)
     datetime_struct.ptr = ptr
     datetime_struct.val = val
@@ -394,3 +390,31 @@ def impl_ne(dt, dt2):
         return dt.val != dt2.val
 
     return impl
+
+
+@overload(operator.add)
+def impl_datetime_add(val1, val2):
+    if isinstance(val1, DateTimeType) and isinstance(val2, DurationType):
+
+        def impl(val1, val2):
+            return DateTime(datetime_add_duration(val1.val, val2.ptr))
+
+        return impl
+    elif isinstance(val1, DurationType) and isinstance(val2, DateTimeType):
+
+        def impl(val1, val2):
+            return DateTime(datetime_add_duration(val2.val, val1.ptr))
+
+        return impl
+    return
+
+
+@overload(operator.sub)
+def impl_datetime_sub(val1, val2):
+    if isinstance(val1, DateTimeType) and isinstance(val2, DurationType):
+
+        def impl(val1, val2):
+            return DateTime(datetime_sub_duration(val1.val, val2.ptr))
+
+        return impl
+    return

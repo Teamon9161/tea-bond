@@ -1,15 +1,21 @@
 from datetime import date, datetime, time
 
-from .bond import Bond
+from .nb_bond import Bond, BondType, bond_type
 from .nb_date import DateType, date_type
 from .nb_datetime import DateTime, DateTimeType, datetime_type
+from .nb_duration import Duration, DurationType, duration_type
 from .nb_time import Time, TimeType, time_type
 
 __all__ = [
     "Bond",
+    "BondType",
+    "bond_type",
     "DateTime",
     "DateTimeType",
     "DateType",
+    "Duration",
+    "DurationType",
+    "duration_type",
     "Time",
     "TimeType",
     "date",

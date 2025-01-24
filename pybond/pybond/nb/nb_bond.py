@@ -64,21 +64,16 @@ def impl_bond_builder(context, builder, sig, args):
     typ = sig.return_type
     (val,) = args
     # Get string data from Numba string
-    string = context.make_helper(builder, types.string, val)
-    str_data = string.data  # Pointer to string data
-    str_len = string.length  # Length of string
-    # Call FFI function with C string
+    code = context.make_helper(builder, types.string, val)
     fn = cgutils.get_or_insert_function(
         builder.module,
-        # ir.FunctionType(ir.PointerType(ir.IntType(8)), [ir.PointerType(ir.IntType(8))]),
         ir.FunctionType(
             ir.PointerType(ir.IntType(8)),
             [ir.PointerType(ir.IntType(8)), ir.IntType(utils.MACHINE_BITS)],
         ),
         name="create_bond",
     )
-    # ptr = builder.call(fn, [cstr])
-    ptr = builder.call(fn, [str_data, str_len])
+    ptr = builder.call(fn, [code.data, code.length])
     # Create Bond object
     bond = cgutils.create_struct_proxy(typ)(context, builder)
     bond.ptr = ptr

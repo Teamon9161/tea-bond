@@ -1,18 +1,25 @@
-from datetime import date, time
+import time
+from datetime import date, datetime
 
 from numba import njit
 from numba.types import string
 
-from pybond.nb import Bond, DateTime
+from pybond.nb import Bond, DateTime, Duration
+
+dt = datetime.now().timestamp() * 1e9
 
 
 @njit
-def test():
+def test(dt):
+    dt = DateTime(dt)
+    print(dt)
+    dr = Duration("1mo3h1m")
+    dt2 = dt - dr
+    print(dt2 > dt)
     # dt = DateTime(1249512)
     # dt = date(2024, 12, 10)
-    # dt = time(10, 12, 21)
     # print(dt)
-    bond = Bond("240011.IB")
+    # bond = Bond("240011.IB")
     # dt = date(2024, 12, 16)
     # print(bond.duration(0.02, dt))
     # s = string("240018")
@@ -20,7 +27,7 @@ def test():
 
 
 # Bond(240011).duration(0.02, "2024-12-16")
-test()
+test(dt)
 
 # date = "2024-10-20"
 # ytm = 1.89 / 100
