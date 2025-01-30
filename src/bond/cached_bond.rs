@@ -91,6 +91,11 @@ impl CachedBond {
         Arc::into_raw(self.0)
     }
 
+    /// Creates a `CachedBond` from a raw pointer to a `Bond`.
+    ///
+    /// # Safety
+    /// The pointer must have been created by `into_raw` and not been freed.
+    /// Calling this function with an invalid pointer is undefined behavior.
     pub unsafe fn from_raw(ptr: *const Bond) -> Self {
         let inner = Arc::from_raw(ptr);
         Self(inner)

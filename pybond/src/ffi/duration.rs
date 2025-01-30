@@ -20,12 +20,12 @@ pub unsafe extern "C" fn datetime_sub_datetime(dt1: i64, dt2: i64) -> *mut c_voi
 pub unsafe extern "C" fn datetime_add_duration(dt: i64, duration: *const TimeDelta) -> i64 {
     let duration = &*duration;
     let dt: DateTime = dt.into();
-    (dt + duration.clone()).0
+    (dt + *duration).0
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn datetime_sub_duration(dt: i64, duration: *const TimeDelta) -> i64 {
     let dt: DateTime = dt.into();
     let duration = &*duration;
-    (dt - duration.clone()).0
+    (dt - *duration).0
 }

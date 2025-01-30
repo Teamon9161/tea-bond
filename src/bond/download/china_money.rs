@@ -43,6 +43,8 @@ impl Bond {
             .build()?;
         // search bond defined code using code
         let url = format!("{}?searchValue={}&verify=false", IB_SEARCH_URL, code);
+        // let search_res = client.post(url).send().await?.text().await?;
+        // dbg!(search_res);
         let search_res: serde_json::Value = client.post(url).send().await?.json().await?;
         // println!("{:#?}", search_res);
         let data = &search_res["data"]

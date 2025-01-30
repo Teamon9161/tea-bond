@@ -2,8 +2,8 @@ import numba as nb
 from llvmlite import ir
 from numba import types
 from numba.core import cgutils, utils
-from numba.experimental import jitclass
 from numba.cpython.hashing import _Py_hash_t
+from numba.experimental import jitclass
 from numba.extending import (
     NativeValue,
     as_numba_type,
@@ -23,7 +23,14 @@ from numba.extending import (
 )
 
 from pybond import Bond
-from pybond.ffi import bond_duration, bond_coupon_rate
+from pybond.ffi import (
+    bond_accrued_interest,
+    bond_calc_ytm,
+    bond_clean_price,
+    bond_coupon_rate,
+    bond_dirty_price,
+    bond_duration,
+)
 from pybond.nb.nb_datetime import DateTimeType  # , create_bond
 
 from .nb_date import DateType
@@ -83,10 +90,12 @@ def impl_bond_builder(context, builder, sig, args):
     bond.ptr = ptr
     return bond._getvalue()
 
+
 @overload_attribute(BondType, "coupon_rate")
 def bond_attr_coupon_rate(bond):
     def impl(bond):
         return bond_coupon_rate(bond.ptr)
+
     return impl
 
 
@@ -102,7 +111,7 @@ def ir_get_bond_full_code(ptr, context, builder):
     strlen_fn = cgutils.get_or_insert_function(
         builder.module,
         ir.FunctionType(ir.IntType(64), [ir.PointerType(ir.IntType(8))]),
-        name="strlen"
+        name="strlen",
     )
     length = builder.call(strlen_fn, [cstr])
     uni_str = cgutils.create_struct_proxy(types.unicode_type)(context, builder)
@@ -121,25 +130,76 @@ def ir_get_bond_full_code(ptr, context, builder):
 @intrinsic
 def get_bond_full_code(typingctx, bond_ptr):
     """根据Bond的指针获取bond的代码(包括交易所信息)"""
+
     def codegen(context, builder, sig, args):
         return ir_get_bond_full_code(args[0], context, builder)
+
     sig = types.unicode_type(bond_ptr)
     return sig, codegen
+
 
 @overload_attribute(BondType, "full_code")
 def get_full_code_attr(bond):
     if isinstance(bond, BondType):
+
         def impl(bond):
-            # 在类型推断时告诉 Numba 这是字符串
             return get_bond_full_code(bond.ptr)
+
         return impl
+
 
 @overload_method(BondType, "duration")
 def bond_calc_duration(bond, ytm, date):
     if not isinstance(date, (DateType, DateTimeType)):
         return
+
     def impl(bond, ytm, date):
         return bond_duration(bond.ptr, ytm, date.year, date.month, date.day)
+
+    return impl
+
+
+@overload_method(BondType, "accrued_interest")
+def bond_calc_accrued_interest(bond, date):
+    if not isinstance(date, (DateType, DateTimeType)):
+        return
+
+    def impl(bond, date):
+        return bond_accrued_interest(bond.ptr, date.year, date.month, date.day)
+
+    return impl
+
+
+@overload_method(BondType, "dirty_price")
+def bond_calc_dirty_price(bond, ytm, date):
+    if not isinstance(date, (DateType, DateTimeType)):
+        return
+
+    def impl(bond, ytm, date):
+        return bond_dirty_price(bond.ptr, ytm, date.year, date.month, date.day)
+
+    return impl
+
+
+@overload_method(BondType, "clean_price")
+def bond_calc_clean_price(bond, ytm, date):
+    if not isinstance(date, (DateType, DateTimeType)):
+        return
+
+    def impl(bond, ytm, date):
+        return bond_clean_price(bond.ptr, ytm, date.year, date.month, date.day)
+
+    return impl
+
+
+@overload_method(BondType, "calc_ytm_with_price")
+def bond_ytm_with_price(bond, dirty_price, date):
+    if not isinstance(date, (DateType, DateTimeType)):
+        return
+
+    def impl(bond, dirty_price, date):
+        return bond_calc_ytm(bond.ptr, dirty_price, date.year, date.month, date.day)
+
     return impl
 
 
