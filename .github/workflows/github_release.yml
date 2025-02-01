@@ -1,0 +1,65 @@
+name: PyBond Release
+
+on:
+  push:
+    tags:
+      - 'pybond*'
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform.os }}
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            wheel-name: manylinux
+          - os: windows-latest
+            wheel-name: win
+          - os: macos-latest
+            wheel-name: macos
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # - name: Install Rust
+      #   uses: dtolnay/rust-toolchain@stable
+
+      - name: Install maturin
+        run: pip install maturin
+
+      - name: Build wheel
+        working-directory: ./pybond
+        run: maturin build --release
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels-${{ matrix.platform.wheel-name }}
+          path: pybond/target/wheels/*.whl
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: wheels
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: wheels/**/*.whl
+          draft: false
+          prerelease: false
+          generate_release_notes: true
