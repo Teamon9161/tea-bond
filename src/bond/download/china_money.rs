@@ -1,6 +1,6 @@
 use crate::bond::{Bond, BondDayCount, CouponType, InterestType};
 use crate::SmallStr;
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 
 // const IB_SEARCH_URL: &str =
 //     "https://www.chinamoney.com.cn/ses/rest/cm-u-notice-ses-cn/queryBondOrEnty";
