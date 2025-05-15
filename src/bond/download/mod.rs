@@ -12,7 +12,7 @@ impl Bond {
             (code, Market::IB)
         };
         match market {
-            Market::IB => Self::ib_download_from_china_money(code).await,
+            Market::IB => Self::ib_download_from_china_money(code, None).await,
             Market::SH => Self::sh_download_from_sse(code).await,
             market => bail!(
                 "Download bond from Market {:#?} is not supported yet",

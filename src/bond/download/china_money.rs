@@ -2,10 +2,11 @@ use crate::bond::{Bond, BondDayCount, CouponType, InterestType};
 use crate::SmallStr;
 use anyhow::{anyhow, bail, Result};
 
-const IB_SEARCH_URL: &str =
-    "https://iftp.chinamoney.com.cn/ses/rest/cm-u-notice-ses-cn/queryBondOrEnty";
-const IB_BOND_DETAIL_URL: &str =
-    "https://iftp.chinamoney.com.cn/ags/ms/cm-u-bond-md/BondDetailInfo";
+// const IB_SEARCH_URL: &str =
+//     "https://www.chinamoney.com.cn/ses/rest/cm-u-notice-ses-cn/queryBondOrEnty";
+// const IB_BOND_DETAIL_URL: &str = "https://www.chinamoney.com.cn/ags/ms/cm-u-bond-md/BondDetailInfo";
+const IB_SEARCH_URL: &str = "https://www.chinamoney.com.cn/ags/ms/cm-u-md-bond/CbtPri";
+const IB_BOND_DETAIL_URL: &str = "https://www.chinamoney.com.cn/ags/ms/cm-u-bond-md/BondDetailInfo";
 
 // const USER_AGENT: &'static str = "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36";
 // const USER_AGENT: &'static str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
@@ -36,33 +37,49 @@ fn ib_get_inst_freq(cp_type: CouponType, freq: &str) -> Result<i32> {
 }
 
 impl Bond {
-    pub async fn ib_download_from_china_money(code: &str) -> Result<Bond> {
+    pub async fn ib_download_from_china_money(
+        code: &str,
+        search_str: Option<&str>,
+    ) -> Result<Bond> {
         let client = reqwest::ClientBuilder::new()
             .use_rustls_tls()
             // .user_agent(USER_AGENT)
             .build()?;
         // search bond defined code using code
         let url = format!("{}?searchValue={}&verify=false", IB_SEARCH_URL, code);
+        // let url = format!(
+        //     "{}?lang=cn&flag=1&bondName={}&t={}",
+        //     IB_SEARCH_URL,
+        //     search_str.unwrap_or(""),
+        //     chrono::Local::now().timestamp_millis(),
+        // );
         // let search_res = client.post(url).send().await?.text().await?;
         // dbg!(search_res);
         let search_res: serde_json::Value = client.post(url).send().await?.json().await?;
-        // println!("{:#?}", search_res);
-        let data = &search_res["data"]
-            .get("bondOrEntyResult")
-            .ok_or_else(|| anyhow!("No bond found for code: {}, search data is null", code))?;
+        let data = &search_res["records"];
         let defined_code = if data.is_null() {
-            bail!(
-                "No bond found for code: {}, bond or enty result is null",
-                code
-            );
+            bail!("No bond found for code: {}, IB records is null", code);
         } else {
-            let data = data.as_object().unwrap();
+            let data = data.as_array().unwrap();
             if data.is_empty() {
                 bail!("Cann't find code: {} in IB search result", code);
             }
-            data["definedCode"].as_str().unwrap()
+            let mut find_code = "";
+            for bond_info in data {
+                let bond_info = bond_info.as_object().unwrap();
+                let bond_code = bond_info["bondcode"].as_str().unwrap();
+                dbg!(bond_code, code);
+                if bond_code == code {
+                    find_code = bond_info["code"].as_str().unwrap();
+                    break;
+                }
+            }
+            if find_code == "" {
+                bail!("Cann't find code: {} in IB search result", code);
+            }
+            find_code
         };
-        // println!("defined_code: {}", defined_code);
+        println!("defined_code: {}", defined_code);
         // download bond detail info using defined code
         let info_result: serde_json::Value = client
             .post(IB_BOND_DETAIL_URL)
@@ -122,7 +139,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ib_download() -> Result<()> {
-        let bond = Bond::download("249946.IB").await?;
+        let bond = Bond::download("250205.IB").await?;
         dbg!(bond);
         Ok(())
     }
