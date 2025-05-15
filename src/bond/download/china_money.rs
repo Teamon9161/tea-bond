@@ -2,9 +2,6 @@ use crate::bond::{Bond, BondDayCount, CouponType, InterestType};
 use crate::SmallStr;
 use anyhow::{bail, Result};
 
-// const IB_SEARCH_URL: &str =
-//     "https://www.chinamoney.com.cn/ses/rest/cm-u-notice-ses-cn/queryBondOrEnty";
-// const IB_BOND_DETAIL_URL: &str = "https://www.chinamoney.com.cn/ags/ms/cm-u-bond-md/BondDetailInfo";
 const IB_SEARCH_URL: &str = "https://www.chinamoney.com.cn/ags/ms/cm-u-md-bond/CbtPri";
 const IB_BOND_DETAIL_URL: &str = "https://www.chinamoney.com.cn/ags/ms/cm-u-bond-md/BondDetailInfo";
 
@@ -68,7 +65,7 @@ impl Bond {
             for bond_info in data {
                 let bond_info = bond_info.as_object().unwrap();
                 let bond_code = bond_info["bondcode"].as_str().unwrap();
-                dbg!(bond_code, code);
+                // dbg!(bond_code, code);
                 if bond_code == code {
                     find_code = bond_info["code"].as_str().unwrap();
                     break;
@@ -79,7 +76,7 @@ impl Bond {
             }
             find_code
         };
-        println!("defined_code: {}", defined_code);
+        // println!("defined_code: {}", defined_code);
         // download bond detail info using defined code
         let info_result: serde_json::Value = client
             .post(IB_BOND_DETAIL_URL)
