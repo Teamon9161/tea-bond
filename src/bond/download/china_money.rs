@@ -46,13 +46,13 @@ impl Bond {
             // .user_agent(USER_AGENT)
             .build()?;
         // search bond defined code using code
-        let url = format!("{}?searchValue={}&verify=false", IB_SEARCH_URL, code);
-        // let url = format!(
-        //     "{}?lang=cn&flag=1&bondName={}&t={}",
-        //     IB_SEARCH_URL,
-        //     search_str.unwrap_or(""),
-        //     chrono::Local::now().timestamp_millis(),
-        // );
+        // let url = format!("{}?searchValue={}&verify=false", IB_SEARCH_URL, code);
+        let url = format!(
+            "{}?lang=cn&flag=1&bondName={}&t={}",
+            IB_SEARCH_URL,
+            search_str.unwrap_or(""),
+            chrono::Local::now().timestamp_millis(),
+        );
         // let search_res = client.post(url).send().await?.text().await?;
         // dbg!(search_res);
         let search_res: serde_json::Value = client.post(url).send().await?.json().await?;
