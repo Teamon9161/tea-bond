@@ -4,7 +4,7 @@ from importlib.util import find_spec
 from pathlib import Path
 
 from .pybond import Bond as _BondRS
-from .pybond import download_bond
+from .pybond import Future, download_bond
 
 WIND_AVAILABLE = find_spec("WindPy") is not None
 if WIND_AVAILABLE:
@@ -153,3 +153,9 @@ class Bond(_BondRS):
         return self.calc_duration(
             ytm, date, cp_dates=cp_dates, remain_cp_num=remain_cp_num
         )
+
+    def cf(self, future: str | Future) -> float:
+        """计算转换因子"""
+        from .pybond import TfEvaluator
+
+        return TfEvaluator(future, self).cf
