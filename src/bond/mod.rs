@@ -69,9 +69,19 @@ impl Bond {
     /// 确保日期在有效范围内
     fn ensure_date_valid(&self, date: NaiveDate) -> Result<()> {
         if date < self.carry_date {
-            bail!("Calculating date is before the bond's carry date");
+            bail!(
+                "Calculating date {} is before the bond {} 's carry date {}",
+                date,
+                self.code(),
+                self.carry_date
+            );
         } else if date >= self.maturity_date {
-            bail!("Calculating date is after the bond's maturity date");
+            bail!(
+                "Calculating date {} is after the bond {} 's maturity date {}",
+                date,
+                self.code(),
+                self.maturity_date
+            );
         }
         Ok(())
     }
