@@ -8,6 +8,7 @@ pub use future_type::FutureType;
 use crate::SmallStr;
 use anyhow::{bail, Result};
 use chrono::{Datelike, Duration, NaiveDate, Weekday};
+use tea_calendar::{china::CFFEX, Calendar};
 
 const CFFEX_DEFAULT_CP_RATE: f64 = 0.03;
 
@@ -96,7 +97,8 @@ impl Future {
     #[inline]
     pub fn deliver_date(&self) -> Result<NaiveDate> {
         let last_trading_date = self.last_trading_date()?;
-        Ok(last_trading_date + Duration::days(4))
+        Ok(CFFEX.find_workday(last_trading_date, 2))
+        // Ok(last_trading_date + Duration::days(4))
     }
 
     #[inline]

@@ -24,7 +24,7 @@ pyo3 = { version = "0.23", features = [
 ] }
 #tea-bond = { git = "https://github.com/teamon9161/tea-bond.git", branch = "master" }
 tea-time = { version = "0.5" }
-tea-bond = { path = ".." }
+tea-bond = { path = "../tea-bond" }
 chrono = { version = "0.4", default-features = false }
 numpy = { version = "0.23", optional = true }
 tevec = { version = "0.5.0", optional = true }

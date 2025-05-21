@@ -1,7 +1,7 @@
-use std::str::FromStr;
-
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
-
+use std::str::FromStr;
+use tea_calendar::{china::*, Calendar};
 #[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq, Clone, Copy)]
 pub enum CouponType {
     /// 附息债券
@@ -55,6 +55,18 @@ impl FromStr for Market {
             "SZE" => Ok(Market::SZE),
             "SZ" => Ok(Market::SZ),
             _ => anyhow::bail!("Unknown market: {}", s),
+        }
+    }
+}
+
+impl Calendar for Market {
+    fn is_business_day(&self, date: NaiveDate) -> bool {
+        match self {
+            Market::IB => IB.is_business_day(date),
+            Market::SSE => SSE.is_business_day(date),
+            Market::SH => SSE.is_business_day(date),
+            Market::SZE => SZE.is_business_day(date),
+            Market::SZ => SZE.is_business_day(date),
         }
     }
 }

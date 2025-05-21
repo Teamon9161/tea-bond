@@ -71,7 +71,7 @@ impl Bond {
                     break;
                 }
             }
-            if find_code == "" {
+            if find_code.is_empty() {
                 bail!("Cann't find code: {} in IB search result", code);
             }
             find_code

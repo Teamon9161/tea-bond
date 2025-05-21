@@ -1,3 +1,10 @@
+# Tea-Bond Workspace
+
+这是一个 Rust Workspace 项目，包含以下 crate：
+
+- `tea-bond`: 债券相关计算库
+- `pybond`: 提供 Python 绑定的库 (默认不包含在构建中)
+
 
 ## IRR计算说明
 

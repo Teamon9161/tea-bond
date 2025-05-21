@@ -19,7 +19,7 @@ const BASE_QUERY_PARAMS: [(&str, &str); 7] = [
 use rand::Rng;
 
 fn generate_callback() -> String {
-    let random_num = rand::thread_rng().gen_range(10000000..99999999);
+    let random_num = rand::rng().random_range(10000000..99999999);
     format!("jsonpCallback{}", random_num)
 }
 

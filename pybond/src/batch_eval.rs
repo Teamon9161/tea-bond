@@ -5,7 +5,7 @@ use super::future::PyFuture;
 use super::tf_evaluator::PyTfEvaluator;
 use chrono::NaiveDate;
 use pyo3::prelude::*;
-use tea_bond::{Bond, BondYtm, Future, FuturePrice, TfEvaluator};
+use tea_bond::{BondYtm, CachedBond, Future, FuturePrice, TfEvaluator};
 use tevec::prelude::*;
 
 #[pyclass]
@@ -22,7 +22,7 @@ impl From<Vec<TfEvaluator>> for Evaluators {
 fn get_bond_ytm_future_price<T: IsNone<Inner = f64>>(
     ytm: T,
     price: T,
-    bond: Arc<Bond>,
+    bond: CachedBond,
     future: Arc<Future>,
 ) -> (BondYtm, FuturePrice) {
     let ytm = if ytm.is_none() {
@@ -42,7 +42,7 @@ fn evaluate_price_vec<V: Vec1View<T>, T: IsNone<Inner = f64>>(
     evaluator: TfEvaluator,
     bond_ytm: V,
     future_price: V,
-    bond: Arc<Bond>,
+    bond: CachedBond,
     future: Arc<Future>,
     date: NaiveDate,
     capital_rate: f64,

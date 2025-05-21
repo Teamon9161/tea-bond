@@ -1,0 +1,25 @@
+[package]
+name = "tea-bond"
+version = "0.2.0"
+edition = "2021"
+exclude = []  # 不再需要排除 pybond，因为它现在是单独的 crate
+
+[features]
+default = ["download"]
+download = ["reqwest", "tokio", "rand"]
+
+[dependencies]
+tea-calendar = { workspace = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+compact_str = { version = "0.9", features = ["serde"] }
+smart-default = "0.7"
+chrono = { workspace = true }
+anyhow = "1"
+parking_lot = "0.12"
+reqwest = { version = "0.12", optional = true, features = [
+    "json",
+    "rustls-tls",
+] }
+tokio = { version = "1", features = ["full"], optional = true }
+rand = { version = "0.9", optional = true } 
