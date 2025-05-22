@@ -10,6 +10,7 @@ def calc_bond_trade_pnl(
     clean_price: IntoExpr,
     clean_close: IntoExpr,
     symbol: str = "",
+    bond_info_path: str | None = None,
     multiplier: float = 1,
     c_rate: float = 0,
     borrowing_cost: float = 0,
@@ -20,6 +21,11 @@ def calc_bond_trade_pnl(
     qty = parse_into_expr(qty)
     clean_price = parse_into_expr(clean_price)
     clean_close = parse_into_expr(clean_close)
+    if bond_info_path is None:
+        from .bond import bonds_info_path as path
+
+        bond_info_path = str(path)
+
     if begin_state is None:
         begin_state = {
             "pos": 0,
@@ -38,6 +44,7 @@ def calc_bond_trade_pnl(
         "borrowing_cost": borrowing_cost,
         "capital_rate": capital_rate,
         "begin_state": begin_state,
+        "bond_info_path": bond_info_path,
     }
     return register_plugin(
         args=[settle_time, qty, clean_price, clean_close],

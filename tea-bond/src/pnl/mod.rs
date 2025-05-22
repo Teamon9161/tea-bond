@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{CachedBond, SmallStr};
 use chrono::{Days, NaiveDate};
 use itertools::izip;
@@ -22,6 +24,7 @@ pub struct PnlReport {
 #[derive(Deserialize)]
 pub struct BondTradePnlOpt {
     pub symbol: SmallStr,
+    pub bond_info_path: Option<PathBuf>,
     pub multiplier: f64,
     pub c_rate: f64,
     pub borrowing_cost: f64,
@@ -54,7 +57,7 @@ where
     let symbol = if opt.symbol.is_empty() {
         None
     } else {
-        Some(CachedBond::new(&opt.symbol, None).unwrap())
+        Some(CachedBond::new(&opt.symbol, opt.bond_info_path.as_deref()).unwrap())
     };
     let coupon_paid = symbol.as_ref().map(|bond| bond.get_coupon()).unwrap_or(0.);
     izip!(
