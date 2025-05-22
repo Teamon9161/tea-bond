@@ -4,5 +4,5 @@ data/
 bonds_info/
 *.pyd
 .idea/
-**/Cargo.lock
+# **/Cargo.lock
 **/target/
