@@ -8,6 +8,8 @@ mod bond;
 mod calendar;
 mod ffi;
 mod future;
+#[cfg(feature = "pnl")]
+mod pnl;
 mod tf_evaluator;
 mod utils;
 

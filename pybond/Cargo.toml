@@ -9,9 +9,17 @@ name = "pybond"
 crate-type = ["cdylib"]
 
 [features]
-default = ["download"]
+default = ["download", "pnl"]
 numpy = ["dep:numpy", "tevec/ndarray"]
 download = ["tea-bond/download"]
+pnl = [
+    "tea-bond/pnl",
+    "tevec/polars",
+    "tevec/polars-struct",
+    "tevec/time",
+    "pyo3-polars",
+    "polars-arrow",
+]
 
 [dependencies]
 pyo3 = { version = "0.23", features = [
@@ -22,11 +30,10 @@ pyo3 = { version = "0.23", features = [
     # "experimental-inspect",
     "multiple-pymethods",
 ] }
-#tea-bond = { git = "https://github.com/teamon9161/tea-bond.git", branch = "master" }
 tea-time = { version = "0.5" }
 tea-bond = { path = "../tea-bond" }
 chrono = { version = "0.4", default-features = false }
 numpy = { version = "0.23", optional = true }
-tevec = { version = "0.5.0", optional = true }
-parking_lot = "0.12"
-# ndarray = { version = "0.16", optional = true }
+tevec = { version = "0.5", optional = true }
+pyo3-polars = { version = "0.20", optional = true, features = ["derive"] }
+polars-arrow = { version = "0", optional = true }
