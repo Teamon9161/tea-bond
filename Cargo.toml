@@ -1,9 +1,5 @@
 [workspace]
-members = [
-    "tea-bond",
-    "tea-calendar",
-    "pybond", 
-]
+members = ["tea-bond", "tea-calendar", "pybond"]
 
 default-members = [
     "tea-bond",
@@ -16,4 +12,5 @@ resolver = "2"
 
 [workspace.dependencies]
 chrono = "0.4"
+tea-time = { git = "https://github.com/teamon9161/tevec.git", rev = "8142290" }
 tea-calendar = { path = "tea-calendar" }

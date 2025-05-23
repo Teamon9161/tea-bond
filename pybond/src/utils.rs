@@ -15,15 +15,14 @@ pub fn extract_date(dt: &Bound<'_, PyAny>) -> PyResult<NaiveDate> {
         Ok(dt)
     } else if let Ok(str_dt) = dt.extract::<Cow<'_, str>>() {
         let dt = str_dt.parse().map_err(|_| {
-            PyValueError::new_err(format!("Can not parse {} to a Date object", str_dt))
+            PyValueError::new_err(format!("Can not parse {str_dt} to a Date object"))
         })?;
         Ok(dt)
     } else if dt.is_none() {
         Ok(Default::default())
     } else {
         Err(PyValueError::new_err(format!(
-            "Can not parse {} to a Date object",
-            dt
+            "Can not parse {dt} to a Date object",
         )))
     }
 }

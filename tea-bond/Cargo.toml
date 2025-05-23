@@ -2,7 +2,7 @@
 name = "tea-bond"
 version = "0.2.0"
 edition = "2021"
-exclude = []  # 不再需要排除 pybond，因为它现在是单独的 crate
+exclude = []      # 不再需要排除 pybond，因为它现在是单独的 crate
 
 [features]
 default = ["download", "pnl"]
@@ -23,6 +23,6 @@ reqwest = { version = "0.12", optional = true, features = [
     "rustls-tls",
 ] }
 tokio = { version = "1", features = ["full"], optional = true }
-rand = { version = "0.9", optional = true } 
+rand = { version = "0.9", optional = true }
 itertools = { version = "0.14", optional = true }
-tevec = { version = "0.5", default-features = false, optional = true }
+tevec = { git = "https://github.com/teamon9161/tevec.git", rev = "8142290", default-features = false, optional = true }

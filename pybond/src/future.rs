@@ -82,7 +82,7 @@ impl PyFuture {
     fn future_type(&self) -> PyResult<String> {
         self.0
             .future_type()
-            .map(|ft| format!("{:?}", ft))
+            .map(|ft| format!("{ft:?}"))
             .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 }

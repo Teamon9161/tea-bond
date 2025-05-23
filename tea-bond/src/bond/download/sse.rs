@@ -20,7 +20,7 @@ use rand::Rng;
 
 fn generate_callback() -> String {
     let random_num = rand::rng().random_range(10000000..99999999);
-    format!("jsonpCallback{}", random_num)
+    format!("jsonpCallback{random_num}")
 }
 
 fn extract_json(response: String) -> Result<serde_json::Value> {

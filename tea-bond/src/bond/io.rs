@@ -10,11 +10,11 @@ use std::{
 impl Bond {
     pub fn get_save_path(code: &str, path: Option<&Path>) -> PathBuf {
         if let Some(path) = path {
-            PathBuf::from(path).join(format!("{}.json", code))
+            PathBuf::from(path).join(format!("{code}.json"))
         } else if let Ok(path) = std::env::var("BONDS_INFO_PATH") {
-            PathBuf::from(path).join(format!("{}.json", code))
+            PathBuf::from(path).join(format!("{code}.json"))
         } else {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!("bonds_info/{}.json", code))
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!("bonds_info/{code}.json"))
         }
     }
 
@@ -34,7 +34,7 @@ impl Bond {
             //     "Read bond from json file,code doesn't contain market type, use IB as default: {}",
             //     code
             // );
-            format!("{}.IB", code).into()
+            format!("{code}.IB").into()
         } else {
             code.into()
         };
@@ -68,7 +68,7 @@ impl Bond {
     /// # Arguments
     ///
     /// * `path` - The path where the bond should be saved. This can be either a directory
-    ///            or a file path.
+    ///   or a file path.
     ///
     /// # Returns
     ///

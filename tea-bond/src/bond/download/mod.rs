@@ -5,7 +5,7 @@ use anyhow::{bail, Result};
 
 impl Bond {
     pub async fn download(code: &str) -> Result<Bond> {
-        println!("Download bond: {}", code);
+        println!("Download bond: {code}");
         let (code, market) = if let Some((code, market)) = code.split_once(".") {
             (code, market.parse()?)
         } else {

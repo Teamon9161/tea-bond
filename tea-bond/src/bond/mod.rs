@@ -66,27 +66,6 @@ impl Bond {
     }
 
     #[inline]
-    /// 确保日期在有效范围内
-    fn ensure_date_valid(&self, date: NaiveDate) -> Result<()> {
-        if date < self.carry_date {
-            bail!(
-                "Calculating date {} is before the bond {} 's carry date {}",
-                date,
-                self.code(),
-                self.carry_date
-            );
-        } else if date >= self.maturity_date {
-            bail!(
-                "Calculating date {} is after the bond {} 's maturity date {}",
-                date,
-                self.code(),
-                self.maturity_date
-            );
-        }
-        Ok(())
-    }
-
-    #[inline]
     /// 确保不是零息债券
     fn ensure_not_zero_coupon(&self) -> Result<()> {
         if self.is_zero_coupon() {
@@ -134,10 +113,33 @@ impl Bond {
         );
         Ok(day_counts)
     }
+
+    #[inline]
+    /// 确保日期在有效范围内
+    fn ensure_date_valid(&self, date: NaiveDate) -> Result<NaiveDate> {
+        if date < self.carry_date {
+            eprintln!(
+                "Calculating date {} is before the bond {} 's carry date {}, adjust date to carry date",
+                date,
+                self.code(),
+                self.carry_date
+            );
+            return Ok(self.carry_date);
+        } else if date >= self.maturity_date {
+            bail!(
+                "Calculating date {} is after the bond {} 's maturity date {}",
+                date,
+                self.code(),
+                self.maturity_date
+            );
+        }
+        Ok(date)
+    }
+
     /// 获取上一付息日和下一付息日
     pub fn get_nearest_cp_date(&self, date: NaiveDate) -> Result<(NaiveDate, NaiveDate)> {
         self.ensure_not_zero_coupon()?;
-        self.ensure_date_valid(date)?;
+        let date = self.ensure_date_valid(date)?;
         let date_offset = self.get_cp_offset()?;
         let mut cp_date = self.carry_date;
         let mut cp_date_next = cp_date + date_offset;

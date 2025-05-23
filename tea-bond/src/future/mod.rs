@@ -70,7 +70,7 @@ impl Future {
     pub fn last_trading_date(&self) -> Result<NaiveDate> {
         let yymm = self.code.replace(|c: char| c.is_alphabetic(), "");
         let yyyy = if let Some(yy) = yymm.get(0..2) {
-            format!("20{}", yy)
+            format!("20{yy}")
         } else {
             bail!("Can not extract year from future code: {}", self.code);
         };
