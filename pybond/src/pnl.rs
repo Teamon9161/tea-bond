@@ -1,5 +1,6 @@
 use pyo3_polars::derive::polars_expr;
 use tea_bond::pnl::{self, BondTradePnlOpt, PnlReport};
+use tevec::export::arrow as polars_arrow;
 use tevec::export::polars::prelude::*;
 use tevec::prelude::{IsNone, Vec1Collect};
 
