@@ -1,5 +1,10 @@
-import polars as pl
-from polars.type_aliases import IntoExpr
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import polars as pl
+    from polars.type_aliases import IntoExpr
 
 from .utils import parse_into_expr, register_plugin
 
