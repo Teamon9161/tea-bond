@@ -175,6 +175,19 @@ impl PyBond {
         self.0.is_zero_coupon()
     }
 
+    /// 剩余年数
+    #[pyo3(signature = (date=None))]
+    pub fn remain_year(&self, date: Option<&Bound<'_, PyAny>>) -> PyResult<f64> {
+        let date = date.map(extract_date).transpose()?;
+        Ok(self.0.remain_year(date.unwrap_or(self.maturity_date())))
+    }
+
+    /// 发行年数
+    #[getter]
+    pub fn issue_year(&self) -> i32 {
+        self.0.issue_year()
+    }
+
     /// 获取区间付息（单个付息周期的利息金额）
     ///
     /// 区间付息 = 票面利率 * 面值 / 年付息次数

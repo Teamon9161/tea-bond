@@ -1,3 +1,5 @@
+from datetime import date, time
+
 from numba import njit
 
 from pybond.nb import *
@@ -15,6 +17,10 @@ from pybond.nb import *
 @njit
 def test():
     # print(DateTime(dt))
+    # time = Time(17, 28, 0)
+    # print(time)
+    _time = time(17, 28, 0)
+    print(f"time; {_time}")
     bond = Bond("240018.IB")
     dt = date(2024, 12, 30)
     ytm = 0.019
@@ -26,8 +32,6 @@ def test():
     print(bond.clean_price(ytm, dt))
     print(bond.duration(ytm, dt))
     print(bond.calc_ytm_with_price(bond.dirty_price(ytm, dt), dt))
-    # t = Test(1249512)
-    # t = DateTime(12401204)
 
 
 test()

@@ -66,13 +66,26 @@ impl Bond {
     }
 
     #[inline]
-    /// 确保不是零息债券
-    fn ensure_not_zero_coupon(&self) -> Result<()> {
-        if self.is_zero_coupon() {
-            bail!("Zero Coupon bond does not have coupon dates");
-        }
-        Ok(())
+    pub fn remain_year(&self, date: NaiveDate) -> f64 {
+        let year_diff = self.maturity_date.year() - date.year();
+        let month_diff = self.maturity_date.month() as i32 - date.month() as i32;
+        let date_diff = self.maturity_date.day() as i32 - date.day() as i32;
+        year_diff as f64 + month_diff as f64 / 12.0 + date_diff as f64 / 365.0
     }
+
+    #[inline]
+    pub fn issue_year(&self) -> i32 {
+        self.maturity_date.year() - self.carry_date.year()
+    }
+
+    // #[inline]
+    // /// 确保不是零息债券
+    // fn ensure_not_zero_coupon(&self) -> Result<()> {
+    //     if self.is_zero_coupon() {
+    //         bail!("Zero Coupon bond does not have coupon dates");
+    //     }
+    //     Ok(())
+    // }
 
     #[inline]
     /// 获取区间付息（单个付息周期的利息金额）
@@ -138,7 +151,9 @@ impl Bond {
 
     /// 获取上一付息日和下一付息日
     pub fn get_nearest_cp_date(&self, date: NaiveDate) -> Result<(NaiveDate, NaiveDate)> {
-        self.ensure_not_zero_coupon()?;
+        if self.is_zero_coupon() {
+            bail!("Zero Coupon bond does not have coupon dates");
+        }
         let date = self.ensure_date_valid(date)?;
         let date_offset = self.get_cp_offset()?;
         let mut cp_date = self.carry_date;

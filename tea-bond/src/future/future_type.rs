@@ -10,19 +10,6 @@ pub enum FutureType {
     TL, // 30年期国债期货
 }
 
-#[inline]
-fn issue_year(maturity_date: NaiveDate, carry_date: NaiveDate) -> i32 {
-    maturity_date.year() - carry_date.year()
-}
-
-#[inline]
-fn remain_year(delivery_date: NaiveDate, maturity_date: NaiveDate) -> f64 {
-    let year_diff = maturity_date.year() - delivery_date.year();
-    let month_diff = maturity_date.month() as i32 - delivery_date.month() as i32;
-    let date_diff = maturity_date.day() as i32 - 1; // 规定为于期货到期月首日的差值
-    year_diff as f64 + month_diff as f64 / 12.0 + date_diff as f64 / 365.0
-}
-
 impl FromStr for FutureType {
     type Err = anyhow::Error;
 
@@ -37,6 +24,14 @@ impl FromStr for FutureType {
     }
 }
 
+#[inline]
+fn remain_year(delivery_date: NaiveDate, maturity_date: NaiveDate) -> f64 {
+    let year_diff = maturity_date.year() - delivery_date.year();
+    let month_diff = maturity_date.month() as i32 - delivery_date.month() as i32;
+    let date_diff = maturity_date.day() as i32 - 1; // 规定为与期货到期月首日的差值
+    year_diff as f64 + month_diff as f64 / 12.0 + date_diff as f64 / 365.0
+}
+
 impl FutureType {
     /// 判断是不是可交割券
     pub fn is_deliverable(
@@ -45,7 +40,7 @@ impl FutureType {
         carry_date: NaiveDate,
         maturity_date: NaiveDate,
     ) -> bool {
-        let issue_year = issue_year(maturity_date, carry_date);
+        let issue_year = maturity_date.year() - carry_date.year();
         let remain_year = remain_year(delivery_date, maturity_date);
         match self {
             // 2年期国债期货
