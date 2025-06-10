@@ -41,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.platform.wheel-name }}
-          path: pybond/target/wheels/*.whl
+          path: target/wheels/*.whl
 
   release:
     name: Create Release
