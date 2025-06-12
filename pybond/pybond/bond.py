@@ -7,8 +7,6 @@ from .pybond import Bond as _BondRS
 from .pybond import Future, download_bond
 
 WIND_AVAILABLE = find_spec("WindPy") is not None
-if WIND_AVAILABLE:
-    from .download import login as wind_login
 
 if os.environ.get("BONDS_INFO_PATH") is not None:
     bonds_info_environ_flag = True
