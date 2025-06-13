@@ -157,3 +157,16 @@ class Bond(_BondRS):
         from .pybond import TfEvaluator
 
         return TfEvaluator(future, self).cf
+
+    def calc_ytm_with_clean_price(
+        self,
+        clean_price: float,
+        date: date,
+        cp_dates: tuple[date, date] | None = None,
+        remain_cp_num: int | None = None,
+    ) -> float:
+        """通过净价计算债券ytm"""
+        dirty_price = clean_price + self.accrued_interest(date, cp_dates=cp_dates)
+        return self.calc_ytm_with_price(
+            dirty_price, date, cp_dates=cp_dates, remain_cp_num=remain_cp_num
+        )
