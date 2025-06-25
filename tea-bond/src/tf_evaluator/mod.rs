@@ -59,15 +59,16 @@ mod tests {
         assert_approx_eq(evaluator.accrued_interest, 0.8745205479452056);
         assert_approx_eq(evaluator.duration, 6.040420842016215);
         assert_approx_eq(evaluator.cf, 0.958);
-        assert_approx_eq(evaluator.deliver_accrued_interest, 1.0993973);
+        // 期货的缴款日由于是中秋节，所以会顺延到下一个交易日，计算结果与原本有所不同
+        assert_approx_eq(evaluator.deliver_accrued_interest, 1.1118904);
         assert_approx_eq(evaluator.deliver_cost, 101.87774695275598);
-        assert_approx_eq(evaluator.future_dirty_price, 102.1683973);
-        assert_approx_eq(evaluator.f_b_spread, 0.29065034724402494);
+        assert_approx_eq(evaluator.future_dirty_price, 102.1808904);
+        assert_approx_eq(evaluator.f_b_spread, 0.3031434472440253);
         assert_approx_eq(evaluator.basis_spread, -0.06577359518922776);
-        assert_approx_eq(evaluator.net_basis_spread, -0.09973424062570677);
-        assert_approx_eq(evaluator.carry, 0.033960645436479);
-        assert_approx_eq(evaluator.irr, 0.02892556681284581);
-        assert_approx_eq(evaluator.future_ytm, 0.021018009246774893);
+        assert_approx_eq(evaluator.net_basis_spread, -0.1016208902580227);
+        assert_approx_eq(evaluator.carry, 0.03584729506879494);
+        assert_approx_eq(evaluator.irr, 0.028581046130913425);
+        assert_approx_eq(evaluator.future_ytm, 0.021016611992962765);
     }
 
     fn get_evaluator_without_cp_before_deliver_date() -> TfEvaluator {

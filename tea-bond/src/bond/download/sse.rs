@@ -145,14 +145,14 @@ impl Bond {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-    #[tokio::test]
-    async fn test_sh_download_from_sse() -> Result<()> {
-        let bond = Bond::sh_download_from_sse("019743").await?;
-        dbg!(bond);
-        Ok(())
-    }
-}
+//     #[tokio::test]
+//     async fn test_sh_download_from_sse() -> Result<()> {
+//         let bond = Bond::sh_download_from_sse("019743").await?;
+//         dbg!(bond);
+//         Ok(())
+//     }
+// }

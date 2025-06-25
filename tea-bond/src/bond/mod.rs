@@ -194,15 +194,15 @@ impl Bond {
     ) -> Result<i32> {
         let mut next_cp_date =
             next_cp_date.unwrap_or_else(|| self.get_nearest_cp_date(date).unwrap().1);
-        if next_cp_date >= until_date {
-            // 不同于债券到期日的剩余付息次数计算，这种情况可能在截止日期前不会再有付息
-            // 参考python代码，目前当期货缴款日正好是付息日时，按0处理
-            // TODO: 检查等于的情况是否正确
+        if next_cp_date > until_date {
+            // 对于正好相等的情况，由于应计利息会被重置为0，因此剩余付息次数不应该返回0
+            // 否则计算的持有期收益将会不连续
+            // 此处与原python代码处理不同，当期货缴款日正好是付息日时，按1处理
             return Ok(0);
         }
         let mut cp_num = 0;
         let offset = self.get_cp_offset()?;
-        while next_cp_date < until_date {
+        while next_cp_date <= until_date {
             cp_num += 1;
             next_cp_date = next_cp_date + offset;
         }

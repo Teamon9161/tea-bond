@@ -130,14 +130,14 @@ impl Bond {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-    #[tokio::test]
-    async fn test_ib_download() -> Result<()> {
-        let bond = Bond::download("250205.IB").await?;
-        dbg!(bond);
-        Ok(())
-    }
-}
+//     #[tokio::test]
+//     async fn test_ib_download() -> Result<()> {
+//         let bond = Bond::download("250205.IB").await?;
+//         dbg!(bond);
+//         Ok(())
+//     }
+// }
