@@ -13,7 +13,7 @@ pub use enums::{BondDayCount, CouponType, InterestType, Market};
 use crate::day_counter::{DayCountRule, ACTUAL};
 use crate::SmallStr;
 use anyhow::{bail, ensure, Result};
-use chrono::{Datelike, Duration, Months, NaiveDate};
+use chrono::{Datelike, Months, NaiveDate};
 use impl_traits::{deserialize_date, serialize_date};
 use serde::{Deserialize, Serialize};
 
@@ -139,12 +139,13 @@ impl Bond {
             );
             return Ok(self.carry_date);
         } else if date >= self.maturity_date {
-            bail!(
-                "Calculating date {} is after the bond {} 's maturity date {}",
+            eprintln!(
+                "Calculating date {} is after the bond {} 's maturity date {}, the result may be incorrect",
                 date,
                 self.code(),
                 self.maturity_date
             );
+            return Ok(self.maturity_date);
         }
         Ok(date)
     }
@@ -171,13 +172,15 @@ impl Bond {
 
     /// 剩余的付息次数
     pub fn remain_cp_num(&self, date: NaiveDate, next_cp_date: Option<NaiveDate>) -> Result<i32> {
+        use tea_calendar::Calendar;
         let mut next_cp_date =
             next_cp_date.unwrap_or_else(|| self.get_nearest_cp_date(date).unwrap().1);
         let mut cp_num = 0;
         let offset = self.get_cp_offset()?;
         // TODO: 数据是否确实存在到期日不同于发行日的情况？如果存在，是后延还是提前？
         // 当下一付息日正好等于到期日时，目前正好返回1，也是正确的
-        let maturity_date = self.maturity_date + Duration::days(3); // 减去3天避免节假日导致的计算偏差
+        // let maturity_date = self.maturity_date + Duration::days(3); // 减去3天避免节假日导致的计算偏差
+        let maturity_date = self.mkt.find_workday(self.maturity_date, 0);
         while next_cp_date <= maturity_date {
             cp_num += 1;
             next_cp_date = next_cp_date + offset;
