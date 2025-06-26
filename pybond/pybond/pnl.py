@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     import polars as pl
     from polars.type_aliases import IntoExpr
 
-from .utils import parse_into_expr, register_plugin
+from .polars_utils import parse_into_expr, register_plugin
 
 
 def calc_bond_trade_pnl(

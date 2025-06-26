@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from .bond import Bond
-from .pnl import calc_bond_trade_pnl
+
+# from .pnl import calc_bond_trade_pnl
 from .pybond import Future, Ib, Sse
 from .pybond import TfEvaluator as _TfEvaluatorRS
 
@@ -13,4 +14,4 @@ class TfEvaluator(_TfEvaluatorRS):
         return super().__new__(cls, future, bond, *args, **kwargs)
 
 
-__all__ = ["Bond", "Future", "TfEvaluator", "Ib", "Sse", "calc_bond_trade_pnl"]
+__all__ = ["Bond", "Future", "TfEvaluator", "Ib", "Sse"]
