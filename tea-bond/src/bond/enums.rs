@@ -16,6 +16,18 @@ pub enum CouponType {
     OneTime,
 }
 
+impl FromStr for CouponType {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Coupon_Bear" | "CouponBear" => Ok(CouponType::CouponBear),
+            "Zero_Coupon" | "ZeroCoupon" => Ok(CouponType::ZeroCoupon),
+            "One_Time" | "OneTime" => Ok(CouponType::OneTime),
+            _ => anyhow::bail!("Unknown coupon type: {}", s),
+        }
+    }
+}
+
 #[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq, Clone, Copy)]
 pub enum InterestType {
     /// 固定利率

@@ -2,6 +2,7 @@ use super::Bond;
 use crate::SmallStr;
 use anyhow::Result;
 use parking_lot::Mutex;
+use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use std::{
     collections::HashMap,
@@ -20,6 +21,25 @@ static BOND_DICT: LazyLock<Mutex<HashMap<SmallStr, Arc<Bond>>>> =
 /// to the underlying `Bond` type.
 #[derive(Clone, PartialEq, Eq)]
 pub struct CachedBond(Arc<Bond>);
+
+impl Serialize for CachedBond {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for CachedBond {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let bond = Bond::deserialize(deserializer)?;
+        Ok(Self::from_bond(bond))
+    }
+}
 
 /// Clears the global bond cache (`BOND_DICT`), freeing all cached bonds.
 #[inline]
@@ -71,6 +91,11 @@ impl CachedBond {
     /// # Returns
     /// A `Result` containing the `CachedBond` if successful, or an error if the bond could not be read.
     pub fn new(bond_code: &str, path: Option<&Path>) -> Result<Self> {
+        // default bond is not cached
+        if bond_code.is_empty() {
+            let bond = Bond::default();
+            return Ok(Self::from_bond(bond));
+        }
         {
             // Check if the bond is already in the cache
             let bond_dict = BOND_DICT.lock();
@@ -89,6 +114,10 @@ impl CachedBond {
 
     pub fn into_raw(self) -> *const Bond {
         Arc::into_raw(self.0)
+    }
+
+    pub fn as_mut_ptr(&self) -> *mut Bond {
+        Arc::as_ptr(&self.0) as *mut Bond
     }
 
     /// Creates a `CachedBond` from a raw pointer to a `Bond`.
@@ -124,16 +153,5 @@ impl CachedBond {
             }
         }
         Self(bond)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for CachedBond {
-    #[inline]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let bond = Bond::deserialize(deserializer)?;
-        Ok(Self::from_bond(bond))
     }
 }

@@ -24,7 +24,7 @@ impl Bond {
     /// use tea_bond::Bond;
     /// let bond = Bond::read_json("240006.IB", None).unwrap();
     /// assert_eq!(bond.code(), "240006");
-    /// assert_eq!(bond.cp_rate_1st, 0.0228)
+    /// assert_eq!(bond.cp_rate, 0.0228)
     /// ```
     #[allow(clippy::collapsible_else_if)]
     pub fn read_json(code: impl AsRef<str>, path: Option<&Path>) -> Result<Self> {

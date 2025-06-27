@@ -117,7 +117,7 @@ impl Bond {
                     par_value: res["FACE_VALUE"].as_str().unwrap().parse().unwrap(),
                     cp_type,
                     interest_type,
-                    cp_rate_1st: (res["FACE_RATE"]
+                    cp_rate: (res["FACE_RATE"]
                         .as_str()
                         .unwrap()
                         .parse::<f64>()

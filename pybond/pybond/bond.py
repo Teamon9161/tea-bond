@@ -20,7 +20,7 @@ if not bonds_info_path.exists():
 
 
 class Bond(_BondRS):
-    def __new__(cls, code: str | int, path: str | Path | None = None):
+    def __new__(cls, code: str | int = "", path: str | Path | None = None):
         """
         Create a new Bond instance.
 
@@ -36,6 +36,8 @@ class Bond(_BondRS):
             the bond info will be downloaded automatically.
         """
         code = str(code)
+        if code == "":
+            return super().__new__(cls, "", path)
         if "." not in code:
             code = code + ".IB"
         path = bonds_info_path if path is None else Path(path)
@@ -44,6 +46,17 @@ class Bond(_BondRS):
         else:
             cls.download(code, path)
             return super().__new__(cls, code, path)
+
+    @classmethod
+    def from_json(cls, data: str | dict) -> "Bond":
+        if isinstance(data, str):
+            import json
+
+            data = json.loads(data)
+        bond = Bond()
+        for k, v in data.items():
+            setattr(bond, k, v)
+        return bond
 
     @staticmethod
     def download(

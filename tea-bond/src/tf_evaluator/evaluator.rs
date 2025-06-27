@@ -232,7 +232,7 @@ impl TfEvaluator {
             let month_num_from_dlv2next_cp = month_delta(deliver_date, deliver_next_cp_date);
             out.cf = Some(calc_cf(
                 remain_cp_num_after_deliver,
-                out.bond.bond.cp_rate_1st,
+                out.bond.bond.cp_rate,
                 out.bond.bond.inst_freq,
                 month_num_from_dlv2next_cp,
                 None,

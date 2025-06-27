@@ -54,6 +54,10 @@ class Bond:
         """票面利率, 浮动付息债券仅表示发行时票面利率"""
 
     @property
+    def cp_rate(self) -> float:
+        """票面利率, 浮动付息债券仅表示发行时票面利率"""
+
+    @property
     def base_rate(self) -> float | None:
         """基准利率, 浮动付息债券适用"""
 

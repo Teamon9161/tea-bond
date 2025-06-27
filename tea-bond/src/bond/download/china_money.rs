@@ -106,7 +106,7 @@ impl Bond {
                 par_value: info["parValue"].as_str().unwrap().parse().unwrap(),
                 cp_type,
                 interest_type,
-                cp_rate_1st: (info["parCouponRate"]
+                cp_rate: (info["parCouponRate"]
                     .as_str()
                     .unwrap()
                     .parse::<f64>()
@@ -121,7 +121,7 @@ impl Bond {
                 maturity_date: info["mrtyDate"].as_str().unwrap().parse().unwrap(),
                 day_count: BondDayCount::default(),
             };
-            if bond.cp_rate_1st != 0. {
+            if bond.cp_rate != 0. {
                 assert!(bond.cp_type != CouponType::ZeroCoupon);
                 assert!(bond.inst_freq != 0);
             }

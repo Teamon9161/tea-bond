@@ -14,7 +14,7 @@ impl Default for Bond {
             par_value: 100.0,
             cp_type: CouponType::default(),
             interest_type: InterestType::default(),
-            cp_rate_1st: 0.03,
+            cp_rate: 0.03,
             base_rate: None,
             rate_spread: None,
             inst_freq: 1,

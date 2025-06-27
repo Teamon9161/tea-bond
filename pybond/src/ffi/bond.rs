@@ -22,7 +22,7 @@ pub extern "C" fn free_bond(bond: *mut c_void) {
 #[no_mangle]
 pub extern "C" fn bond_coupon_rate(bond: *const Bond) -> f64 {
     let bond = unsafe { &*bond };
-    bond.cp_rate_1st
+    bond.cp_rate
 }
 
 #[no_mangle]

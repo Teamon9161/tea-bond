@@ -25,7 +25,8 @@ pub struct Bond {
     pub par_value: f64,              // 债券面值
     pub cp_type: CouponType,         // 息票品种
     pub interest_type: InterestType, // 息票利率类型
-    pub cp_rate_1st: f64,            // 票面利率, 浮动付息债券仅表示发行时票面利率
+    #[serde(alias = "cp_rate_1st")]
+    pub cp_rate: f64, // 票面利率, 浮动付息债券仅表示发行时票面利率
     pub base_rate: Option<f64>,      // 基准利率, 浮动付息债券适用
     pub rate_spread: Option<f64>,    // 固定利差, 浮动付息债券适用
     pub inst_freq: i32,              // 年付息次数
@@ -92,7 +93,7 @@ impl Bond {
     ///
     /// 区间付息 = 票面利率 * 面值 / 年付息次数
     pub fn get_coupon(&self) -> f64 {
-        self.cp_rate_1st * self.par_value / self.inst_freq as f64
+        self.cp_rate * self.par_value / self.inst_freq as f64
     }
 
     /// 获得付息间隔
@@ -252,7 +253,7 @@ impl Bond {
             Market::IB => {
                 // 银行间是算头不算尾，计算实际天数（自然日）
                 let inst_accrued_days = ACTUAL.count_days(pre_cp_date, calculating_date);
-                let coupon = self.cp_rate_1st * self.par_value / self.inst_freq as f64;
+                let coupon = self.cp_rate * self.par_value / self.inst_freq as f64;
                 // 当前付息周期实际天数
                 let present_cp_period_days = ACTUAL.count_days(pre_cp_date, next_cp_date);
                 Ok(coupon * inst_accrued_days as f64 / present_cp_period_days as f64)
@@ -260,7 +261,7 @@ impl Bond {
             Market::SH | Market::SSE | Market::SZE | Market::SZ => {
                 // 交易所是算头又算尾
                 let inst_accrued_days = 1 + ACTUAL.count_days(pre_cp_date, calculating_date);
-                Ok(self.cp_rate_1st * self.par_value * inst_accrued_days as f64 / 365.0)
+                Ok(self.cp_rate * self.par_value * inst_accrued_days as f64 / 365.0)
             }
         }
     }

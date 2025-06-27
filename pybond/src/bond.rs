@@ -2,7 +2,7 @@ use std::{ops::Deref, path::PathBuf};
 
 use crate::utils::{extract_date, extract_date2};
 use chrono::NaiveDate;
-use pyo3::prelude::*;
+use pyo3::{exceptions::PyValueError, prelude::*, types::PyType};
 use tea_bond::*;
 
 #[pyclass(name = "Bond", subclass)]
@@ -46,7 +46,7 @@ impl PyBond {
     /// Raises:
     ///     ValueError: If bond data cannot be read or parsed
     #[new]
-    #[pyo3(signature = (code, path))]
+    #[pyo3(signature = (code="", path=None))]
     fn new(code: &str, path: Option<PathBuf>) -> PyResult<Self> {
         crate::utils::get_bond_from_code(code, path.as_deref())
     }
@@ -68,6 +68,14 @@ impl PyBond {
         self.0.save(path).map_err(Into::into)
     }
 
+    #[classmethod]
+    fn from_json(_cls: &Bound<'_, PyType>, str: &str) -> PyResult<Self> {
+        use crate::bond::export::serde_json;
+        let bond: CachedBond =
+            serde_json::from_str(str).map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(Self(bond))
+    }
+
     fn __repr__(&self) -> String {
         format!("{:?}", self.0)
     }
@@ -86,10 +94,30 @@ impl PyBond {
         self.0.code()
     }
 
+    #[setter]
+    pub fn set_code(&mut self, code: &str) {
+        let raw = self.0.as_mut_ptr();
+        unsafe {
+            let bond = &mut *raw;
+            bond.bond_code = format!("{}.{:?}", code, bond.mkt).into();
+        }
+    }
+
     /// 债券代码, 包含交易所后缀
     #[getter]
     pub fn full_code(&self) -> &str {
         &self.0.bond_code
+    }
+
+    #[setter]
+    pub fn set_full_code(&mut self, full_code: &str) -> PyResult<()> {
+        let raw = self.0.as_mut_ptr();
+        unsafe {
+            let bond = &mut *raw;
+            bond.bond_code = full_code.into();
+            bond.mkt = full_code.split('.').last().unwrap_or("IB").parse()?;
+        }
+        Ok(())
     }
 
     /// 债券市场
@@ -98,10 +126,29 @@ impl PyBond {
         format!("{:?}", self.0.mkt)
     }
 
+    #[setter]
+    pub fn set_market(&mut self, market: &str) -> PyResult<()> {
+        let raw = self.0.as_mut_ptr();
+        unsafe {
+            let bond = &mut *raw;
+            bond.mkt = market.parse()?;
+        }
+        Ok(())
+    }
+
     /// 债券简称
     #[getter]
     pub fn abbr(&self) -> &str {
         &self.0.abbr
+    }
+
+    #[setter]
+    pub fn set_abbr(&mut self, abbr: &str) {
+        let raw = self.0.as_mut_ptr();
+        unsafe {
+            let bond = &mut *raw;
+            bond.abbr = abbr.into();
+        }
     }
 
     /// 债券名称 (alias for abbr)
@@ -110,16 +157,40 @@ impl PyBond {
         self.abbr()
     }
 
+    #[setter]
+    pub fn set_name(&mut self, name: &str) {
+        self.set_abbr(name);
+    }
+
     /// 债券面值
     #[getter]
     pub fn par_value(&self) -> f64 {
         self.0.par_value
     }
 
+    #[setter]
+    pub fn set_par_value(&mut self, par_value: f64) {
+        let raw = self.0.as_mut_ptr();
+        unsafe {
+            let bond = &mut *raw;
+            bond.par_value = par_value;
+        }
+    }
+
     /// 息票品种
     #[getter]
     pub fn coupon_type(&self) -> String {
         format!("{:?}", self.0.cp_type)
+    }
+
+    #[setter]
+    pub fn set_coupon_type(&mut self, coupon_type: &str) -> PyResult<()> {
+        let raw = self.0.as_mut_ptr();
+        unsafe {
+            let bond = &mut *raw;
+            bond.cp_type = coupon_type.parse()?;
+        }
+        Ok(())
     }
 
     /// 息票利率类型
@@ -131,7 +202,31 @@ impl PyBond {
     /// 票面利率, 浮动付息债券仅表示发行时票面利率
     #[getter]
     pub fn coupon_rate(&self) -> f64 {
-        self.0.cp_rate_1st
+        self.0.cp_rate
+    }
+
+    #[getter]
+    pub fn cp_rate(&self) -> f64 {
+        self.0.cp_rate
+    }
+
+    #[setter]
+    pub fn set_coupon_rate(&mut self, coupon_rate: f64) {
+        let raw = self.0.as_mut_ptr();
+        unsafe {
+            let bond = &mut *raw;
+            bond.cp_rate = coupon_rate;
+        }
+    }
+
+    #[setter]
+    pub fn set_cp_rate_1st(&mut self, cp_rate_1st: f64) {
+        self.set_coupon_rate(cp_rate_1st);
+    }
+
+    #[setter]
+    pub fn set_cp_rate(&mut self, cp_rate: f64) {
+        self.set_coupon_rate(cp_rate);
     }
 
     /// 基准利率, 浮动付息债券适用
@@ -152,16 +247,47 @@ impl PyBond {
         self.0.inst_freq
     }
 
+    #[setter]
+    pub fn set_inst_freq(&mut self, inst_freq: i32) {
+        let raw = self.0.as_mut_ptr();
+        unsafe {
+            let bond = &mut *raw;
+            bond.inst_freq = inst_freq;
+        }
+    }
+
     /// 起息日
     #[getter]
     pub fn carry_date(&self) -> NaiveDate {
         self.0.carry_date
     }
 
+    #[setter]
+    pub fn set_carry_date(&mut self, carry_date: &Bound<'_, PyAny>) -> PyResult<()> {
+        let carry_date = extract_date(carry_date)?;
+        let raw = self.0.as_mut_ptr();
+        unsafe {
+            let bond = &mut *raw;
+            bond.carry_date = carry_date;
+        }
+        Ok(())
+    }
+
     /// 到期日
     #[getter]
     pub fn maturity_date(&self) -> NaiveDate {
         self.0.maturity_date
+    }
+
+    #[setter]
+    pub fn set_maturity_date(&mut self, maturity_date: &Bound<'_, PyAny>) -> PyResult<()> {
+        let maturity_date = extract_date(maturity_date)?;
+        let raw = self.0.as_mut_ptr();
+        unsafe {
+            let bond = &mut *raw;
+            bond.maturity_date = maturity_date;
+        }
+        Ok(())
     }
 
     /// 计息基准
