@@ -279,14 +279,14 @@ impl PyTfEvaluator {
         &self,
         future_price: Option<f64>,
         bond_ytm: Option<f64>,
-        date: Option<NaiveDate>,
+        date: Option<&Bound<'_, PyAny>>,
         future: Option<PyFuture>,
         bond: Option<PyBond>,
         capital_rate: Option<f64>,
         reinvest_rate: Option<f64>,
     ) -> PyResult<Self> {
         let date = if let Some(date) = date {
-            date
+            extract_date(date)?
         } else {
             self.0.date
         };

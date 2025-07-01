@@ -1,12 +1,7 @@
-from pybond import Bond
+from pybond import Bond, TfEvaluator
 
-data = {
-    "bond_code": "123456.IB",
-    "abbr": "123456",
-    "cp_rate": 0.01,
-    "inst_freq": 2,
-    "carry_date": "2021-01-01",
-    "maturity_date": "2024-01-01",
-}
+dt = "2025-07-01"
+e = TfEvaluator("T2509", 240215, dt, capital_rate=0.019, reinvest_rate=0)
 
-bond = Bond.from_json(data)
+e = e.calc_all()
+print(e.update(bond_ytm=0.02, future_price=100).calc_all())

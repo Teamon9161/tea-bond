@@ -128,8 +128,8 @@ impl TfEvaluator {
             None
         };
 
-        // 如果债券和期货不变，则期货全价不变
-        let future_dirty_price = if !bond_chg && !future_chg {
+        // 如果债券和期货不变且期货的价格不变，则期货全价不变
+        let future_dirty_price = if !bond_chg && !future_chg && future.price == self.future.price {
             self.future_dirty_price
         } else {
             None
