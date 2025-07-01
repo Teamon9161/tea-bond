@@ -47,16 +47,37 @@ jobs:
     name: Create Release
     needs: build
     runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      # Use to sign the release artifacts
+      id-token: write
+      # Used to upload release artifacts
+      contents: write
+      # Used to generate artifact attestation
+      attestations: write
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: wheels
 
-      - name: Create Release
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: "wheels/**/*.whl"
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: wheels/**/*.whl
           draft: false
           prerelease: false
           generate_release_notes: true
+      
+      - name: Publish to PyPI
+        uses: PyO3/maturin-action@v1
+        env:
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        with:
+          command: upload
+          args: --non-interactive --skip-existing wheels/**/*.whl
