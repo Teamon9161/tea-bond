@@ -274,8 +274,8 @@ class TfEvaluator:
 
     def update(
         self,
-        future_price: float,
-        bond_ytm: float,
+        future_price: float | None = None,
+        bond_ytm: float | None = None,
         date: date | None = None,
         future: Future | None = None,
         bond: Bond | None = None,

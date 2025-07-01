@@ -270,15 +270,15 @@ impl PyTfEvaluator {
             .map(Self)
     }
 
-    #[pyo3(signature = (future_price, bond_ytm, date=None, future=None, bond=None, capital_rate=None, reinvest_rate=None))]
+    #[pyo3(signature = (future_price=None, bond_ytm=None, date=None, future=None, bond=None, capital_rate=None, reinvest_rate=None))]
     /// 根据新的日期、债券和期货信息更新评估器
     ///
     /// 此函数会根据输入的新信息更新评估器的各个字段，
     /// 并根据变化情况决定是否保留原有的计算结果。
     fn update(
         &self,
-        future_price: f64,
-        bond_ytm: f64,
+        future_price: Option<f64>,
+        bond_ytm: Option<f64>,
         date: Option<NaiveDate>,
         future: Option<PyFuture>,
         bond: Option<PyBond>,
@@ -305,6 +305,8 @@ impl PyTfEvaluator {
         } else {
             self.0.capital_rate
         };
+        let future_price = future_price.unwrap_or(self.0.future.price);
+        let bond_ytm = bond_ytm.unwrap_or(self.0.bond.ytm);
         Ok(Self(self.0.clone().update_with_new_info(
             date,
             (future, future_price),
