@@ -2,7 +2,7 @@ import ctypes
 
 import llvmlite.binding
 
-from pybond import tea_bond
+from pybond import pybond
 
-lib = ctypes.cdll.LoadLibrary(tea_bond.__file__)
-llvmlite.binding.load_library_permanently(tea_bond.__file__)
+lib = ctypes.cdll.LoadLibrary(pybond.__file__)
+llvmlite.binding.load_library_permanently(pybond.__file__)

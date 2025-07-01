@@ -3,8 +3,8 @@ from datetime import date
 from importlib.util import find_spec
 from pathlib import Path
 
-from .tea_bond import Bond as _BondRS
-from .tea_bond import Future, download_bond
+from .pybond import Bond as _BondRS
+from .pybond import Future, download_bond
 
 WIND_AVAILABLE = find_spec("WindPy") is not None
 
@@ -167,7 +167,7 @@ class Bond(_BondRS):
 
     def cf(self, future: str | Future) -> float:
         """计算转换因子"""
-        from .tea_bond import TfEvaluator
+        from .pybond import TfEvaluator
 
         return TfEvaluator(future, self).cf
 
