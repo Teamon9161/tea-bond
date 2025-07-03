@@ -127,7 +127,7 @@ where
                 } else {
                     state.pos_price = (state.pos_price * prev_pos.abs() + qty.abs() * trade_price)
                         / state.pos.abs();
-                    state.avg_price = state.amt / state.pos * multiplier
+                    state.avg_price = state.amt / (state.pos * multiplier)
                 }
                 if state.pos.abs() <= EPS {
                     state.avg_price = 0.;
