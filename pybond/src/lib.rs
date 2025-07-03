@@ -15,7 +15,11 @@ mod utils;
 
 use bond::PyBond;
 use future::PyFuture;
+use pyo3_polars::PolarsAllocator;
 use tf_evaluator::PyTfEvaluator;
+
+#[global_allocator]
+static ALLOC: PolarsAllocator = PolarsAllocator::new();
 
 #[pymodule]
 fn pybond(m: &Bound<'_, PyModule>) -> PyResult<()> {
