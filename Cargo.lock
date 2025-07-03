@@ -2195,7 +2195,7 @@ dependencies = [
 
 [[package]]
 name = "pybond"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "chrono",
  "numpy",
@@ -3115,7 +3115,7 @@ dependencies = [
 
 [[package]]
 name = "tea-bond"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "anyhow",
  "chrono",
