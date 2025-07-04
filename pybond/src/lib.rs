@@ -15,7 +15,6 @@ mod utils;
 
 use bond::PyBond;
 use future::PyFuture;
-use pyo3_polars::PolarsAllocator;
 use tf_evaluator::PyTfEvaluator;
 
 #[pymodule]
