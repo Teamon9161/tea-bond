@@ -187,6 +187,26 @@ class TfEvaluator:
         reinvest_rate: float | None = None,
     ) -> None: ...
     def copy(self) -> TfEvaluator: ...
+
+    def date(self) -> date:
+        """获取计算日期"""
+
+    @property
+    def bond_code(self) -> str:
+        """获取债券代码"""
+
+    @property
+    def bond_ytm(self) -> float:
+        """获取债券收益率"""
+
+    @property
+    def future(self) -> str:
+        """获取期货代码"""
+
+    @property
+    def future_price(self) -> float:
+        """获取期货价格"""
+
     @property
     def deliverable(self) -> bool:
         """判断债券是否是期货的可交割券"""

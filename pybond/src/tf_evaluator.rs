@@ -71,6 +71,35 @@ impl PyTfEvaluator {
             .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
+    #[getter]
+    fn date(&self) -> NaiveDate {
+        self.0.date
+    }
+
+    #[getter]
+    /// 获取债券代码
+    fn bond_code(&self) -> String {
+        self.0.bond.bond.code().into()
+    }
+
+    #[getter]
+    /// 获取债券收益率
+    fn bond_ytm(&self) -> f64 {
+        self.0.bond.ytm
+    }
+
+    #[getter]
+    /// 获取期货代码
+    fn future(&self) -> String {
+        self.0.future.future.code.clone().into()
+    }
+
+    #[getter]
+    /// 获取期货价格
+    fn future_price(&self) -> f64 {
+        self.0.future.price
+    }
+
     /// 计算期货配对缴款日
     fn with_deliver_date(&self) -> PyResult<Self> {
         self.0

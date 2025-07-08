@@ -115,7 +115,7 @@ impl PyBond {
         unsafe {
             let bond = &mut *raw;
             bond.bond_code = full_code.into();
-            bond.mkt = full_code.split('.').last().unwrap_or("IB").parse()?;
+            bond.mkt = full_code.split('.').next_back().unwrap_or("IB").parse()?;
         }
         Ok(())
     }
