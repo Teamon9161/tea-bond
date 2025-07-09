@@ -1,12 +1,24 @@
 use crate::bond::{Bond, BondDayCount, CouponType, InterestType};
 use crate::SmallStr;
 use anyhow::{bail, Result};
+use std::sync::OnceLock;
 
 const IB_SEARCH_URL: &str = "https://www.chinamoney.com.cn/ags/ms/cm-u-md-bond/CbtPri";
 const IB_BOND_DETAIL_URL: &str = "https://www.chinamoney.com.cn/ags/ms/cm-u-bond-md/BondDetailInfo";
 
-// const USER_AGENT: &'static str = "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36";
-// const USER_AGENT: &'static str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+// Lazy initialized user agent based on platform
+static USER_AGENT: OnceLock<String> = OnceLock::new();
+
+fn get_user_agent() -> &'static str {
+    USER_AGENT.get_or_init(|| {
+        match std::env::consts::OS {
+            "linux" => "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36".to_string(),
+            "windows" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36".to_string(),
+            "macos" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36".to_string(),
+            _ => "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36".to_string(), // fallback to Linux
+        }
+    })
+}
 
 fn ib_get_coupon_interest_type(typ: &str) -> Result<(CouponType, InterestType)> {
     match typ {
@@ -40,18 +52,17 @@ impl Bond {
     ) -> Result<Bond> {
         let client = reqwest::ClientBuilder::new()
             .use_rustls_tls()
-            // .user_agent(USER_AGENT)
+            .user_agent(get_user_agent()) // 使用lazy初始化的user agent
             .build()?;
-        // search bond defined code using code
-        // let url = format!("{}?searchValue={}&verify=false", IB_SEARCH_URL, code);
+
+        // ... 其余代码保持不变
         let url = format!(
             "{}?lang=cn&flag=1&bondName={}&t={}",
             IB_SEARCH_URL,
             search_str.unwrap_or(""),
             chrono::Local::now().timestamp_millis(),
         );
-        // let search_res = client.post(url).send().await?.text().await?;
-        // dbg!(search_res);
+
         let search_res: serde_json::Value = client.post(url).send().await?.json().await?;
         let data = &search_res["records"];
         let defined_code = if data.is_null() {
@@ -65,7 +76,6 @@ impl Bond {
             for bond_info in data {
                 let bond_info = bond_info.as_object().unwrap();
                 let bond_code = bond_info["bondcode"].as_str().unwrap();
-                // dbg!(bond_code, code);
                 if bond_code == code {
                     find_code = bond_info["code"].as_str().unwrap();
                     break;
@@ -76,8 +86,7 @@ impl Bond {
             }
             find_code
         };
-        // println!("defined_code: {}", defined_code);
-        // download bond detail info using defined code
+
         let info_result: serde_json::Value = client
             .post(IB_BOND_DETAIL_URL)
             .form(&serde_json::json!({
@@ -88,7 +97,7 @@ impl Bond {
             .json()
             .await?;
         let info = &info_result["data"]["bondBaseInfo"];
-        // println!("{info:#?}");
+
         if info["bondCode"].as_str().unwrap() != code {
             bail!("Downloaded bond {} failed", code);
         } else {
@@ -130,14 +139,21 @@ impl Bond {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[tokio::test]
-//     async fn test_ib_download() -> Result<()> {
-//         let bond = Bond::download("250205.IB").await?;
-//         dbg!(bond);
-//         Ok(())
-//     }
-// }
+    #[tokio::test]
+    async fn test_ib_download() -> Result<()> {
+        let bond = Bond::download("250205.IB").await?;
+        dbg!(bond);
+        Ok(())
+    }
+
+    #[test]
+    fn test_user_agent_initialization() {
+        let ua = get_user_agent();
+        println!("Current platform user agent: {}", ua);
+        assert!(!ua.is_empty());
+    }
+}
