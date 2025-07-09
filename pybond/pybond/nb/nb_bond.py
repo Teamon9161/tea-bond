@@ -46,12 +46,12 @@ as_numba_type.register(Bond, bond_type)
 
 
 @typeof_impl.register(Bond)
-def typeof_index(val, c):
+def typeof_bond(val, c):
     return bond_type
 
 
 @type_callable(Bond)
-def type_datetime(context):
+def type_bond(context):
     def typer(val):
         return bond_type
 

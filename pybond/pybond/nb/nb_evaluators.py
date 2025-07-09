@@ -56,9 +56,8 @@ from pybond.ffi import (
     tf_evaluator_update_info,
     free_string,
 )
-
+from pybond import TfEvaluator
 from .nb_date import DateType
-from .nb_datetime import DateTimeType
 
 
 class TfEvaluatorType(types.Type):
@@ -67,21 +66,6 @@ class TfEvaluatorType(types.Type):
 
 
 tf_evaluator_type = TfEvaluatorType()
-
-
-class TfEvaluator:
-    """Python TfEvaluator class for numba binding"""
-
-    def __init__(self, future_code, future_price, bond_code, bond_ytm, capital_rate, date, reinvest_rate=None):
-        self.future_code = future_code
-        self.future_price = future_price
-        self.bond_code = bond_code
-        self.bond_ytm = bond_ytm
-        self.capital_rate = capital_rate
-        self.date = date
-        self.reinvest_rate = reinvest_rate
-
-
 as_numba_type.register(TfEvaluator, tf_evaluator_type)
 
 
