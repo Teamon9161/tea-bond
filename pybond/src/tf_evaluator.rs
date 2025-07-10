@@ -1,5 +1,3 @@
-use super::bond::PyBond;
-use super::future::PyFuture;
 use crate::utils::{extract_date, get_bond, get_future};
 use chrono::NaiveDate;
 use pyo3::exceptions::PyValueError;
@@ -309,8 +307,8 @@ impl PyTfEvaluator {
         future_price: Option<f64>,
         bond_ytm: Option<f64>,
         date: Option<&Bound<'_, PyAny>>,
-        future: Option<PyFuture>,
-        bond: Option<PyBond>,
+        future: Option<&Bound<'_, PyAny>>,
+        bond: Option<&Bound<'_, PyAny>>,
         capital_rate: Option<f64>,
         reinvest_rate: Option<f64>,
     ) -> PyResult<Self> {
@@ -320,12 +318,12 @@ impl PyTfEvaluator {
             self.0.date
         };
         let future = if let Some(future) = future {
-            future.0
+            get_future(future)?.0.into()
         } else {
             self.0.future.future.clone()
         };
         let bond = if let Some(bond) = bond {
-            bond.0
+            get_bond(bond)?.0.into()
         } else {
             self.0.bond.bond.clone()
         };
