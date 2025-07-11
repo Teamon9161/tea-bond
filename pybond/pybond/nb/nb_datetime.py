@@ -20,12 +20,9 @@ from numba.extending import (
     unbox,
 )
 
-# from pybond import ffi
 from pybond.ffi import (
     datetime_add_duration,
     datetime_sub_duration,
-    # build_datetime_from_utc_ns,
-    # build_datetime_ns,
     get_datetime_day,
     get_datetime_hour,
     get_datetime_minute,
@@ -33,9 +30,7 @@ from pybond.ffi import (
     get_datetime_nanosecond,
     get_datetime_second,
     get_datetime_year,
-    # local_timestamp_nanos,
     timestamp_nanos,
-    # utc_timestamp_to_local,
 )
 
 from .ir_utils import (

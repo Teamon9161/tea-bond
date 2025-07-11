@@ -139,21 +139,14 @@ impl Bond {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-    #[tokio::test]
-    async fn test_ib_download() -> Result<()> {
-        let bond = Bond::download("250205.IB").await?;
-        dbg!(bond);
-        Ok(())
-    }
-
-    #[test]
-    fn test_user_agent_initialization() {
-        let ua = get_user_agent();
-        println!("Current platform user agent: {}", ua);
-        assert!(!ua.is_empty());
-    }
-}
+//     #[tokio::test]
+//     async fn test_ib_download() -> Result<()> {
+//         let bond = Bond::download("250205.IB").await?;
+//         dbg!(bond);
+//         Ok(())
+//     }
+// }

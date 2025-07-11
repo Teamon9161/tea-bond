@@ -62,6 +62,20 @@ impl PyTfEvaluator {
     }
 
     #[getter]
+    fn get_ptr(&self) -> usize {
+        &self.0 as *const TfEvaluator as usize
+    }
+
+    #[staticmethod]
+    pub fn from_ptr(ptr: usize) -> PyResult<Self> {
+        // Convert the pointer back to a reference
+        unsafe {
+            let evaluator_ref = &*(ptr as *const TfEvaluator);
+            Ok(Self(evaluator_ref.clone()))
+        }
+    }
+
+    #[getter]
     /// 判断债券是否是期货的可交割券
     fn deliverable(&self) -> PyResult<bool> {
         self.0

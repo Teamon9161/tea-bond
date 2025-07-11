@@ -1,25 +1,19 @@
-import numba as nb
 from llvmlite import ir
 from numba import types
 from numba.core import cgutils, utils
 from numba.cpython.hashing import _Py_hash_t
-from numba.experimental import jitclass
 from numba.extending import (
-    NativeValue,
     as_numba_type,
     box,
     intrinsic,
     lower_builtin,
-    lower_getattr,
     make_attribute_wrapper,
     models,
-    overload,
     overload_attribute,
     overload_method,
     register_model,
     type_callable,
     typeof_impl,
-    unbox,
 )
 
 from pybond import Bond
