@@ -1,31 +1,8 @@
+use super::utils::get_bond_data_path;
 use super::utils::get_str;
 use chrono::{Datelike, NaiveDate};
 use std::ffi::c_void;
-use std::path::PathBuf;
-use std::sync::Mutex;
 use tea_bond::{BondYtm, FuturePrice, TfEvaluator};
-
-// Global variable to store bond data path
-static BOND_DATA_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
-
-/// 设置债券数据路径
-#[no_mangle]
-pub extern "C" fn set_bond_data_path(path_ptr: *mut u8, path_len: usize) {
-    let path_str = get_str(path_ptr, path_len);
-    let path = PathBuf::from(path_str);
-    if let Ok(mut global_path) = BOND_DATA_PATH.lock() {
-        *global_path = Some(path);
-    }
-}
-
-/// 获取当前债券数据路径，如果未设置则返回默认路径
-fn get_bond_data_path() -> Option<PathBuf> {
-    if let Ok(global_path) = BOND_DATA_PATH.lock() {
-        global_path.clone()
-    } else {
-        None
-    }
-}
 
 fn create_date(year: u32, month: u32, day: u32) -> NaiveDate {
     NaiveDate::from_ymd_opt(year as i32, month, day).unwrap()
@@ -511,29 +488,27 @@ pub extern "C" fn tf_evaluator_update_info(
         price: future_price,
     };
 
-    let bond_data_path = get_bond_data_path();
-    let bond = match tea_bond::CachedBond::new(bond_code, bond_data_path.as_deref()) {
-        Ok(b) => BondYtm {
-            bond: b.into(),
-            ytm: bond_ytm,
-        },
-        Err(e) => {
-            eprintln!("Failed to create bond {}: {:?}", bond_code, e);
-            return 0;
+    let bond_ytm = if bond_code != evaluator.bond.bond.code()
+        && bond_code != evaluator.bond.bond.bond_code()
+    {
+        let bond_data_path = get_bond_data_path();
+        match tea_bond::CachedBond::new(bond_code, bond_data_path.as_deref()) {
+            Ok(b) => BondYtm {
+                bond: b.into(),
+                ytm: bond_ytm,
+            },
+            Err(e) => {
+                eprintln!("Failed to create bond {}: {:?}", bond_code, e);
+                return 0;
+            }
         }
+    } else {
+        evaluator.bond.clone()
     };
-
-    // 保留再投资利率
-    let reinvest_rate = evaluator.reinvest_rate;
-
-    *evaluator = TfEvaluator {
-        date,
-        future,
-        bond,
-        capital_rate,
-        reinvest_rate,
-        ..Default::default()
-    };
+    *evaluator =
+        (*evaluator)
+            .clone()
+            .update_with_new_info(date, future, bond_ytm, capital_rate, None);
 
     1
 }

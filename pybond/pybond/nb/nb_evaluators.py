@@ -6,6 +6,7 @@ from numba.extending import (
     as_numba_type,
     box,
     lower_builtin,
+    intrinsic,
     make_attribute_wrapper,
     models,
     overload_attribute,
@@ -15,7 +16,6 @@ from numba.extending import (
     typeof_impl,
 )
 from .nb_date import date_type
-
 from pybond import TfEvaluator
 from pybond.ffi import (
     # create_tf_evaluator,
@@ -50,7 +50,7 @@ from pybond.ffi import (
     tf_evaluator_remain_cp_to_deliver,
     tf_evaluator_remain_cp_to_deliver_wm,
     tf_evaluator_remain_days_to_deliver,
-    # tf_evaluator_update_info,
+    tf_evaluator_update_info,
 )
 
 
@@ -237,26 +237,6 @@ def impl_tf_evaluator_builder_with_reinvest(context, builder, sig, args):
     evaluator = cgutils.create_struct_proxy(typ)(context, builder)
     evaluator.ptr = ptr
     return evaluator._getvalue()
-
-
-# Helper function to create LLVM calls for TfEvaluator methods
-def create_tf_evaluator_method_call(method_name, return_type=ir.DoubleType()):
-    def impl(context, builder, sig, args):
-        evaluator_val = args[0]
-        evaluator = cgutils.create_struct_proxy(TfEvaluatorType)(
-            context, builder, value=evaluator_val
-        )
-
-        fn = cgutils.get_or_insert_function(
-            builder.module,
-            ir.FunctionType(return_type, [ir.PointerType(ir.IntType(8))]),
-            name=method_name,
-        )
-
-        result = builder.call(fn, [evaluator.ptr])
-        return result
-
-    return impl
 
 
 # Property getters
@@ -478,3 +458,86 @@ def box_tf_evaluator(typ, val, c):
     c.pyapi.decref(from_ptr_method)
 
     return res
+
+@intrinsic
+def _tf_evaluator_update_call(typingctx, evaluator_t, future_code_t, bond_code_t, date_t, future_price_t, bond_ytm_t, capital_rate_t):
+    """Intrinsic for calling tf_evaluator_update_info FFI function."""
+
+    def codegen(context, builder, sig, args):
+        (
+            evaluator_val,
+            future_code_val,
+            bond_code_val,
+            date_val,
+            future_price_val,
+            bond_ytm_val,
+            capital_rate_val,
+        ) = args
+
+        # Get existing evaluator
+        evaluator = cgutils.create_struct_proxy(tf_evaluator_type)(
+            context, builder, value=evaluator_val
+        )
+
+        # Get string data from Numba strings
+        future_code = context.make_helper(builder, types.string, future_code_val)
+        bond_code = context.make_helper(builder, types.string, bond_code_val)
+
+        # Get date components
+        date = context.make_helper(builder, date_type, date_val)
+
+        # Call tf_evaluator_update_info
+        fn = cgutils.get_or_insert_function(
+            builder.module,
+            ir.FunctionType(
+                ir.IntType(32),  # return type: i32
+                [
+                    ir.PointerType(ir.IntType(8)),  # evaluator ptr
+                    ir.PointerType(ir.IntType(8)),  # future_code_ptr
+                    ir.IntType(utils.MACHINE_BITS),  # future_code_len
+                    ir.DoubleType(),  # future_price
+                    ir.PointerType(ir.IntType(8)),  # bond_code_ptr
+                    ir.IntType(utils.MACHINE_BITS),  # bond_code_len
+                    ir.DoubleType(),  # bond_ytm
+                    ir.DoubleType(),  # capital_rate
+                    ir.IntType(32),  # year
+                    ir.IntType(32),  # month
+                    ir.IntType(32),  # day
+                ],
+            ),
+            name="tf_evaluator_update_info",
+        )
+
+        result = builder.call(
+            fn,
+            [
+                evaluator.ptr,
+                future_code.data,
+                future_code.length,
+                future_price_val,
+                bond_code.data,
+                bond_code.length,
+                bond_ytm_val,
+                capital_rate_val,
+                date.year,
+                date.month,
+                date.day,
+            ],
+        )
+
+        return result
+
+    sig = types.int32(evaluator_t, future_code_t, bond_code_t, date_t, future_price_t, bond_ytm_t, capital_rate_t)
+    return sig, codegen
+
+
+
+@overload_method(TfEvaluatorType, "update")
+# 采用和update pyi同样的参数顺序
+def tf_evaluator_method_update(evaluator, future_price, bond_ytm, date, future, bond, capital_rate):
+    def update_impl(evaluator, future_price, bond_ytm, date, future, bond, capital_rate):
+        result = _tf_evaluator_update_call(evaluator, future, bond, date, future_price, bond_ytm, capital_rate)
+        # Return the evaluator itself (it's been updated in-place)
+        return evaluator
+
+    return update_impl
