@@ -337,7 +337,8 @@ impl PyTfEvaluator {
             self.0.future.future.clone()
         };
         let bond = if let Some(bond) = bond {
-            get_bond(bond)?.0.into()
+            let bond = get_bond(bond)?.0;
+            bond.into()
         } else {
             self.0.bond.bond.clone()
         };
