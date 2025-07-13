@@ -3,7 +3,7 @@ import ctypes
 from .lib import lib
 
 create_bond = lib.create_bond
-create_bond.argstypes = (ctypes.c_void_p, ctypes.c_size_t)
+create_bond.argtypes = (ctypes.c_void_p, ctypes.c_size_t)
 create_bond.restype = ctypes.c_void_p
 
 free_bond = lib.free_bond

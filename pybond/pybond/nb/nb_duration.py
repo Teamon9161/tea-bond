@@ -1,26 +1,15 @@
-import datetime
-import operator
-
 from llvmlite import ir
 from numba import types
 from numba.core import cgutils, utils
 from numba.extending import (
-    NativeValue,
     as_numba_type,
-    box,
     lower_builtin,
     make_attribute_wrapper,
     models,
-    overload,
-    overload_attribute,
-    overload_method,
     register_model,
     type_callable,
     typeof_impl,
-    unbox,
 )
-
-# from .nb_time import Time
 
 
 class Duration:

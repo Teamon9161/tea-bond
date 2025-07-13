@@ -4,6 +4,7 @@ from .nb_bond import Bond, BondType, bond_type
 from .nb_date import DateType, date_type
 from .nb_datetime import DateTime, DateTimeType, datetime_type
 from .nb_duration import Duration, DurationType, duration_type
+from .nb_evaluators import TfEvaluator, TfEvaluatorType, tf_evaluator_type
 from .nb_time import Time, TimeType, time_type
 
 __all__ = [
@@ -16,6 +17,9 @@ __all__ = [
     "Duration",
     "DurationType",
     "duration_type",
+    "TfEvaluator",
+    "TfEvaluatorType",
+    "tf_evaluator_type",
     "Time",
     "TimeType",
     # "date",

@@ -62,6 +62,20 @@ impl PyTfEvaluator {
     }
 
     #[getter]
+    fn get_ptr(&self) -> usize {
+        &self.0 as *const TfEvaluator as usize
+    }
+
+    #[staticmethod]
+    pub fn from_ptr(ptr: usize) -> PyResult<Self> {
+        // Convert the pointer back to a reference
+        unsafe {
+            let evaluator_ref = &*(ptr as *const TfEvaluator);
+            Ok(Self(evaluator_ref.clone()))
+        }
+    }
+
+    #[getter]
     /// 判断债券是否是期货的可交割券
     fn deliverable(&self) -> PyResult<bool> {
         self.0
@@ -323,7 +337,8 @@ impl PyTfEvaluator {
             self.0.future.future.clone()
         };
         let bond = if let Some(bond) = bond {
-            get_bond(bond)?.0.into()
+            let bond = get_bond(bond)?.0;
+            bond.into()
         } else {
             self.0.bond.bond.clone()
         };

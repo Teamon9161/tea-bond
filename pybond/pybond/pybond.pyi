@@ -297,8 +297,8 @@ class TfEvaluator:
         future_price: float | None = None,
         bond_ytm: float | None = None,
         date: date | None = None,
-        future: Future | None = None,
-        bond: Bond | None = None,
+        future: Future | str | None = None,
+        bond: Bond | str | int | None = None,
         capital_rate: float | None = None,
         reinvest_rate: float | None = None,
     ) -> TfEvaluator:

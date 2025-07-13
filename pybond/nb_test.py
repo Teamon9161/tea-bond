@@ -1,21 +1,11 @@
 from datetime import date, time
 
 from numba import njit
-
-from pybond.nb import *
-
-# #[no_mangle]
-# pub extern "C" fn build_datetime_ns(val: i64) -> *mut c_void {
-#     let dt = Utc.timestamp_nanos(val).naive_utc();
-#     Box::into_raw(Box::new(dt)) as *mut c_void
-# }
-#
-# dt = datetime.now().timestamp() * 1e9
-# dt
+from pybond.nb import Bond, TfEvaluator
 
 
 @njit
-def test():
+def test_bond():
     # print(DateTime(dt))
     # time = Time(17, 28, 0)
     # print(time)
@@ -33,5 +23,13 @@ def test():
     print(bond.duration(ytm, dt))
     print(bond.calc_ytm_with_price(bond.dirty_price(ytm, dt), dt))
 
+@njit
+def test_evaluator():
+    dt = date(2024, 12, 30)
+    e = TfEvaluator("T2503", "240215.IB", dt, 100.0, 0.02, 0.018, 0.0).calc_all()
+    print(e)
+    e.update(102.0, 0.01, dt, "T2503", "240018.IB", 0.018)
+    print(e)
+    print(e.future_ytm)
 
-test()
+test_evaluator()

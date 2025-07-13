@@ -1,25 +1,19 @@
-import numba as nb
 from llvmlite import ir
 from numba import types
 from numba.core import cgutils, utils
 from numba.cpython.hashing import _Py_hash_t
-from numba.experimental import jitclass
 from numba.extending import (
-    NativeValue,
     as_numba_type,
     box,
     intrinsic,
     lower_builtin,
-    lower_getattr,
     make_attribute_wrapper,
     models,
-    overload,
     overload_attribute,
     overload_method,
     register_model,
     type_callable,
     typeof_impl,
-    unbox,
 )
 
 from pybond import Bond
@@ -46,12 +40,12 @@ as_numba_type.register(Bond, bond_type)
 
 
 @typeof_impl.register(Bond)
-def typeof_index(val, c):
+def typeof_bond(val, c):
     return bond_type
 
 
 @type_callable(Bond)
-def type_datetime(context):
+def type_bond(context):
     def typer(val):
         return bond_type
 

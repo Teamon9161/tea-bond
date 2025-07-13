@@ -93,9 +93,9 @@ def unbox_date(typ, obj, c):
     c.pyapi.decref(day_obj)
 
     date = cgutils.create_struct_proxy(typ)(c.context, c.builder)
-    date.year = year
-    date.month = month
-    date.day = second
+    date.year = c.builder.trunc(year, ir.IntType(32))
+    date.month = c.builder.trunc(month, ir.IntType(32))
+    date.day = c.builder.trunc(second, ir.IntType(32))
     # Check for errors
     is_error = cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
     return NativeValue(date._getvalue(), is_error=is_error)

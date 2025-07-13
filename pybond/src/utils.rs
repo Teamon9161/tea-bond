@@ -70,9 +70,11 @@ pub fn get_bond(bond: &Bound<'_, PyAny>) -> PyResult<PyBond> {
     if let Ok(bond) = bond.extract::<PyBond>() {
         Ok(bond)
     } else if let Ok(bond_str) = bond.extract::<Cow<'_, str>>() {
-        get_bond_from_code(bond_str.as_ref(), None)
+        let path = crate::ffi::get_bond_data_path();
+        get_bond_from_code(bond_str.as_ref(), path.as_deref())
     } else if let Ok(bond_code) = bond.extract::<i32>() {
-        get_bond_from_code(&bond_code.to_string(), None)
+        let path = crate::ffi::get_bond_data_path();
+        get_bond_from_code(&bond_code.to_string(), path.as_deref())
     } else {
         Err(PyValueError::new_err(
             "Expect a Bond object or a Bond code string",
