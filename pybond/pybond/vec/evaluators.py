@@ -35,13 +35,26 @@ class TfEvaluators:
 # future_prices = np.random.rand(length) + 102
 # bond_ytms = np.random.rand(length) * 0.001 + 0.02
 
+# import polars as pl
+# from pybond.pl import calc_nbs
+# df = pl.DataFrame({
+#     "future": futures,
+#     "bond": bonds,
+#     "date": dates,
+#     "future_price": future_prices,
+#     "bond_ytm": bond_ytms
+# })
+
+
+
 # import time
 # start = time.perf_counter()
-# # TfEvaluators(futures, bonds, dates, future_prices, bond_ytms).net_basis_spread()
+# df.select(calc_nbs(capital_rate=0.018).alias("nbs"))
+# TfEvaluators(futures, bonds, dates, future_prices, bond_ytms).net_basis_spread()
 # res = []
 # evaluator = TfEvaluator("T2412", "", datetime.date(1970, 1, 1), np.nan, np.nan, 0.018, 0)
 # for i in range(length):
 #     evaluator = evaluator.update(future_prices[i], bond_ytms[i], dates[i], futures[i], bonds[i], 0.018)
 #     res.append(evaluator.net_basis_spread)
-
+# print(np.array(res))
 # print(f"Time taken: {time.perf_counter() - start:.6f} seconds")

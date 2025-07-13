@@ -2,7 +2,7 @@
 
 use pyo3::prelude::*;
 
-#[cfg(feature = "numpy")]
+#[cfg(feature = "batch")]
 mod batch_eval;
 mod bond;
 mod calendar;
