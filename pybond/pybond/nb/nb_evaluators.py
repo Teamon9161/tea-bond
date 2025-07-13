@@ -1,12 +1,11 @@
 from llvmlite import ir
 from numba import types
 from numba.core import cgutils, utils
-from numba.cpython.hashing import _Py_hash_t
 from numba.extending import (
     as_numba_type,
     box,
-    lower_builtin,
     intrinsic,
+    lower_builtin,
     make_attribute_wrapper,
     models,
     overload_attribute,
@@ -15,7 +14,7 @@ from numba.extending import (
     type_callable,
     typeof_impl,
 )
-from .nb_date import date_type
+
 from pybond import TfEvaluator
 from pybond.ffi import (
     tf_evaluator_accrued_interest,
@@ -42,9 +41,9 @@ from pybond.ffi import (
     tf_evaluator_remain_cp_to_deliver,
     tf_evaluator_remain_cp_to_deliver_wm,
     tf_evaluator_remain_days_to_deliver,
-    tf_evaluator_update_info,
 )
 
+from .nb_date import date_type
 
 
 class TfEvaluatorType(types.Type):
@@ -451,8 +450,18 @@ def box_tf_evaluator(typ, val, c):
 
     return res
 
+
 @intrinsic
-def _tf_evaluator_update_call(typingctx, evaluator_t, future_price_t, bond_ytm_t, date_t, future_code_t, bond_code_t, capital_rate_t):
+def _tf_evaluator_update_call(
+    typingctx,
+    evaluator_t,
+    future_price_t,
+    bond_ytm_t,
+    date_t,
+    future_code_t,
+    bond_code_t,
+    capital_rate_t,
+):
     """Intrinsic for calling tf_evaluator_update_info FFI function."""
 
     def codegen(context, builder, sig, args):
@@ -519,16 +528,29 @@ def _tf_evaluator_update_call(typingctx, evaluator_t, future_price_t, bond_ytm_t
 
         return result
 
-    sig = types.int32(evaluator_t, future_price_t, bond_ytm_t, date_t, future_code_t, bond_code_t, capital_rate_t)
+    sig = types.int32(
+        evaluator_t,
+        future_price_t,
+        bond_ytm_t,
+        date_t,
+        future_code_t,
+        bond_code_t,
+        capital_rate_t,
+    )
     return sig, codegen
-
 
 
 @overload_method(TfEvaluatorType, "update")
 # 采用和update pyi同样的参数顺序
-def tf_evaluator_method_update(evaluator, future_price, bond_ytm, date, future, bond, capital_rate):
-    def update_impl(evaluator, future_price, bond_ytm, date, future, bond, capital_rate):
-        result = _tf_evaluator_update_call(evaluator, future_price, bond_ytm, date, future, bond, capital_rate)
+def tf_evaluator_method_update(
+    evaluator, future_price, bond_ytm, date, future, bond, capital_rate
+):
+    def update_impl(
+        evaluator, future_price, bond_ytm, date, future, bond, capital_rate
+    ):
+        _result = _tf_evaluator_update_call(
+            evaluator, future_price, bond_ytm, date, future, bond, capital_rate
+        )
         # Return the evaluator itself (it's been updated in-place)
         return evaluator
 
