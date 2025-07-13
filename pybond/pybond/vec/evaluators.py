@@ -37,11 +37,11 @@ class TfEvaluators:
 
 # import time
 # start = time.perf_counter()
-# TfEvaluators(futures, bonds, dates, future_prices, bond_ytms).net_basis_spread()
-# # res = []
-# # evaluator = TfEvaluator("T2412", "", datetime.date(1970, 1, 1), np.nan, np.nan, 0.018, 0)
-# # for i in range(length):
-# #     evaluator = evaluator.update(future_prices[i], bond_ytms[i], dates[i], futures[i], bonds[i], 0.018)
-# #     res.append(evaluator.net_basis_spread)
+# # TfEvaluators(futures, bonds, dates, future_prices, bond_ytms).net_basis_spread()
+# res = []
+# evaluator = TfEvaluator("T2412", "", datetime.date(1970, 1, 1), np.nan, np.nan, 0.018, 0)
+# for i in range(length):
+#     evaluator = evaluator.update(future_prices[i], bond_ytms[i], dates[i], futures[i], bonds[i], 0.018)
+#     res.append(evaluator.net_basis_spread)
 
 # print(f"Time taken: {time.perf_counter() - start:.6f} seconds")
