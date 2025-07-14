@@ -6,6 +6,7 @@ use serde::Deserialize;
 use tea_bond::{CachedBond, Future, TfEvaluator};
 use tevec::export::arrow as polars_arrow;
 use tevec::export::polars::prelude::*;
+use tevec::prelude::IsNone;
 
 #[derive(Deserialize)]
 struct EvaluatorBatchParams {
@@ -35,7 +36,7 @@ macro_rules! auto_cast {
 
 pub const EPOCH: NaiveDate = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
 
-fn batch_eval_impl<F1, F2, O>(
+fn batch_eval_impl<F1, F2, O: IsNone>(
     future: &StringChunked,
     bond: &StringChunked,
     date: &DateChunked,
@@ -45,6 +46,7 @@ fn batch_eval_impl<F1, F2, O>(
     reinvest_rate: Option<f64>,
     evaluator_func: F1,
     return_func: F2,
+    null_future_return_null: bool,
 ) -> Vec<O>
 where
     F1: Fn(TfEvaluator) -> TfEvaluator,
@@ -53,8 +55,16 @@ where
     let reinvest_rate = Some(reinvest_rate.unwrap_or(0.0));
     let bond_data_path = get_bond_data_path();
     let path = bond_data_path.as_deref();
-    // let evaluator = TfEvaluator::default();
-    let len = future_price.len();
+    let len = vec![
+        future_price.len(),
+        bond_ytm.len(),
+        bond.len(),
+        future.len(),
+        date.len(),
+    ]
+    .into_iter()
+    .max()
+    .unwrap();
     if len == 0 {
         return Default::default();
     }
@@ -68,15 +78,15 @@ where
     // create result vector
     let mut result = Vec::with_capacity(len);
     // create firsth TfEvaluator
-    let mut future: Arc<Future> = Future::new(future_iter.next().unwrap().unwrap()).into();
+    let mut future: Arc<Future> = Future::new(future_iter.next().unwrap().unwrap_or("")).into();
     let mut future_price = future_price_iter.next().unwrap().unwrap_or(f64::NAN);
-    let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap(), path).unwrap();
+    let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), path).unwrap();
     let mut bond_ytm = bond_ytm_iter.next().unwrap().unwrap_or(f64::NAN);
     let mut date_physical = date_iter.next().unwrap().unwrap_or(0);
     let mut date = EPOCH
         .checked_add_days(Days::new(date_physical as u64))
         .unwrap();
-    let mut capital_rate = capital_rate_iter.next().unwrap().unwrap();
+    let mut capital_rate = capital_rate_iter.next().unwrap().unwrap_or(f64::NAN);
     let mut evaluator = TfEvaluator {
         date,
         future: (future.clone(), future_price).into(),
@@ -85,10 +95,8 @@ where
         reinvest_rate,
         ..Default::default()
     };
-    // evaluator = evaluator.with_net_basis_spread().unwrap();
     evaluator = evaluator_func(evaluator);
     result.push(return_func(&evaluator));
-    // result.push(evaluator.net_basis_spread.unwrap());
     for _ in 1..len {
         if let Some(f) = future_iter.next() {
             if let Some(f) = f {
@@ -97,6 +105,10 @@ where
                 }
             } else {
                 // TODO(Teamon): 期货如果为空，可能影响结果正确性，最好有进一步的处理
+                if null_future_return_null {
+                    result.push(O::none());
+                    continue;
+                }
                 future = Default::default();
             }
         };
@@ -134,21 +146,16 @@ where
         );
         evaluator = evaluator_func(evaluator);
         result.push(return_func(&evaluator));
-        // evaluator = evaluator.with_net_basis_spread().unwrap();
-        // result.push(evaluator.net_basis_spread.unwrap())
     }
     result
-    // result
-    //     .into_iter()
-    //     .map(|v| if v.is_nan() { None } else { Some(v) })
-    //     .collect_trusted()
 }
 
-fn batch_eval<F1, F2, O>(
+fn batch_eval<F1, F2, O: IsNone>(
     inputs: &[Series],
     kwargs: EvaluatorBatchParams,
     evaluator_func: F1,
     return_func: F2,
+    null_future_return_null: bool,
 ) -> PolarsResult<Vec<O>>
 where
     F1: Fn(TfEvaluator) -> TfEvaluator,
@@ -173,6 +180,7 @@ where
         kwargs.reinvest_rate,
         evaluator_func,
         return_func,
+        null_future_return_null,
     ))
 }
 
@@ -186,9 +194,274 @@ fn evaluators_net_basis_spread(
         kwargs,
         |e: TfEvaluator| e.with_net_basis_spread().unwrap(),
         |e: &TfEvaluator| e.net_basis_spread.unwrap(),
+        true,
     )?
     .into_iter()
     .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_accrued_interest(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_accrued_interest().unwrap(),
+        |e: &TfEvaluator| e.accrued_interest.unwrap(),
+        false,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_deliver_accrued_interest(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_deliver_accrued_interest().unwrap(),
+        |e: &TfEvaluator| e.deliver_accrued_interest.unwrap(),
+        true,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_cf(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_cf().unwrap(),
+        |e: &TfEvaluator| e.cf.unwrap(),
+        true,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_dirty_price(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_dirty_price().unwrap(),
+        |e: &TfEvaluator| e.dirty_price.unwrap(),
+        false,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_clean_price(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_clean_price().unwrap(),
+        |e: &TfEvaluator| e.clean_price.unwrap(),
+        false,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_future_dirty_price(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_future_dirty_price().unwrap(),
+        |e: &TfEvaluator| e.future_dirty_price.unwrap(),
+        true,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_deliver_cost(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_deliver_cost().unwrap(),
+        |e: &TfEvaluator| e.deliver_cost.unwrap(),
+        true,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_basis_spread(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_basis_spread().unwrap(),
+        |e: &TfEvaluator| e.basis_spread.unwrap(),
+        true,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_f_b_spread(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_f_b_spread().unwrap(),
+        |e: &TfEvaluator| e.f_b_spread.unwrap(),
+        true,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_carry(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_carry().unwrap(),
+        |e: &TfEvaluator| e.carry.unwrap(),
+        true,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_duration(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_duration().unwrap(),
+        |e: &TfEvaluator| e.duration.unwrap(),
+        false,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_irr(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_irr().unwrap(),
+        |e: &TfEvaluator| e.irr.unwrap(),
+        true,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_future_ytm(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_future_ytm().unwrap(),
+        |e: &TfEvaluator| e.future_ytm.unwrap(),
+        true,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_remain_cp_to_deliver(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_remain_cp_to_deliver().unwrap(),
+        |e: &TfEvaluator| e.remain_cp_to_deliver.unwrap(),
+        true,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_remain_cp_to_deliver_wm(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_remain_cp_to_deliver().unwrap(),
+        |e: &TfEvaluator| e.remain_cp_to_deliver_wm.unwrap(),
+        true,
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Int32)]
+fn evaluators_remain_cp_num(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Int32Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_remain_cp_num().unwrap(),
+        |e: &TfEvaluator| e.remain_cp_num.unwrap(),
+        false,
+    )?
+    .into_iter()
+    .map(|v| Some(v))
     .collect_trusted();
     Ok(result.into_series())
 }
