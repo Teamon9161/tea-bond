@@ -35,7 +35,7 @@ macro_rules! auto_cast {
 
 pub const EPOCH: NaiveDate = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
 
-fn calc_nbs(
+fn batch_eval_impl<F1, F2, O>(
     future: &StringChunked,
     bond: &StringChunked,
     date: &DateChunked,
@@ -43,7 +43,13 @@ fn calc_nbs(
     bond_ytm: &Float64Chunked,
     capital_rate: &Float64Chunked,
     reinvest_rate: Option<f64>,
-) -> Float64Chunked {
+    evaluator_func: F1,
+    return_func: F2,
+) -> Vec<O>
+where
+    F1: Fn(TfEvaluator) -> TfEvaluator,
+    F2: Fn(&TfEvaluator) -> O, // O: PolarsDataType,
+{
     let reinvest_rate = Some(reinvest_rate.unwrap_or(0.0));
     let bond_data_path = get_bond_data_path();
     let path = bond_data_path.as_deref();
@@ -79,8 +85,10 @@ fn calc_nbs(
         reinvest_rate,
         ..Default::default()
     };
-    evaluator = evaluator.with_net_basis_spread().unwrap();
-    result.push(evaluator.net_basis_spread.unwrap());
+    // evaluator = evaluator.with_net_basis_spread().unwrap();
+    evaluator = evaluator_func(evaluator);
+    result.push(return_func(&evaluator));
+    // result.push(evaluator.net_basis_spread.unwrap());
     for _ in 1..len {
         if let Some(f) = future_iter.next() {
             if let Some(f) = f {
@@ -124,20 +132,28 @@ fn calc_nbs(
             capital_rate,
             reinvest_rate,
         );
-        evaluator = evaluator.with_net_basis_spread().unwrap();
-        result.push(evaluator.net_basis_spread.unwrap())
+        evaluator = evaluator_func(evaluator);
+        result.push(return_func(&evaluator));
+        // evaluator = evaluator.with_net_basis_spread().unwrap();
+        // result.push(evaluator.net_basis_spread.unwrap())
     }
     result
-        .into_iter()
-        .map(|v| if v.is_nan() { None } else { Some(v) })
-        .collect_trusted()
+    // result
+    //     .into_iter()
+    //     .map(|v| if v.is_nan() { None } else { Some(v) })
+    //     .collect_trusted()
 }
 
-#[polars_expr(output_type=Float64)]
-fn evaluators_net_basis_spread(
+fn batch_eval<F1, F2, O>(
     inputs: &[Series],
     kwargs: EvaluatorBatchParams,
-) -> PolarsResult<Series> {
+    evaluator_func: F1,
+    return_func: F2,
+) -> PolarsResult<Vec<O>>
+where
+    F1: Fn(TfEvaluator) -> TfEvaluator,
+    F2: Fn(&TfEvaluator) -> O,
+{
     let (future, bond, date, future_price, bond_ytm, capital_rate) = (
         &inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4], &inputs[5],
     );
@@ -147,7 +163,7 @@ fn evaluators_net_basis_spread(
         DataType::Date => date.clone(),
         _ => date.cast(&DataType::Date)?,
     };
-    let result = calc_nbs(
+    Ok(batch_eval_impl(
         future.str()?,
         bond.str()?,
         date.date()?,
@@ -155,6 +171,24 @@ fn evaluators_net_basis_spread(
         bond_ytm.f64()?,
         capital_rate.f64()?,
         kwargs.reinvest_rate,
-    );
+        evaluator_func,
+        return_func,
+    ))
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_net_basis_spread(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_net_basis_spread().unwrap(),
+        |e: &TfEvaluator| e.net_basis_spread.unwrap(),
+    )?
+    .into_iter()
+    .map(|v| if v.is_nan() { None } else { Some(v) })
+    .collect_trusted();
     Ok(result.into_series())
 }

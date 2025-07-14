@@ -49,8 +49,8 @@ class TfEvaluators:
 
 # import time
 # start = time.perf_counter()
-# df.select(calc_nbs(capital_rate=0.018).alias("nbs"))
-# TfEvaluators(futures, bonds, dates, future_prices, bond_ytms).net_basis_spread()
+# print(df.select(calc_nbs(capital_rate=0.018).alias("nbs")))
+# # TfEvaluators(futures, bonds, dates, future_prices, bond_ytms).net_basis_spread()
 # res = []
 # evaluator = TfEvaluator("T2412", "", datetime.date(1970, 1, 1), np.nan, np.nan, 0.018, 0)
 # for i in range(length):
