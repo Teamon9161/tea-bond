@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .pybond import Bond as _BondRS
 from .pybond import Future, download_bond
-from .ffi.utils import set_bond_data_path
+# from .ffi.utils import set_bond_data_path
 
 WIND_AVAILABLE = find_spec("WindPy") is not None
 
@@ -15,11 +15,11 @@ if os.environ.get("BONDS_INFO_PATH") is not None:
 else:
     bonds_info_environ_flag = False
     bonds_info_path = Path(__file__).parent / "data" / "bonds_info"
+    os.environ["BONDS_INFO_PATH"] = str(bonds_info_path)
 
 if not bonds_info_path.exists():
     bonds_info_path.mkdir(parents=True)
 
-set_bond_data_path(bonds_info_path)
 
 class Bond(_BondRS):
     def __new__(cls, code: str | int = "", path: str | Path | None = None):

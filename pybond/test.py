@@ -1,25 +1,30 @@
-# import numpy as np
-# import datetime
-# import polars as pl
-# from pybond.pl import TfEvaluators, Bonds
+import numpy as np
+import datetime
+import polars as pl
+from pybond.pl import TfEvaluators, Bonds
 # import os
 # os.environ["POLARS_VERBOSE"] = "1"
 
-# length = 1000000
-# futures = ["T2509"] * (length-2) + ["T2412", "T2509"]
-# bonds = ["240215"] * (length-1) + ["240018"]
-# dates = [datetime.date(2025, 5, 11)] * (length-3) + [datetime.date(2025, 5, 15)] * 3
-# future_prices = np.random.rand(length) + 102
-# bond_ytms = np.random.rand(length) * 0.001 + 0.02
+from pybond import TfEvaluator
+e = TfEvaluator("T2509", 250205, "2025-07-15", 100, 0.02, 0.018)
+e.net_basis_spread
 
 
-# df = pl.DataFrame({
-#     "future": futures,
-#     "bond": bonds,
-#     "date": dates,
-#     "future_price": future_prices,
-#     "bond_ytm": bond_ytms
-# })
+length = 1000000
+futures = ["T2509"] * (length-2) + ["T2412", "T2509"]
+bonds = ["240215"] * (length-1) + ["240018"]
+dates = [datetime.date(2025, 5, 11)] * (length-3) + [datetime.date(2025, 5, 15)] * 3
+future_prices = np.random.rand(length) + 102
+bond_ytms = np.random.rand(length) * 0.001 + 0.02
+
+
+df = pl.DataFrame({
+    "future": futures,
+    "bond": bonds,
+    "date": dates,
+    "future_price": future_prices,
+    "bond_ytm": bond_ytms
+})
 
 
 # df.select(

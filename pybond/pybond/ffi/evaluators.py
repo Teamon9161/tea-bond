@@ -38,11 +38,6 @@ free_tf_evaluator = lib.free_tf_evaluator
 free_tf_evaluator.argtypes = [ctypes.c_void_p]
 free_tf_evaluator.restype = None
 
-# Bond data path management
-set_bond_data_path = lib.set_bond_data_path
-set_bond_data_path.argtypes = [ctypes.c_void_p, ctypes.c_size_t]
-set_bond_data_path.restype = None
-
 # Basic properties
 tf_evaluator_is_deliverable = lib.tf_evaluator_is_deliverable
 tf_evaluator_is_deliverable.argtypes = [ctypes.c_void_p]

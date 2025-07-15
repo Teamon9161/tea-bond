@@ -7,6 +7,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+// pub static mut BONDS_INFO_PATH: Option<PathBuf> = None;
+
 impl Bond {
     pub fn get_save_path(code: &str, path: Option<&Path>) -> PathBuf {
         if let Some(path) = path {

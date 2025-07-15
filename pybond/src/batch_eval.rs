@@ -1,4 +1,3 @@
-use crate::ffi::get_bond_data_path;
 use chrono::{Days, NaiveDate};
 use pyo3_polars::derive::polars_expr;
 use pyo3_polars::export::polars_core::utils::CustomIterTools;
@@ -53,8 +52,6 @@ where
     F2: Fn(&TfEvaluator) -> O, // O: PolarsDataType,
 {
     let reinvest_rate = Some(reinvest_rate.unwrap_or(0.0));
-    let bond_data_path = get_bond_data_path();
-    let path = bond_data_path.as_deref();
     let len = vec![
         future_price.len(),
         bond_ytm.len(),
@@ -80,7 +77,7 @@ where
     // create firsth TfEvaluator
     let mut future: Arc<Future> = Future::new(future_iter.next().unwrap().unwrap_or("")).into();
     let mut future_price = future_price_iter.next().unwrap().unwrap_or(f64::NAN);
-    let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), path).unwrap();
+    let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None).unwrap();
     let mut bond_ytm = bond_ytm_iter.next().unwrap().unwrap_or(f64::NAN);
     let mut date_physical = date_iter.next().unwrap().unwrap_or(0);
     let mut date = EPOCH
@@ -115,7 +112,7 @@ where
         if let Some(b) = bond_iter.next() {
             if let Some(b) = b {
                 if b != bond.code() && b != &bond.bond_code {
-                    bond = CachedBond::new(b, path).unwrap();
+                    bond = CachedBond::new(b, None).unwrap();
                 }
             } else {
                 bond = Default::default();
