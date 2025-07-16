@@ -2198,9 +2198,11 @@ name = "pybond"
 version = "0.2.8"
 dependencies = [
  "chrono",
+ "itertools 0.14.0",
  "numpy",
  "pyo3",
  "pyo3-polars",
+ "serde",
  "tea-bond",
  "tea-time",
  "tevec",

@@ -22,6 +22,12 @@ static BOND_DICT: LazyLock<Mutex<HashMap<SmallStr, Arc<Bond>>>> =
 #[derive(Clone, PartialEq, Eq)]
 pub struct CachedBond(Arc<Bond>);
 
+impl Default for CachedBond {
+    fn default() -> Self {
+        Self::new("", None).unwrap()
+    }
+}
+
 impl Serialize for CachedBond {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where

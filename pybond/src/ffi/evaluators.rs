@@ -1,4 +1,3 @@
-use super::utils::get_bond_data_path;
 use super::utils::get_str;
 use chrono::{Datelike, NaiveDate};
 use std::ffi::c_void;
@@ -31,8 +30,7 @@ pub extern "C" fn create_tf_evaluator(
         price: future_price,
     };
 
-    let bond_data_path = get_bond_data_path();
-    let bond = match tea_bond::CachedBond::new(bond_code, bond_data_path.as_deref()) {
+    let bond = match tea_bond::CachedBond::new(bond_code, None) {
         Ok(b) => BondYtm {
             bond: b.into(),
             ytm: bond_ytm,
@@ -79,8 +77,7 @@ pub extern "C" fn create_tf_evaluator_with_reinvest(
         price: future_price,
     };
 
-    let bond_data_path = get_bond_data_path();
-    let bond = match tea_bond::CachedBond::new(bond_code, bond_data_path.as_deref()) {
+    let bond = match tea_bond::CachedBond::new(bond_code, None) {
         Ok(b) => BondYtm {
             bond: b.into(),
             ytm: bond_ytm,
@@ -491,8 +488,7 @@ pub extern "C" fn tf_evaluator_update_info(
     let bond_ytm = if bond_code != evaluator.bond.bond.code()
         && bond_code != evaluator.bond.bond.bond_code()
     {
-        let bond_data_path = get_bond_data_path();
-        match tea_bond::CachedBond::new(bond_code, bond_data_path.as_deref()) {
+        match tea_bond::CachedBond::new(bond_code, None) {
             Ok(b) => BondYtm {
                 bond: b.into(),
                 ytm: bond_ytm,
