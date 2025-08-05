@@ -103,6 +103,11 @@ impl PyBond {
         }
     }
 
+    #[setter]
+    pub fn set_bond_code(&mut self, code: &str) {
+        self.set_code(code)
+    }
+
     /// 债券代码, 包含交易所后缀
     #[getter]
     pub fn full_code(&self) -> &str {
@@ -197,6 +202,16 @@ impl PyBond {
     #[getter]
     pub fn interest_type(&self) -> String {
         format!("{:?}", self.0.interest_type)
+    }
+
+    #[setter]
+    pub fn set_interest_type(&mut self, typ: &str) -> PyResult<()> {
+        let raw = self.0.as_mut_ptr();
+        unsafe {
+            let bond = &mut *raw;
+            bond.interest_type = typ.parse()?;
+        }
+        Ok(())
     }
 
     /// 票面利率, 浮动付息债券仅表示发行时票面利率
@@ -294,6 +309,16 @@ impl PyBond {
     #[getter]
     pub fn day_count(&self) -> String {
         format!("{:?}", self.0.day_count)
+    }
+
+    #[setter]
+    pub fn set_day_count(&mut self, day_count: &str) -> PyResult<()> {
+        let raw = self.0.as_mut_ptr();
+        unsafe {
+            let bond = &mut *raw;
+            bond.day_count = day_count.parse()?;
+        }
+        Ok(())
     }
 
     /// 是否为零息债券

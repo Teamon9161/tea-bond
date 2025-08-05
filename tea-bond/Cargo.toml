@@ -1,6 +1,6 @@
 [package]
 name = "tea-bond"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 exclude = []      # 不再需要排除 pybond，因为它现在是单独的 crate
 

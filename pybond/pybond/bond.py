@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from datetime import date
 from importlib.util import find_spec
@@ -5,6 +7,7 @@ from pathlib import Path
 
 from .pybond import Bond as _BondRS
 from .pybond import Future, download_bond
+
 # from .ffi.utils import set_bond_data_path
 
 WIND_AVAILABLE = find_spec("WindPy") is not None
@@ -50,7 +53,7 @@ class Bond(_BondRS):
             return super().__new__(cls, code, path)
 
     @classmethod
-    def from_json(cls, data: str | dict) -> "Bond":
+    def from_json(cls, data: str | dict) -> Bond:
         if isinstance(data, str):
             import json
 

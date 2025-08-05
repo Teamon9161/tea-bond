@@ -31,14 +31,27 @@ impl FromStr for CouponType {
 #[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq, Clone, Copy)]
 pub enum InterestType {
     /// 固定利率
+    #[default]
     Fixed,
     /// 浮动利率
-    #[default]
     Floating,
     /// 累进利率
     Progressive,
     /// 零息
     Zero,
+}
+
+impl FromStr for InterestType {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Fixed" | "Fix" | "fix" | "fixed" => Ok(InterestType::Fixed),
+            "Floating" | "floating" | "Float" | "float" => Ok(InterestType::Floating),
+            "Progressive" | "progressive" => Ok(InterestType::Progressive),
+            "Zero" | "zero" => Ok(InterestType::Zero),
+            _ => anyhow::bail!("Unknown interest type: {}", s),
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq, Clone, Copy)]
@@ -107,4 +120,23 @@ pub enum BondDayCount {
     BusIB,
     #[serde(alias = "BUSSSE")]
     BusSSE,
+}
+
+impl FromStr for BondDayCount {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "ACT/ACT" | "Act/Act" => Ok(BondDayCount::ActAct),
+            "A/365" | "Act/365" => Ok(BondDayCount::Act365),
+            "A/360" | "Act/360" => Ok(BondDayCount::Act360),
+            "A/365F" | "Act/365F" => Ok(BondDayCount::Act365F),
+            "T/365" | "Thirty/365" => Ok(BondDayCount::Thirty365),
+            "T/360" | "Thirty/360" => Ok(BondDayCount::Thirty360),
+            "BUS" | "Bus" => Ok(BondDayCount::Bus),
+            "BUSIB" | "BUS/IB" | "Bus/IB" => Ok(BondDayCount::BusIB),
+            "BUSSSE" | "BUS/SSE" | "Bus/SSE" => Ok(BondDayCount::BusSSE),
+            _ => anyhow::bail!("Unknown day count: {}", s),
+        }
+    }
 }
