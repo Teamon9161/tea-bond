@@ -241,12 +241,35 @@ class TfEvaluators:
 
 
 class Bonds:
+    """
+    A class for bond-specific calculations using Polars expressions.
+
+    This class provides methods for calculating various bond metrics
+    without requiring futures contract information.
+    """
+
     def __init__(self, bond: IntoExpr = "symbol"):
+        """
+        Initialize Bonds with bond identifier.
+
+        Args:
+            bond: Bond code column expression (default: "symbol")
+        """
         self.bond = bond
 
     def _evaluator(
         self, date: IntoExpr | None = None, ytm: IntoExpr | None = None
     ) -> TfEvaluators:
+        """
+        Create a TfEvaluators instance for bond-only calculations.
+
+        Args:
+            date: Evaluation date column expression
+            ytm: Yield to maturity column expression
+
+        Returns:
+            TfEvaluators: Configured evaluator instance
+        """
         return TfEvaluators(
             future=None,
             bond=self.bond,
@@ -258,27 +281,86 @@ class Bonds:
         )
 
     def accrued_interest(self, date: IntoExpr = "date"):
+        """
+        Calculate accrued interest for the bond (应计利息).
+
+        Args:
+            date: Evaluation date column expression
+
+        Returns:
+            Polars expression for accrued interest
+        """
         return self._evaluator(date=date).accrued_interest
 
     def clean_price(self, ytm: IntoExpr = "ytm", date: IntoExpr = "date"):
+        """
+        Calculate bond clean price (债券净价).
+
+        Args:
+            ytm: Yield to maturity column expression
+            date: Evaluation date column expression
+
+        Returns:
+            Polars expression for bond clean price
+        """
         return self._evaluator(date=date, ytm=ytm).clean_price
 
     def dirty_price(self, ytm: IntoExpr = "ytm", date: IntoExpr = "date"):
+        """
+        Calculate bond dirty price (债券全价).
+
+        Args:
+            ytm: Yield to maturity column expression
+            date: Evaluation date column expression
+
+        Returns:
+            Polars expression for bond dirty price
+        """
         return self._evaluator(date=date, ytm=ytm).dirty_price
 
     def duration(self, ytm: IntoExpr = "ytm", date: IntoExpr = "date"):
+        """
+        Calculate modified duration (修正久期).
+
+        Args:
+            ytm: Yield to maturity column expression
+            date: Evaluation date column expression
+
+        Returns:
+            Polars expression for modified duration
+        """
         return self._evaluator(date=date, ytm=ytm).duration
 
     def remain_cp_num(self, date: IntoExpr = "date"):
+        """
+        Calculate remaining number of coupon payments (债券剩余付息次数).
+
+        Args:
+            date: Evaluation date column expression
+
+        Returns:
+            Polars expression for remaining number of coupon payments
+        """
         return self._evaluator(date=date).remain_cp_num
 
     # TODO(Teamon): 实现向量化根据净价反推ytm的函数
 
 
 def find_workday(date: IntoExpr, market: str | Ib | Sse, offset: int = 0):
-    if isinstance(market, Ib):
+    """
+    Find the workday based on the given date and market calendar.
+
+    Args:
+        date: Input date column expression
+        market: Market identifier (IB, SSE, or string)
+        offset: Number of workdays to offset (default: 0)
+
+    Returns:
+        Polars expression for the adjusted workday
+    """
+    if market == Ib:
         market = "IB"
-    elif isinstance(market, Sse):
+    elif market == Sse:
         market = "SSE"
     date = parse_into_expr(date)
     return register_plugin(
@@ -290,9 +372,19 @@ def find_workday(date: IntoExpr, market: str | Ib | Sse, offset: int = 0):
 
 
 def is_business_day(date: IntoExpr, market: str | Ib | Sse):
-    if isinstance(market, Ib):
+    """
+    Check if the given date is a business day for the specified market.
+
+    Args:
+        date: Input date column expression
+        market: Market identifier (IB, SSE, or string)
+
+    Returns:
+        Polars expression returning boolean values for business day check
+    """
+    if market == Ib:
         market = "IB"
-    elif isinstance(market, Sse):
+    elif market == Sse:
         market = "SSE"
     date = parse_into_expr(date)
     return register_plugin(
