@@ -6,7 +6,7 @@ import polars as pl
 # import os
 # os.environ["POLARS_VERBOSE"] = "1"
 from pybond import TfEvaluator
-from pybond.pl import Bonds, TfEvaluators
+from pybond.pl import Bonds, TfEvaluators, find_workday, is_business_day
 
 e = TfEvaluator("T2509", 250205, "2025-07-15", 100, 0.02, 0.018)
 e.net_basis_spread
@@ -32,6 +32,9 @@ df = pl.DataFrame(
 
 
 df.select(
+    "date",
+    sd=find_workday("date", "IB", 1),
+    ib=is_business_day("date", "SSE"),
     cp=Bonds("bond").clean_price(ytm="bond_ytm"),
     dp=Bonds("bond").dirty_price(ytm="bond_ytm"),
     ai=Bonds("bond").accrued_interest(),

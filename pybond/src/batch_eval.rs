@@ -1,8 +1,9 @@
-use chrono::{Days, NaiveDate};
+use chrono::{Datelike, Days, NaiveDate};
 use pyo3_polars::derive::polars_expr;
 use pyo3_polars::export::polars_core::utils::CustomIterTools;
 use serde::Deserialize;
-use tea_bond::{CachedBond, Future, TfEvaluator};
+use tea_bond::export::calendar::Calendar;
+use tea_bond::{CachedBond, Future, Market, TfEvaluator};
 use tevec::export::arrow as polars_arrow;
 use tevec::export::polars::prelude::*;
 use tevec::prelude::IsNone;
@@ -34,6 +35,7 @@ macro_rules! auto_cast {
 }
 
 pub const EPOCH: NaiveDate = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
+pub const EPOCH_DAYS_FROM_CE: i32 = 719163;
 
 fn batch_eval_impl<F1, F2, O: IsNone>(
     future: &StringChunked,
@@ -461,4 +463,71 @@ fn evaluators_remain_cp_num(
     .map(Some)
     .collect_trusted();
     Ok(result.into_series())
+}
+
+#[derive(Deserialize)]
+struct FindWorkdayKwargs {
+    market: Market,
+    offset: i32
+}
+
+#[polars_expr(output_type=Date)]
+fn calendar_find_workday(
+    inputs: &[Series],
+    kwargs: FindWorkdayKwargs
+) -> PolarsResult<Series> {
+    use tea_bond::export::calendar::china;
+    let date_series = inputs[0].date()?.physical();
+    let res: Int32Chunked = match kwargs.market {
+        Market::IB => {
+            date_series.iter().map(|value| {
+                value.map(|v| {
+                    let dt = EPOCH.checked_add_days(Days::new(v as u64)).unwrap();
+                    china::IB.find_workday(dt, kwargs.offset).num_days_from_ce() - EPOCH_DAYS_FROM_CE
+                })
+            }).collect_trusted()
+        },
+        Market::SSE | Market::SH | Market::SZ | Market::SZE => {
+            date_series.iter().map(|value| {
+                value.map(|v| {
+                    let dt = EPOCH.checked_add_days(Days::new(v as u64)).unwrap();
+                    china::SSE.find_workday(dt, kwargs.offset).num_days_from_ce() - EPOCH_DAYS_FROM_CE
+                })
+            }).collect_trusted()
+        }
+    };
+    Ok(res.into_date().into_series())
+}
+
+#[derive(Deserialize)]
+struct IsBusinessDayKwargs {
+    market: Market,
+}
+
+#[polars_expr(output_type=Boolean)]
+fn calendar_is_business_day(
+    inputs: &[Series],
+    kwargs: IsBusinessDayKwargs
+) -> PolarsResult<Series> {
+    use tea_bond::export::calendar::china;
+    let date_series = inputs[0].date()?.physical();
+    let res: BooleanChunked = match kwargs.market {
+        Market::IB => {
+            date_series.iter().map(|value| {
+                value.map(|v| {
+                    let dt = EPOCH.checked_add_days(Days::new(v as u64)).unwrap();
+                    china::IB.is_business_day(dt)
+                })
+            }).collect_trusted()
+        },
+        Market::SSE | Market::SH | Market::SZ | Market::SZE => {
+            date_series.iter().map(|value| {
+                value.map(|v| {
+                    let dt = EPOCH.checked_add_days(Days::new(v as u64)).unwrap();
+                    china::SSE.is_business_day(dt)
+                })
+            }).collect_trusted()
+        }
+    };
+    Ok(res.into_series())
 }

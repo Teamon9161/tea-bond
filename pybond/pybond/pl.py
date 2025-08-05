@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .pybond import Ib, Sse
+
 if TYPE_CHECKING:
     from polars.type_aliases import IntoExpr
 import polars as pl
@@ -242,7 +244,9 @@ class Bonds:
     def __init__(self, bond: IntoExpr = "symbol"):
         self.bond = bond
 
-    def _evaluator(self, date=None, ytm=None) -> TfEvaluators:
+    def _evaluator(
+        self, date: IntoExpr | None = None, ytm: IntoExpr | None = None
+    ) -> TfEvaluators:
         return TfEvaluators(
             future=None,
             bond=self.bond,
@@ -253,19 +257,47 @@ class Bonds:
             reinvest_rate=None,
         )
 
-    def accrued_interest(self, date="date"):
+    def accrued_interest(self, date: IntoExpr = "date"):
         return self._evaluator(date=date).accrued_interest
 
-    def clean_price(self, ytm="ytm", date="date"):
+    def clean_price(self, ytm: IntoExpr = "ytm", date: IntoExpr = "date"):
         return self._evaluator(date=date, ytm=ytm).clean_price
 
-    def dirty_price(self, ytm="ytm", date="date"):
+    def dirty_price(self, ytm: IntoExpr = "ytm", date: IntoExpr = "date"):
         return self._evaluator(date=date, ytm=ytm).dirty_price
 
-    def duration(self, ytm="ytm", date="date"):
+    def duration(self, ytm: IntoExpr = "ytm", date: IntoExpr = "date"):
         return self._evaluator(date=date, ytm=ytm).duration
 
-    def remain_cp_num(self, date="date"):
+    def remain_cp_num(self, date: IntoExpr = "date"):
         return self._evaluator(date=date).remain_cp_num
 
     # TODO(Teamon): 实现向量化根据净价反推ytm的函数
+
+
+def find_workday(date: IntoExpr, market: str | Ib | Sse, offset: int = 0):
+    if isinstance(market, Ib):
+        market = "IB"
+    elif isinstance(market, Sse):
+        market = "SSE"
+    date = parse_into_expr(date)
+    return register_plugin(
+        args=[date],
+        kwargs={"market": market, "offset": offset},
+        symbol="calendar_find_workday",
+        is_elementwise=True,
+    )
+
+
+def is_business_day(date: IntoExpr, market: str | Ib | Sse):
+    if isinstance(market, Ib):
+        market = "IB"
+    elif isinstance(market, Sse):
+        market = "SSE"
+    date = parse_into_expr(date)
+    return register_plugin(
+        args=[date],
+        kwargs={"market": market},
+        symbol="calendar_is_business_day",
+        is_elementwise=True,
+    )
