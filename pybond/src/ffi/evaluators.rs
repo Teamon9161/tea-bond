@@ -32,11 +32,11 @@ pub extern "C" fn create_tf_evaluator(
 
     let bond = match tea_bond::CachedBond::new(bond_code, None) {
         Ok(b) => BondYtm {
-            bond: b.into(),
+            bond: b,
             ytm: bond_ytm,
         },
         Err(e) => {
-            eprintln!("Failed to create bond {}: {:?}", bond_code, e);
+            eprintln!("Failed to create bond {bond_code}: {e:?}");
             return std::ptr::null_mut();
         }
     };
@@ -79,11 +79,11 @@ pub extern "C" fn create_tf_evaluator_with_reinvest(
 
     let bond = match tea_bond::CachedBond::new(bond_code, None) {
         Ok(b) => BondYtm {
-            bond: b.into(),
+            bond: b,
             ytm: bond_ytm,
         },
         Err(e) => {
-            eprintln!("Failed to create bond {}: {:?}", bond_code, e);
+            eprintln!("Failed to create bond {bond_code}: {e:?}");
             return std::ptr::null_mut();
         }
     };
@@ -398,7 +398,7 @@ pub extern "C" fn tf_evaluator_get_deliver_date(
 pub extern "C" fn tf_evaluator_bond_code(evaluator: *const TfEvaluator) -> *mut i8 {
     let evaluator = unsafe { &*evaluator };
     let code = evaluator.bond.bond.code();
-    match std::ffi::CString::new(code.as_ref() as &str) {
+    match std::ffi::CString::new(code) {
         Ok(c_str) => c_str.into_raw(),
         Err(_) => std::ptr::null_mut(),
     }
@@ -490,11 +490,11 @@ pub extern "C" fn tf_evaluator_update_info(
     {
         match tea_bond::CachedBond::new(bond_code, None) {
             Ok(b) => BondYtm {
-                bond: b.into(),
+                bond: b,
                 ytm: bond_ytm,
             },
             Err(e) => {
-                eprintln!("Failed to create bond {}: {:?}", bond_code, e);
+                eprintln!("Failed to create bond {bond_code}: {e:?}");
                 return 0;
             }
         }

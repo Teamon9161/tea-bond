@@ -332,13 +332,12 @@ impl PyTfEvaluator {
             self.0.date
         };
         let future = if let Some(future) = future {
-            get_future(future)?.0.into()
+            get_future(future)?.0
         } else {
             self.0.future.future.clone()
         };
         let bond = if let Some(bond) = bond {
-            let bond = get_bond(bond)?.0;
-            bond.into()
+            get_bond(bond)?.0
         } else {
             self.0.bond.bond.clone()
         };

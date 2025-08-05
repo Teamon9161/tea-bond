@@ -97,7 +97,7 @@ where
     for _ in 1..len {
         if let Some(f) = future_iter.next() {
             if let Some(f) = f {
-                if f != &future.code {
+                if future.code != f {
                     future = Future::new(f).into()
                 }
             } else {
@@ -111,7 +111,7 @@ where
         };
         if let Some(b) = bond_iter.next() {
             if let Some(b) = b {
-                if b != bond.code() && b != &bond.bond_code {
+                if b != bond.code() && bond.bond_code != b {
                     bond = CachedBond::new(b, None).unwrap();
                 }
             } else {
@@ -458,7 +458,7 @@ fn evaluators_remain_cp_num(
         false,
     )?
     .into_iter()
-    .map(|v| Some(v))
+    .map(Some)
     .collect_trusted();
     Ok(result.into_series())
 }
