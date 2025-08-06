@@ -556,6 +556,17 @@ impl PyTfEvaluator {
     }
 
     #[getter]
+    /// 距离交割日的天数
+    fn remain_days_to_deliver(&mut self) -> PyResult<i32> {
+        if let Some(remain_days_to_deliver) = self.0.remain_days_to_deliver {
+            Ok(remain_days_to_deliver)
+        } else {
+            self.0 = self.with_remain_days_to_deliver()?.0;
+            Ok(self.0.remain_days_to_deliver.unwrap())
+        }
+    }
+
+    #[getter]
     /// 加权平均到交割的期间付息
     fn remain_cp_to_deliver_wm(&mut self) -> PyResult<f64> {
         if let Some(remain_cp_to_deliver_wm) = self.0.remain_cp_to_deliver_wm {
