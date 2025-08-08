@@ -1,14 +1,15 @@
 [workspace]
 members = ["tea-bond", "tea-calendar", "pybond"]
-
 default-members = [
     "tea-bond",
     "tea-calendar",
     # "pybond",
 ]
-
-
 resolver = "2"
+
+[workspace.package]
+version = "0.3.4"
+edition = "2024"
 
 [workspace.dependencies]
 chrono = "0.4"

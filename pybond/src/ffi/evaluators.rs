@@ -8,7 +8,7 @@ fn create_date(year: u32, month: u32, day: u32) -> NaiveDate {
 }
 
 /// 创建TfEvaluator实例
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn create_tf_evaluator(
     future_code_ptr: *mut u8,
     future_code_len: usize,
@@ -54,7 +54,7 @@ pub extern "C" fn create_tf_evaluator(
 }
 
 /// 创建带再投资利率的TfEvaluator实例
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn create_tf_evaluator_with_reinvest(
     future_code_ptr: *mut u8,
     future_code_len: usize,
@@ -101,7 +101,7 @@ pub extern "C" fn create_tf_evaluator_with_reinvest(
 }
 
 /// 释放TfEvaluator实例
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn free_tf_evaluator(evaluator: *mut c_void) {
     if !evaluator.is_null() {
         let _evaluator = unsafe { Box::from_raw(evaluator as *mut TfEvaluator) };
@@ -109,7 +109,7 @@ pub extern "C" fn free_tf_evaluator(evaluator: *mut c_void) {
 }
 
 /// 判断债券是否是期货的可交割券
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_is_deliverable(evaluator: *const TfEvaluator) -> i32 {
     let evaluator = unsafe { &*evaluator };
     match evaluator.is_deliverable() {
@@ -120,7 +120,7 @@ pub extern "C" fn tf_evaluator_is_deliverable(evaluator: *const TfEvaluator) -> 
 }
 
 /// 计算应计利息
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_accrued_interest(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_accrued_interest() {
@@ -133,7 +133,7 @@ pub extern "C" fn tf_evaluator_accrued_interest(evaluator: *mut TfEvaluator) -> 
 }
 
 /// 计算交割应计利息
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_deliver_accrued_interest(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_deliver_accrued_interest() {
@@ -146,7 +146,7 @@ pub extern "C" fn tf_evaluator_deliver_accrued_interest(evaluator: *mut TfEvalua
 }
 
 /// 计算转换因子
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_cf(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_cf() {
@@ -159,7 +159,7 @@ pub extern "C" fn tf_evaluator_cf(evaluator: *mut TfEvaluator) -> f64 {
 }
 
 /// 计算债券全价
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_dirty_price(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_dirty_price() {
@@ -172,7 +172,7 @@ pub extern "C" fn tf_evaluator_dirty_price(evaluator: *mut TfEvaluator) -> f64 {
 }
 
 /// 计算债券净价
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_clean_price(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_clean_price() {
@@ -185,7 +185,7 @@ pub extern "C" fn tf_evaluator_clean_price(evaluator: *mut TfEvaluator) -> f64 {
 }
 
 /// 计算期货全价
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_future_dirty_price(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_future_dirty_price() {
@@ -198,7 +198,7 @@ pub extern "C" fn tf_evaluator_future_dirty_price(evaluator: *mut TfEvaluator) -
 }
 
 /// 计算交割成本
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_deliver_cost(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_deliver_cost() {
@@ -211,7 +211,7 @@ pub extern "C" fn tf_evaluator_deliver_cost(evaluator: *mut TfEvaluator) -> f64 
 }
 
 /// 计算基差
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_basis_spread(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_basis_spread() {
@@ -224,7 +224,7 @@ pub extern "C" fn tf_evaluator_basis_spread(evaluator: *mut TfEvaluator) -> f64 
 }
 
 /// 计算期现价差
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_f_b_spread(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_f_b_spread() {
@@ -237,7 +237,7 @@ pub extern "C" fn tf_evaluator_f_b_spread(evaluator: *mut TfEvaluator) -> f64 {
 }
 
 /// 计算持有收益
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_carry(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_carry() {
@@ -250,7 +250,7 @@ pub extern "C" fn tf_evaluator_carry(evaluator: *mut TfEvaluator) -> f64 {
 }
 
 /// 计算净基差
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_net_basis_spread(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_net_basis_spread() {
@@ -263,7 +263,7 @@ pub extern "C" fn tf_evaluator_net_basis_spread(evaluator: *mut TfEvaluator) -> 
 }
 
 /// 计算修正久期
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_duration(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_duration() {
@@ -276,7 +276,7 @@ pub extern "C" fn tf_evaluator_duration(evaluator: *mut TfEvaluator) -> f64 {
 }
 
 /// 计算内部收益率(IRR)
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_irr(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_irr() {
@@ -289,7 +289,7 @@ pub extern "C" fn tf_evaluator_irr(evaluator: *mut TfEvaluator) -> f64 {
 }
 
 /// 计算期货隐含收益率
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_future_ytm(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_future_ytm() {
@@ -302,7 +302,7 @@ pub extern "C" fn tf_evaluator_future_ytm(evaluator: *mut TfEvaluator) -> f64 {
 }
 
 /// 计算到交割的剩余天数
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_remain_days_to_deliver(evaluator: *mut TfEvaluator) -> i32 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_remain_days_to_deliver() {
@@ -315,7 +315,7 @@ pub extern "C" fn tf_evaluator_remain_days_to_deliver(evaluator: *mut TfEvaluato
 }
 
 /// 计算剩余付息次数
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_remain_cp_num(evaluator: *mut TfEvaluator) -> i32 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_remain_cp_num() {
@@ -328,7 +328,7 @@ pub extern "C" fn tf_evaluator_remain_cp_num(evaluator: *mut TfEvaluator) -> i32
 }
 
 /// 计算到交割的期间付息
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_remain_cp_to_deliver(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_remain_cp_to_deliver() {
@@ -341,7 +341,7 @@ pub extern "C" fn tf_evaluator_remain_cp_to_deliver(evaluator: *mut TfEvaluator)
 }
 
 /// 计算加权平均到交割的期间付息
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_remain_cp_to_deliver_wm(evaluator: *mut TfEvaluator) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().with_remain_cp_to_deliver() {
@@ -354,7 +354,7 @@ pub extern "C" fn tf_evaluator_remain_cp_to_deliver_wm(evaluator: *mut TfEvaluat
 }
 
 /// 计算所有指标
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_calc_all(evaluator: *mut TfEvaluator) -> i32 {
     let evaluator = unsafe { &mut *evaluator };
     match evaluator.clone().calc_all() {
@@ -367,7 +367,7 @@ pub extern "C" fn tf_evaluator_calc_all(evaluator: *mut TfEvaluator) -> i32 {
 }
 
 /// 获取期货交割日期
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_get_deliver_date(
     evaluator: *mut TfEvaluator,
     year: *mut u32,
@@ -394,7 +394,7 @@ pub extern "C" fn tf_evaluator_get_deliver_date(
 }
 
 /// 获取债券代码
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_bond_code(evaluator: *const TfEvaluator) -> *mut i8 {
     let evaluator = unsafe { &*evaluator };
     let code = evaluator.bond.bond.code();
@@ -405,7 +405,7 @@ pub extern "C" fn tf_evaluator_bond_code(evaluator: *const TfEvaluator) -> *mut 
 }
 
 /// 获取期货代码
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_future_code(evaluator: *const TfEvaluator) -> *mut i8 {
     let evaluator = unsafe { &*evaluator };
     let code = &evaluator.future.future.code;
@@ -416,35 +416,35 @@ pub extern "C" fn tf_evaluator_future_code(evaluator: *const TfEvaluator) -> *mu
 }
 
 /// 获取债券收益率
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_bond_ytm(evaluator: *const TfEvaluator) -> f64 {
     let evaluator = unsafe { &*evaluator };
     evaluator.bond.ytm
 }
 
 /// 获取期货价格
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_future_price(evaluator: *const TfEvaluator) -> f64 {
     let evaluator = unsafe { &*evaluator };
     evaluator.future.price
 }
 
 /// 获取资金成本率
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_capital_rate(evaluator: *const TfEvaluator) -> f64 {
     let evaluator = unsafe { &*evaluator };
     evaluator.capital_rate
 }
 
 /// 获取再投资利率
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_reinvest_rate(evaluator: *const TfEvaluator) -> f64 {
     let evaluator = unsafe { &*evaluator };
     evaluator.reinvest_rate.unwrap_or(f64::NAN)
 }
 
 /// 获取计算日期
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_get_date(
     evaluator: *const TfEvaluator,
     year: *mut u32,
@@ -461,7 +461,7 @@ pub extern "C" fn tf_evaluator_get_date(
 }
 
 /// 更新evaluator的信息
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_update_info(
     evaluator: *mut TfEvaluator,
     future_code_ptr: *mut u8,
@@ -510,7 +510,7 @@ pub extern "C" fn tf_evaluator_update_info(
 }
 
 /// 释放C字符串
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn free_string(s: *mut i8) {
     if !s.is_null() {
         unsafe {
