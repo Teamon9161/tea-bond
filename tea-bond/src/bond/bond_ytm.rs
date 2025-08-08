@@ -1,6 +1,7 @@
 use super::Bond;
 use super::CachedBond;
 use anyhow::{Error, Result};
+use std::ops::Deref;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BondYtm {
@@ -14,6 +15,14 @@ impl Default for BondYtm {
             bond: Bond::default().into(),
             ytm: f64::NAN,
         }
+    }
+}
+
+impl Deref for BondYtm {
+    type Target = Bond;
+
+    fn deref(&self) -> &Self::Target {
+        &self.bond
     }
 }
 

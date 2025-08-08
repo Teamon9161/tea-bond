@@ -1,4 +1,5 @@
 use super::Future;
+use std::ops::Deref;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -13,6 +14,14 @@ impl Default for FuturePrice {
             future: Arc::new(Future::default()),
             price: f64::NAN,
         }
+    }
+}
+
+impl Deref for FuturePrice {
+    type Target = Future;
+
+    fn deref(&self) -> &Self::Target {
+        &self.future
     }
 }
 

@@ -85,9 +85,9 @@ impl TfEvaluator {
     #[inline]
     /// 判断债券是否是期货的可交割券
     pub fn is_deliverable(&self) -> Result<bool> {
-        self.future.future.is_deliverable(
-            self.bond.bond.carry_date,
-            self.bond.bond.maturity_date,
+        self.future.is_deliverable(
+            self.bond.carry_date,
+            self.bond.maturity_date,
             self.deliver_date,
         )
     }
@@ -96,7 +96,7 @@ impl TfEvaluator {
     /// 计算期货配对缴款日
     pub fn with_deliver_date(mut self) -> Result<Self> {
         if self.deliver_date.is_none() {
-            self.deliver_date = Some(self.future.future.deliver_date()?);
+            self.deliver_date = Some(self.future.deliver_date()?);
         }
         Ok(self)
     }
@@ -105,8 +105,7 @@ impl TfEvaluator {
     #[inline]
     pub fn with_nearest_cp_dates(mut self) -> Result<Self> {
         if self.cp_dates.is_none() {
-            let bond = &self.bond.bond;
-            let (pre_cp_date, next_cp_date) = bond.get_nearest_cp_date(self.date)?;
+            let (pre_cp_date, next_cp_date) = self.bond.get_nearest_cp_date(self.date)?;
             self.cp_dates = Some((pre_cp_date, next_cp_date));
         }
         Ok(self)
@@ -117,10 +116,8 @@ impl TfEvaluator {
     pub fn with_deliver_cp_dates(self) -> Result<Self> {
         if self.deliver_cp_dates.is_none() {
             let mut out = self.with_deliver_date()?;
-            let (pre_cp_date, next_cp_date) = out
-                .bond
-                .bond
-                .get_nearest_cp_date(out.deliver_date.unwrap())?;
+            let (pre_cp_date, next_cp_date) =
+                out.bond.get_nearest_cp_date(out.deliver_date.unwrap())?;
             out.deliver_cp_dates = Some((pre_cp_date, next_cp_date));
             Ok(out)
         } else {
@@ -147,7 +144,6 @@ impl TfEvaluator {
             let mut out = self.with_nearest_cp_dates()?;
             out.remain_cp_num = Some(
                 out.bond
-                    .bond
                     .remain_cp_num(out.date, Some(out.cp_dates.unwrap().1))?,
             );
             Ok(out)
@@ -163,7 +159,6 @@ impl TfEvaluator {
             let mut out = self.with_nearest_cp_dates()?;
             out.accrued_interest = Some(
                 out.bond
-                    .bond
                     .calc_accrued_interest(out.date, Some(out.cp_dates.unwrap()))?,
             );
             Ok(out)
@@ -177,7 +172,7 @@ impl TfEvaluator {
     pub fn with_dirty_price(self) -> Result<Self> {
         if self.dirty_price.is_none() {
             let mut out = self.with_remain_cp_num()?;
-            out.dirty_price = Some(out.bond.bond.calc_dirty_price_with_ytm(
+            out.dirty_price = Some(out.bond.calc_dirty_price_with_ytm(
                 out.bond.ytm,
                 out.date,
                 out.cp_dates,
@@ -206,7 +201,7 @@ impl TfEvaluator {
     pub fn with_duration(self) -> Result<Self> {
         if self.duration.is_none() {
             let mut out = self.with_remain_cp_num()?;
-            out.duration = Some(out.bond.bond.calc_duration(
+            out.duration = Some(out.bond.calc_duration(
                 out.bond.ytm,
                 out.date,
                 out.cp_dates,
@@ -224,16 +219,15 @@ impl TfEvaluator {
             let mut out = self.with_deliver_cp_dates()?;
             let deliver_date = out.deliver_date.unwrap(); // 交割日
             let (_deliver_pre_cp_date, deliver_next_cp_date) =
-                out.bond.bond.get_nearest_cp_date(deliver_date)?;
+                out.bond.get_nearest_cp_date(deliver_date)?;
             let remain_cp_num_after_deliver = out
-                .bond
                 .bond
                 .remain_cp_num(deliver_date, Some(deliver_next_cp_date))?;
             let month_num_from_dlv2next_cp = month_delta(deliver_date, deliver_next_cp_date);
             out.cf = Some(calc_cf(
                 remain_cp_num_after_deliver,
-                out.bond.bond.cp_rate,
-                out.bond.bond.inst_freq,
+                out.bond.cp_rate,
+                out.bond.inst_freq,
                 month_num_from_dlv2next_cp,
                 None,
             ));
@@ -265,8 +259,8 @@ impl TfEvaluator {
     pub fn with_deliver_accrued_interest(self) -> Result<Self> {
         if self.deliver_accrued_interest.is_none() {
             let mut out = self.with_deliver_cp_dates()?;
-            let coupon = out.bond.bond.get_coupon();
-            let deliver_date = out.future.future.deliver_date()?; // 交割日
+            let coupon = out.bond.get_coupon();
+            let deliver_date = out.future.deliver_date()?; // 交割日
             let (deliver_pre_cp_date, deliver_next_cp_date) = out.deliver_cp_dates.unwrap();
             let deliver_accrued_interest = coupon
                 * ACTUAL.count_days(deliver_pre_cp_date, deliver_date) as f64
@@ -297,14 +291,14 @@ impl TfEvaluator {
             let mut out = self.with_deliver_date()?.with_nearest_cp_dates()?;
             let deliver_date = out.deliver_date.unwrap();
             // 计算期间付息次数
-            let n = out.bond.bond.remain_cp_num_until(
+            let n = out.bond.remain_cp_num_until(
                 out.date,
                 deliver_date,
                 Some(out.cp_dates.unwrap().1),
             )?;
             if n != 0 {
-                let coupon = out.bond.bond.get_coupon();
-                let remain_cp_dates = out.bond.bond.remain_cp_dates_until(
+                let coupon = out.bond.get_coupon();
+                let remain_cp_dates = out.bond.remain_cp_dates_until(
                     out.date,
                     deliver_date,
                     Some(out.cp_dates.unwrap().1),
@@ -428,14 +422,13 @@ impl TfEvaluator {
         if self.future_ytm.is_none() {
             let mut out = self.with_cf()?.with_deliver_date()?;
             let deliver_date = out.deliver_date.unwrap();
-            let accrued_interest = out.bond.bond.calc_accrued_interest(deliver_date, None)?;
+            let accrued_interest = out.bond.calc_accrued_interest(deliver_date, None)?;
             let tmp_dirty_price = out.future.price * out.cf.unwrap() + accrued_interest;
-            out.future_ytm = Some(out.bond.bond.calc_ytm_with_price(
-                tmp_dirty_price,
-                deliver_date,
-                None,
-                None,
-            )?);
+            out.future_ytm =
+                Some(
+                    out.bond
+                        .calc_ytm_with_price(tmp_dirty_price, deliver_date, None, None)?,
+                );
             Ok(out)
         } else {
             Ok(self)
