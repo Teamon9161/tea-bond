@@ -48,6 +48,7 @@ fn batch_eval_impl<F1, F2, O: IsNone>(
     evaluator_func: F1,
     return_func: F2,
     null_future_return_null: bool,
+    null_bond_return_null: bool,
 ) -> Vec<O>
 where
     F1: Fn(TfEvaluator) -> TfEvaluator,
@@ -117,6 +118,10 @@ where
                     bond = CachedBond::new(b, None).unwrap();
                 }
             } else {
+                if null_bond_return_null {
+                    result.push(O::none());
+                    continue;
+                }
                 bond = Default::default();
             }
         };
@@ -155,6 +160,7 @@ fn batch_eval<F1, F2, O: IsNone>(
     evaluator_func: F1,
     return_func: F2,
     null_future_return_null: bool,
+    null_bond_return_null: bool,
 ) -> PolarsResult<Vec<O>>
 where
     F1: Fn(TfEvaluator) -> TfEvaluator,
@@ -180,6 +186,7 @@ where
         evaluator_func,
         return_func,
         null_future_return_null,
+        null_bond_return_null,
     ))
 }
 
@@ -193,6 +200,7 @@ fn evaluators_net_basis_spread(
         kwargs,
         |e: TfEvaluator| e.with_net_basis_spread().unwrap(),
         |e: &TfEvaluator| e.net_basis_spread.unwrap(),
+        true,
         true,
     )?
     .into_iter()
@@ -212,6 +220,7 @@ fn evaluators_accrued_interest(
         |e: TfEvaluator| e.with_accrued_interest().unwrap(),
         |e: &TfEvaluator| e.accrued_interest.unwrap(),
         false,
+        true,
     )?
     .into_iter()
     .map(|v| if v.is_nan() { None } else { Some(v) })
@@ -230,6 +239,7 @@ fn evaluators_deliver_accrued_interest(
         |e: TfEvaluator| e.with_deliver_accrued_interest().unwrap(),
         |e: &TfEvaluator| e.deliver_accrued_interest.unwrap(),
         true,
+        true,
     )?
     .into_iter()
     .map(|v| if v.is_nan() { None } else { Some(v) })
@@ -244,6 +254,7 @@ fn evaluators_cf(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResul
         kwargs,
         |e: TfEvaluator| e.with_cf().unwrap(),
         |e: &TfEvaluator| e.cf.unwrap(),
+        true,
         true,
     )?
     .into_iter()
@@ -260,6 +271,7 @@ fn evaluators_dirty_price(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Po
         |e: TfEvaluator| e.with_dirty_price().unwrap(),
         |e: &TfEvaluator| e.dirty_price.unwrap(),
         false,
+        true,
     )?
     .into_iter()
     .map(|v| if v.is_nan() { None } else { Some(v) })
@@ -275,6 +287,7 @@ fn evaluators_clean_price(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Po
         |e: TfEvaluator| e.with_clean_price().unwrap(),
         |e: &TfEvaluator| e.clean_price.unwrap(),
         false,
+        true,
     )?
     .into_iter()
     .map(|v| if v.is_nan() { None } else { Some(v) })
@@ -292,6 +305,7 @@ fn evaluators_future_dirty_price(
         kwargs,
         |e: TfEvaluator| e.with_future_dirty_price().unwrap(),
         |e: &TfEvaluator| e.future_dirty_price.unwrap(),
+        true,
         true,
     )?
     .into_iter()
@@ -311,6 +325,7 @@ fn evaluators_deliver_cost(
         |e: TfEvaluator| e.with_deliver_cost().unwrap(),
         |e: &TfEvaluator| e.deliver_cost.unwrap(),
         true,
+        true,
     )?
     .into_iter()
     .map(|v| if v.is_nan() { None } else { Some(v) })
@@ -329,6 +344,7 @@ fn evaluators_basis_spread(
         |e: TfEvaluator| e.with_basis_spread().unwrap(),
         |e: &TfEvaluator| e.basis_spread.unwrap(),
         true,
+        true,
     )?
     .into_iter()
     .map(|v| if v.is_nan() { None } else { Some(v) })
@@ -343,6 +359,7 @@ fn evaluators_f_b_spread(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Pol
         kwargs,
         |e: TfEvaluator| e.with_f_b_spread().unwrap(),
         |e: &TfEvaluator| e.f_b_spread.unwrap(),
+        true,
         true,
     )?
     .into_iter()
@@ -359,6 +376,7 @@ fn evaluators_carry(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsRe
         |e: TfEvaluator| e.with_carry().unwrap(),
         |e: &TfEvaluator| e.carry.unwrap(),
         true,
+        true,
     )?
     .into_iter()
     .map(|v| if v.is_nan() { None } else { Some(v) })
@@ -374,6 +392,7 @@ fn evaluators_duration(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Polar
         |e: TfEvaluator| e.with_duration().unwrap(),
         |e: &TfEvaluator| e.duration.unwrap(),
         false,
+        true,
     )?
     .into_iter()
     .map(|v| if v.is_nan() { None } else { Some(v) })
@@ -389,6 +408,7 @@ fn evaluators_irr(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResu
         |e: TfEvaluator| e.with_irr().unwrap(),
         |e: &TfEvaluator| e.irr.unwrap(),
         true,
+        true,
     )?
     .into_iter()
     .map(|v| if v.is_nan() { None } else { Some(v) })
@@ -403,6 +423,7 @@ fn evaluators_future_ytm(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Pol
         kwargs,
         |e: TfEvaluator| e.with_future_ytm().unwrap(),
         |e: &TfEvaluator| e.future_ytm.unwrap(),
+        true,
         true,
     )?
     .into_iter()
@@ -422,6 +443,7 @@ fn evaluators_remain_cp_to_deliver(
         |e: TfEvaluator| e.with_remain_cp_to_deliver().unwrap(),
         |e: &TfEvaluator| e.remain_cp_to_deliver.unwrap(),
         true,
+        true,
     )?
     .into_iter()
     .map(|v| if v.is_nan() { None } else { Some(v) })
@@ -439,6 +461,7 @@ fn evaluators_remain_cp_to_deliver_wm(
         kwargs,
         |e: TfEvaluator| e.with_remain_cp_to_deliver().unwrap(),
         |e: &TfEvaluator| e.remain_cp_to_deliver_wm.unwrap(),
+        true,
         true,
     )?
     .into_iter()
@@ -458,6 +481,7 @@ fn evaluators_remain_cp_num(
         |e: TfEvaluator| e.with_remain_cp_num().unwrap(),
         |e: &TfEvaluator| e.remain_cp_num.unwrap(),
         false,
+        true,
     )?
     .into_iter()
     .map(Some)
@@ -468,33 +492,36 @@ fn evaluators_remain_cp_num(
 #[derive(Deserialize)]
 struct FindWorkdayKwargs {
     market: Market,
-    offset: i32
+    offset: i32,
 }
 
 #[polars_expr(output_type=Date)]
-fn calendar_find_workday(
-    inputs: &[Series],
-    kwargs: FindWorkdayKwargs
-) -> PolarsResult<Series> {
+fn calendar_find_workday(inputs: &[Series], kwargs: FindWorkdayKwargs) -> PolarsResult<Series> {
     use tea_bond::export::calendar::china;
     let date_series = inputs[0].date()?.physical();
     let res: Int32Chunked = match kwargs.market {
-        Market::IB => {
-            date_series.iter().map(|value| {
+        Market::IB => date_series
+            .iter()
+            .map(|value| {
                 value.map(|v| {
                     let dt = EPOCH.checked_add_days(Days::new(v as u64)).unwrap();
-                    china::IB.find_workday(dt, kwargs.offset).num_days_from_ce() - EPOCH_DAYS_FROM_CE
+                    china::IB.find_workday(dt, kwargs.offset).num_days_from_ce()
+                        - EPOCH_DAYS_FROM_CE
                 })
-            }).collect_trusted()
-        },
-        Market::SSE | Market::SH | Market::SZ | Market::SZE => {
-            date_series.iter().map(|value| {
+            })
+            .collect_trusted(),
+        Market::SSE | Market::SH | Market::SZ | Market::SZE => date_series
+            .iter()
+            .map(|value| {
                 value.map(|v| {
                     let dt = EPOCH.checked_add_days(Days::new(v as u64)).unwrap();
-                    china::SSE.find_workday(dt, kwargs.offset).num_days_from_ce() - EPOCH_DAYS_FROM_CE
+                    china::SSE
+                        .find_workday(dt, kwargs.offset)
+                        .num_days_from_ce()
+                        - EPOCH_DAYS_FROM_CE
                 })
-            }).collect_trusted()
-        }
+            })
+            .collect_trusted(),
     };
     Ok(res.into_date().into_series())
 }
@@ -507,27 +534,29 @@ struct IsBusinessDayKwargs {
 #[polars_expr(output_type=Boolean)]
 fn calendar_is_business_day(
     inputs: &[Series],
-    kwargs: IsBusinessDayKwargs
+    kwargs: IsBusinessDayKwargs,
 ) -> PolarsResult<Series> {
     use tea_bond::export::calendar::china;
     let date_series = inputs[0].date()?.physical();
     let res: BooleanChunked = match kwargs.market {
-        Market::IB => {
-            date_series.iter().map(|value| {
+        Market::IB => date_series
+            .iter()
+            .map(|value| {
                 value.map(|v| {
                     let dt = EPOCH.checked_add_days(Days::new(v as u64)).unwrap();
                     china::IB.is_business_day(dt)
                 })
-            }).collect_trusted()
-        },
-        Market::SSE | Market::SH | Market::SZ | Market::SZE => {
-            date_series.iter().map(|value| {
+            })
+            .collect_trusted(),
+        Market::SSE | Market::SH | Market::SZ | Market::SZE => date_series
+            .iter()
+            .map(|value| {
                 value.map(|v| {
                     let dt = EPOCH.checked_add_days(Days::new(v as u64)).unwrap();
                     china::SSE.is_business_day(dt)
                 })
-            }).collect_trusted()
-        }
+            })
+            .collect_trusted(),
     };
     Ok(res.into_series())
 }
