@@ -7,12 +7,12 @@ mod impl_convert;
 mod impl_traits;
 mod io;
 pub use bond_ytm::BondYtm;
-pub use cached_bond::{free_bond_dict, CachedBond};
+pub use cached_bond::{CachedBond, free_bond_dict};
 pub use enums::{BondDayCount, CouponType, InterestType, Market};
 
-use crate::day_counter::{DayCountRule, ACTUAL};
 use crate::SmallStr;
-use anyhow::{bail, ensure, Result};
+use crate::day_counter::{ACTUAL, DayCountRule};
+use anyhow::{Result, bail, ensure};
 use chrono::{Datelike, Months, NaiveDate};
 use impl_traits::{deserialize_date, serialize_date};
 use serde::{Deserialize, Serialize};
@@ -44,6 +44,18 @@ pub struct Bond {
 }
 
 impl Bond {
+    pub(crate) fn check_ytm(&self, ytm: f64) -> f64 {
+        if ytm > 1.0 {
+            eprintln!(
+                "Warning: Bond: {}, YTM exceeds 100%, dividing by 100 by default.",
+                self.bond_code()
+            );
+            ytm * 0.01
+        } else {
+            ytm
+        }
+    }
+
     #[inline]
     /// 债券代码，不包含交易所后缀
     pub fn code(&self) -> &str {
@@ -274,6 +286,7 @@ impl Bond {
         cp_dates: Option<(NaiveDate, NaiveDate)>,
         remain_cp_num: Option<i32>,
     ) -> Result<f64> {
+        let ytm = self.check_ytm(ytm);
         let inst_freq = self.inst_freq as f64;
         let coupon = self.get_coupon();
         let (pre_cp_date, next_cp_date) = if let Some(cp_dates) = cp_dates {
@@ -372,6 +385,7 @@ impl Bond {
         cp_dates: Option<(NaiveDate, NaiveDate)>,
         remain_cp_num: Option<i32>,
     ) -> Result<f64> {
+        let ytm = self.check_ytm(ytm);
         let inst_freq = self.inst_freq as f64;
         let coupon = self.get_coupon();
         let (pre_cp_date, next_cp_date) =
@@ -405,6 +419,7 @@ impl Bond {
         cp_dates: Option<(NaiveDate, NaiveDate)>,
         remain_cp_num: Option<i32>,
     ) -> Result<f64> {
+        let ytm = self.check_ytm(ytm);
         let duration = self.calc_macaulay_duration(ytm, date, cp_dates, remain_cp_num)?;
         Ok(duration / (1. + ytm / self.inst_freq as f64))
     }

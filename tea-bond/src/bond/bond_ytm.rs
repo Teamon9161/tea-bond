@@ -29,10 +29,9 @@ impl Deref for BondYtm {
 impl BondYtm {
     #[inline]
     pub fn new(bond: impl Into<Bond>, ytm: f64) -> Self {
-        BondYtm {
-            bond: CachedBond::from_bond(bond.into()),
-            ytm,
-        }
+        let bond = CachedBond::from_bond(bond.into());
+        let ytm = bond.check_ytm(ytm);
+        BondYtm { bond, ytm }
     }
 
     #[inline]
@@ -42,6 +41,7 @@ impl BondYtm {
 
     #[inline]
     pub fn with_ytm(self, ytm: f64) -> Self {
+        let ytm = self.bond.check_ytm(ytm);
         BondYtm { ytm, ..self }
     }
 }
