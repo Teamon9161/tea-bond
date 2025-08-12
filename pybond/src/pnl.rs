@@ -60,6 +60,10 @@ pub fn pnl_report_vec_to_series(reports: &[PnlReport]) -> Series {
         .iter()
         .map(|t| t.amt.to_opt())
         .collect_trusted_vec1();
+    let fee: Float64Chunked = reports
+        .iter()
+        .map(|t| t.fee.to_opt())
+        .collect_trusted_vec1();
     let res: StructChunked = StructChunked::from_series(
         "pnl_report".into(),
         pos.len(),
@@ -74,6 +78,7 @@ pub fn pnl_report_vec_to_series(reports: &[PnlReport]) -> Series {
                 .with_name("unrealized_pnl".into()),
             coupon_paid.into_series().with_name("coupon_paid".into()),
             amt.into_series().with_name("amt".into()),
+            fee.into_series().with_name("fee".into()),
         ]
         .iter(),
     )
@@ -91,6 +96,7 @@ fn get_output_type(_input_fields: &[Field]) -> PolarsResult<Field> {
         Field::new("unrealized_pnl".into(), DataType::Float64),
         Field::new("coupon_paid".into(), DataType::Float64),
         Field::new("amt".into(), DataType::Float64),
+        Field::new("fee".into(), DataType::Float64),
     ]);
     Ok(Field::new("pnl_report".into(), dtype))
 }

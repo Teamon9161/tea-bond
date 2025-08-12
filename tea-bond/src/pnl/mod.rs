@@ -1,11 +1,14 @@
+mod fee;
+
 use std::path::PathBuf;
 
 use crate::{CachedBond, SmallStr};
 use chrono::{Days, NaiveDate};
+use fee::Fee;
 use itertools::izip;
 use serde::Deserialize;
 use tea_calendar::Calendar;
-use tevec::prelude::{IsNone, Number, Vec1, Vec1View, EPS};
+use tevec::prelude::{EPS, IsNone, Number, Vec1, Vec1View};
 
 pub const EPOCH: NaiveDate = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
 
@@ -19,6 +22,7 @@ pub struct PnlReport {
     pub unrealized_pnl: f64,
     pub coupon_paid: f64,
     pub amt: f64,
+    pub fee: f64,
 }
 
 #[derive(Deserialize)]
@@ -26,11 +30,10 @@ pub struct BondTradePnlOpt {
     pub symbol: SmallStr,
     pub bond_info_path: Option<PathBuf>,
     pub multiplier: f64,
-    pub c_rate: f64,
+    pub fee: SmallStr,
     pub borrowing_cost: f64,
     pub capital_rate: f64,
     pub begin_state: PnlReport,
-    // pub commission_type: CommissionType,
 }
 
 pub fn calc_bond_trade_pnl<T, V, VT>(
@@ -51,6 +54,7 @@ where
     }
     let multiplier = opt.multiplier;
     let mut state = opt.begin_state;
+    let fee: Fee = opt.fee.parse().unwrap();
     let mut last_settle_time = None;
     let mut last_cp_date = EPOCH;
     let mut accrued_interest = 0.;
@@ -91,15 +95,6 @@ where
             }
             // 当前需要付息
             if settle_time == last_cp_date {
-                // println!(
-                //     "bond: {:?} last cp date: {:?}, settle_date: {:?}, coupon_paid: {:?}, pos: {:?}",
-                //     bond.code(),
-                //     last_cp_date,
-                //     settle_time,
-                //     coupon_paid,
-                //     state.pos
-                // );
-
                 state.coupon_paid += coupon_paid * multiplier * qty;
             }
 
@@ -113,8 +108,10 @@ where
         if qty != 0. {
             let trade_price = trade_price.unwrap().f64();
             let prev_pos = state.pos;
+            let trade_amt = qty * trade_price * multiplier; // with sign
             state.pos += qty;
-            state.amt += qty * trade_price * multiplier;
+            state.amt += trade_amt;
+            state.fee += fee.amount(qty, trade_amt, 1); // Fee model will take into account the sign of the trade amount and quantity.
             if prev_pos.abs() > EPS {
                 if qty.signum() != prev_pos.signum() {
                     // 减仓
@@ -142,7 +139,7 @@ where
         }
         if let Some(close) = close {
             let close = close.f64();
-            state.pnl = state.pos * close * multiplier + state.coupon_paid - state.amt;
+            state.pnl = state.pos * close * multiplier + state.coupon_paid - state.amt - state.fee;
             state.unrealized_pnl = state.pos * (close - state.pos_price) * multiplier;
         }
         // println!("PNL Report: {:?}", state);
