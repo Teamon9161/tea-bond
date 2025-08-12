@@ -2195,7 +2195,7 @@ dependencies = [
 
 [[package]]
 name = "pybond"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "chrono",
  "itertools 0.14.0",
@@ -3117,7 +3117,7 @@ dependencies = [
 
 [[package]]
 name = "tea-bond"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3136,7 +3136,7 @@ dependencies = [
 
 [[package]]
 name = "tea-calendar"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "chrono",
 ]
