@@ -4,6 +4,7 @@ import pandas as pd
 import polars as pl
 
 from .pl import Bonds as PlBonds
+from .pl import Futures as PlFutures
 from .pl import TfEvaluators as PlTfEvaluators
 
 
@@ -51,7 +52,6 @@ class TfEvaluators:
             }
         )
         self._evaluators = PlTfEvaluators(reinvest_rate=reinvest_rate)
-        # self.reinvest_rate = reinvest_rate
 
     @property
     def net_basis_spread(self):
@@ -258,6 +258,30 @@ class TfEvaluators:
             "remain_cp_num"
         ].to_pandas()
 
+    @property
+    def deliver_date(self):
+        """
+        Calculate delivery date (交割日).
+
+        Returns:
+            pd.Series: Delivery date values
+        """
+        return self.pl_df.select(deliver_date=self._evaluators.deliver_date)[
+            "deliver_date"
+        ].to_pandas()
+
+    @property
+    def last_trading_date(self):
+        """
+        Calculate last trading date (最后交易日).
+
+        Returns:
+            pd.Series: Last trading date values
+        """
+        return self.pl_df.select(last_trading_date=self._evaluators.last_trading_date)[
+            "last_trading_date"
+        ].to_pandas()
+
 
 class Bonds:
     """
@@ -352,6 +376,41 @@ class Bonds:
         df = pl.DataFrame({"bond": self.bond, "date": date})
         return df.select(remain_cp_num=PlBonds("bond").remain_cp_num("date"))[
             "remain_cp_num"
+        ].to_pandas()
+
+
+class Futures:
+    def __init__(self, future: str | pd.Series):
+        self.future = future
+
+    def deliver_date(self):
+        """
+        Calculate delivery date (交割日).
+
+        Args:
+            date: Evaluation date(s)
+
+        Returns:
+            pd.Series: Delivery date values
+        """
+        df = pl.DataFrame({"future": self.future})
+        return df.select(deliver_date=PlFutures("future").deliver_date())[
+            "deliver_date"
+        ].to_pandas()
+
+    def last_trading_date(self):
+        """
+        Calculate last trading date (最后交易日).
+
+        Args:
+            date: Evaluation date(s)
+
+        Returns:
+            pd.Series: Last trading date values
+        """
+        df = pl.DataFrame({"future": self.future})
+        return df.select(last_trading_date=PlFutures("future").last_trading_date())[
+            "last_trading_date"
         ].to_pandas()
 
 

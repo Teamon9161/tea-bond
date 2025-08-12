@@ -62,9 +62,6 @@ where
         date.len(),
     ];
     let len = *len_vec.iter().max().unwrap();
-    // .into_iter()
-    // .min()
-    // .unwrap();
     if *len_vec.iter().min().unwrap() == 0 {
         return Default::default();
     }
@@ -473,6 +470,50 @@ fn evaluators_remain_cp_num(
     .into_iter()
     .collect_trusted();
     Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Date)]
+fn evaluators_deliver_date(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Int32Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e.with_deliver_date().unwrap(),
+        |e: &TfEvaluator| {
+            e.deliver_date
+                .map(|d| d.num_days_from_ce() - EPOCH_DAYS_FROM_CE)
+        },
+        true,
+        false,
+    )?
+    .into_iter()
+    .collect_trusted();
+    Ok(result.into_date().into_series())
+}
+
+#[polars_expr(output_type=Date)]
+fn evaluators_last_trading_date(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Int32Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e,
+        |e: &TfEvaluator| {
+            e.future
+                .last_trading_date()
+                .ok()
+                .map(|d| d.num_days_from_ce() - EPOCH_DAYS_FROM_CE)
+        },
+        true,
+        false,
+    )?
+    .into_iter()
+    .collect_trusted();
+    Ok(result.into_date().into_series())
 }
 
 #[derive(Deserialize)]

@@ -38,6 +38,8 @@ class TfEvaluators:
         """
         if future is None:
             future = pl.lit(None).cast(str)
+        if bond is None:
+            bond = pl.lit(None).cast(str)
         self.future = parse_into_expr(future)
         self.bond = parse_into_expr(bond)
         self.date = parse_into_expr(date)
@@ -239,6 +241,26 @@ class TfEvaluators:
         """
         return self._call_plugin("evaluators_remain_cp_num")
 
+    @property
+    def deliver_date(self):
+        """
+        Calculate delivery date (交割日).
+
+        Returns:
+            Polars expression for delivery date
+        """
+        return self._call_plugin("evaluators_deliver_date")
+
+    @property
+    def last_trading_date(self):
+        """
+        Calculate last trading date (最后交易日).
+
+        Returns:
+            Polars expression for last trading date
+        """
+        return self._call_plugin("evaluators_last_trading_date")
+
 
 class Bonds:
     """
@@ -344,6 +366,61 @@ class Bonds:
         return self._evaluator(date=date).remain_cp_num
 
     # TODO(Teamon): 实现向量化根据净价反推ytm的函数
+
+
+class Futures:
+    def __init__(self, future: IntoExpr = "symbol"):
+        """
+        Initialize Futures with future identifier.
+
+        Args:
+            future: Future code column expression (default: "symbol")
+        """
+        self.future = future
+
+    def _evaluator(self, date: IntoExpr | None = None) -> TfEvaluators:
+        """
+        Create a TfEvaluators instance for future-only calculations.
+
+        Args:
+            date: Evaluation date column expression
+
+        Returns:
+            TfEvaluators: Configured evaluator instance
+        """
+        return TfEvaluators(
+            future=self.future,
+            bond=None,
+            date=date,
+            bond_ytm=None,
+            future_price=None,
+            capital_rate=None,
+            reinvest_rate=None,
+        )
+
+    def deliver_date(self):
+        """
+        Calculate delivery date (交割日).
+
+        Args:
+            date: Evaluation date column expression
+
+        Returns:
+            Polars expression for delivery date
+        """
+        return self._evaluator().deliver_date
+
+    def last_trading_date(self):
+        """
+        Calculate last trading date (最后交易日).
+
+        Args:
+            date: Evaluation date column expression
+
+        Returns:
+            Polars expression for last trading date
+        """
+        return self._evaluator().last_trading_date
 
 
 def find_workday(date: IntoExpr, market: str | Ib | Sse, offset: int = 0):
