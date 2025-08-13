@@ -24,9 +24,9 @@ class TfEvaluators:
         future: str | pd.Series,
         bond: str | pd.Series,
         date: str | pd.Series,
-        future_price: pd.Series,
-        bond_ytm: pd.Series,
-        capital_rate: float | pd.Series,
+        future_price: pd.Series | None = None,
+        bond_ytm: pd.Series | None = None,
+        capital_rate: float | pd.Series | None = None,
         reinvest_rate: float | None = None,
     ):
         """
@@ -51,7 +51,12 @@ class TfEvaluators:
                 "capital_rate": capital_rate,
             }
         )
-        self._evaluators = PlTfEvaluators(reinvest_rate=reinvest_rate)
+        self._evaluators = PlTfEvaluators(
+            future_price="future_price",
+            bond_ytm="bond_ytm",
+            capital_rate="capital_rate",
+            reinvest_rate=reinvest_rate,
+        )
 
     @property
     def net_basis_spread(self):

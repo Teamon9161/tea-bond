@@ -19,9 +19,9 @@ class TfEvaluators:
         future: IntoExpr = "future",
         bond: IntoExpr = "bond",
         date: IntoExpr = "date",
-        future_price: IntoExpr = "future_price",
-        bond_ytm: IntoExpr = "bond_ytm",
-        capital_rate: IntoExpr = "capital_rate",
+        future_price: IntoExpr = None,
+        bond_ytm: IntoExpr = None,
+        capital_rate: IntoExpr = None,
         reinvest_rate=None,
     ):
         """
@@ -36,16 +36,24 @@ class TfEvaluators:
             capital_rate: Capital cost rate column expression
             reinvest_rate: Reinvestment rate (optional)
         """
-        if future is None:
-            future = pl.lit(None).cast(str)
-        if bond is None:
-            bond = pl.lit(None).cast(str)
-        self.future = parse_into_expr(future)
-        self.bond = parse_into_expr(bond)
-        self.date = parse_into_expr(date)
-        self.future_price = parse_into_expr(future_price)
-        self.bond_ytm = parse_into_expr(bond_ytm)
-        self.capital_rate = parse_into_expr(capital_rate)
+        self.future = parse_into_expr(
+            future if future is not None else pl.lit(None).cast(str)
+        )
+        self.bond = parse_into_expr(
+            bond if bond is not None else pl.lit(None).cast(str)
+        )
+        self.date = parse_into_expr(
+            date if date is not None else pl.lit(None).cast(pl.Date)
+        )
+        self.future_price = parse_into_expr(
+            future_price if future_price is not None else pl.lit(None)
+        )
+        self.bond_ytm = parse_into_expr(
+            bond_ytm if bond_ytm is not None else pl.lit(None)
+        )
+        self.capital_rate = parse_into_expr(
+            capital_rate if capital_rate is not None else pl.lit(None)
+        )
         self.reinvest_rate = reinvest_rate
 
     def _call_plugin(self, symbol: str):

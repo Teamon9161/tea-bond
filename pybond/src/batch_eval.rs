@@ -72,9 +72,8 @@ where
     let mut bond_ytm_iter = bond_ytm.iter();
     let mut capital_rate_iter = capital_rate.iter();
     let mut date_iter = date.physical().iter();
-    // create result vector
+
     let mut result = Vec::with_capacity(len);
-    // create firsth TfEvaluator
     let mut future: Arc<Future> = Future::new(future_iter.next().unwrap().unwrap_or("")).into();
     let mut future_price = future_price_iter.next().unwrap().unwrap_or(f64::NAN);
     let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None).unwrap();
@@ -92,8 +91,14 @@ where
         reinvest_rate,
         ..Default::default()
     };
-    evaluator = evaluator_func(evaluator);
-    result.push(return_func(&evaluator));
+    if null_future_return_null && evaluator.future.code == "" {
+        result.push(None);
+    } else if null_bond_return_null && evaluator.bond.code().is_empty() {
+        result.push(None);
+    } else {
+        evaluator = evaluator_func(evaluator);
+        result.push(return_func(&evaluator));
+    }
     for _ in 1..len {
         if let Some(fp) = future_price_iter.next() {
             future_price = fp.unwrap_or(f64::NAN);
@@ -147,6 +152,14 @@ where
             capital_rate,
             reinvest_rate,
         );
+        if null_future_return_null && evaluator.future.code == "" {
+            result.push(None);
+            continue;
+        }
+        if null_bond_return_null && evaluator.bond.code().is_empty() {
+            result.push(None);
+            continue;
+        }
         // dbg!("{} {} {}", i, date, &bond.bond_code);
         evaluator = evaluator_func(evaluator);
         result.push(return_func(&evaluator));
