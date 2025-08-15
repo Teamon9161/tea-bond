@@ -54,7 +54,7 @@ where
     F2: Fn(&TfEvaluator) -> Option<O>, // O: PolarsDataType,
 {
     let reinvest_rate = Some(reinvest_rate.unwrap_or(0.0));
-    let len_vec = vec![
+    let len_vec = [
         future_price.len(),
         bond_ytm.len(),
         bond.len(),
@@ -91,9 +91,9 @@ where
         reinvest_rate,
         ..Default::default()
     };
-    if null_future_return_null && evaluator.future.code == "" {
-        result.push(None);
-    } else if null_bond_return_null && evaluator.bond.code().is_empty() {
+    if (null_future_return_null && evaluator.future.code.is_empty())
+        || (null_bond_return_null && evaluator.bond.code().is_empty())
+    {
         result.push(None);
     } else {
         evaluator = evaluator_func(evaluator);
@@ -152,11 +152,9 @@ where
             capital_rate,
             reinvest_rate,
         );
-        if null_future_return_null && evaluator.future.code == "" {
-            result.push(None);
-            continue;
-        }
-        if null_bond_return_null && evaluator.bond.code().is_empty() {
+        if (null_future_return_null && evaluator.future.code.is_empty())
+            || (null_bond_return_null && evaluator.bond.code().is_empty())
+        {
             result.push(None);
             continue;
         }
@@ -538,7 +536,12 @@ struct FindWorkdayKwargs {
 #[polars_expr(output_type=Date)]
 fn calendar_find_workday(inputs: &[Series], kwargs: FindWorkdayKwargs) -> PolarsResult<Series> {
     use tea_bond::export::calendar::china;
-    let date_series = inputs[0].date()?.physical();
+    let date_col = match inputs[0].dtype() {
+        DataType::Date => &inputs[0],
+        DataType::Datetime(_, _) => &inputs[0].cast(&DataType::Date)?,
+        _ => polars_bail!(ComputeError: "Date series should be date dtype"),
+    };
+    let date_series = date_col.date()?.physical();
     let res: Int32Chunked = match kwargs.market {
         Market::IB => date_series
             .iter()
@@ -577,7 +580,12 @@ fn calendar_is_business_day(
     kwargs: IsBusinessDayKwargs,
 ) -> PolarsResult<Series> {
     use tea_bond::export::calendar::china;
-    let date_series = inputs[0].date()?.physical();
+    let date_col = match inputs[0].dtype() {
+        DataType::Date => &inputs[0],
+        DataType::Datetime(_, _) => &inputs[0].cast(&DataType::Date)?,
+        _ => polars_bail!(ComputeError: "Date series should be date dtype"),
+    };
+    let date_series = date_col.date()?.physical();
     let res: BooleanChunked = match kwargs.market {
         Market::IB => date_series
             .iter()
