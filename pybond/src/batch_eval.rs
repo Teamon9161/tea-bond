@@ -16,18 +16,18 @@ macro_rules! auto_cast {
     // for one expression
     ($arm: ident ($se: expr)) => {
         if let DataType::$arm = $se.dtype() {
-            $se.clone()
+            $se
         } else {
-            $se.cast(&DataType::$arm)?
+            &$se.cast(&DataType::$arm)?
         }
     };
     // for multiple expressions
     ($arm: ident ($($se: expr),*)) => {
         ($(
             if let DataType::$arm = $se.dtype() {
-                $se.clone()
+                $se
             } else {
-                $se.cast(&DataType::$arm)?
+                &$se.cast(&DataType::$arm)?
             }
         ),*)
     };
@@ -182,10 +182,7 @@ where
     );
     let (future_price, bond_ytm, capital_rate) =
         auto_cast!(Float64(future_price, bond_ytm, capital_rate));
-    let date = match date.dtype() {
-        DataType::Date => date.clone(),
-        _ => date.cast(&DataType::Date)?,
-    };
+    let date = auto_cast!(Date(date));
     Ok(batch_eval_impl(
         future.str()?,
         bond.str()?,
@@ -536,11 +533,7 @@ struct FindWorkdayKwargs {
 #[polars_expr(output_type=Date)]
 fn calendar_find_workday(inputs: &[Series], kwargs: FindWorkdayKwargs) -> PolarsResult<Series> {
     use tea_bond::export::calendar::china;
-    let date_col = match inputs[0].dtype() {
-        DataType::Date => &inputs[0],
-        DataType::Datetime(_, _) => &inputs[0].cast(&DataType::Date)?,
-        _ => polars_bail!(ComputeError: "Date series should be date dtype"),
-    };
+    let date_col = auto_cast!(Date(&inputs[0]));
     let date_series = date_col.date()?.physical();
     let res: Int32Chunked = match kwargs.market {
         Market::IB => date_series
@@ -580,11 +573,7 @@ fn calendar_is_business_day(
     kwargs: IsBusinessDayKwargs,
 ) -> PolarsResult<Series> {
     use tea_bond::export::calendar::china;
-    let date_col = match inputs[0].dtype() {
-        DataType::Date => &inputs[0],
-        DataType::Datetime(_, _) => &inputs[0].cast(&DataType::Date)?,
-        _ => polars_bail!(ComputeError: "Date series should be date dtype"),
-    };
+    let date_col = auto_cast!(Date(&inputs[0]));
     let date_series = date_col.date()?.physical();
     let res: BooleanChunked = match kwargs.market {
         Market::IB => date_series
