@@ -37,10 +37,7 @@ mod tests {
             future: future.into(),
             price: 105.5,
         };
-        let bond_ytm = BondYtm {
-            bond: bond.into(),
-            ytm: 2.115 / 100.,
-        };
+        let bond_ytm = BondYtm::new(bond, 2.115 * 0.01);
         TfEvaluator {
             date: NaiveDate::from_ymd_opt(2024, 8, 12).unwrap(),
             future: future_price,
