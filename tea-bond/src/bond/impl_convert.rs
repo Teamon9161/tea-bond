@@ -1,5 +1,5 @@
 use super::Bond;
-use super::{bond_ytm::BondYtm, CachedBond};
+use super::{CachedBond, bond_ytm::BondYtm};
 use crate::SmallStr;
 use anyhow::{Error, Result};
 use std::borrow::Cow;
@@ -96,53 +96,16 @@ impl<S: TryInto<Bond>> TryFrom<(S, f64)> for BondYtm {
 
     #[inline]
     fn try_from(t: (S, f64)) -> core::result::Result<Self, Self::Error> {
-        Ok(Self {
-            bond: t.0.try_into()?.into(),
-            ytm: t.1,
-        })
+        let bond: CachedBond = t.0.try_into()?.into();
+        let ytm = bond.check_ytm(t.1);
+        Ok(Self { bond, ytm })
     }
 }
-
-// impl TryFrom<(Arc<Bond>, f64)> for BondYtm {
-//     type Error = Error;
-
-//     #[inline]
-//     fn try_from(t: (Arc<Bond>, f64)) -> Result<Self> {
-//         Ok(Self {
-//             bond: t.0.into(),
-//             ytm: t.1,
-//         })
-//     }
-// }
-
-// impl TryFrom<(CachedBond, f64)> for BondYtm {
-//     type Error = Error;
-
-//     #[inline]
-//     fn try_from(t: (CachedBond, f64)) -> Result<Self> {
-//         Ok(Self {
-//             bond: t.0,
-//             ytm: t.1,
-//         })
-//     }
-// }
-
-// impl From<(Arc<Bond>, f64)> for BondYtm {
-//     #[inline]
-//     fn from(t: (Arc<Bond>, f64)) -> Self {
-//         Self {
-//             bond: t.0.into(),
-//             ytm: t.1,
-//         }
-//     }
-// }
 
 impl From<(CachedBond, f64)> for BondYtm {
     #[inline]
     fn from(t: (CachedBond, f64)) -> Self {
-        Self {
-            bond: t.0,
-            ytm: t.1,
-        }
+        let ytm = t.0.check_ytm(t.1);
+        Self { bond: t.0, ytm }
     }
 }
