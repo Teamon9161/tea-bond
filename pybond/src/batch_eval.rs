@@ -3,7 +3,7 @@ use pyo3_polars::derive::polars_expr;
 use pyo3_polars::export::polars_core::utils::CustomIterTools;
 use serde::Deserialize;
 use tea_bond::export::calendar::Calendar;
-use tea_bond::{CachedBond, Future, Market, TfEvaluator};
+use tea_bond::{BondYtm, CachedBond, Future, Market, TfEvaluator};
 use tevec::export::arrow as polars_arrow;
 use tevec::export::polars::prelude::*;
 
@@ -86,7 +86,7 @@ where
     let mut evaluator = TfEvaluator {
         date,
         future: (future.clone(), future_price).into(),
-        bond: (bond.clone(), bond_ytm).into(),
+        bond: BondYtm::new(bond.clone(), bond_ytm),
         capital_rate,
         reinvest_rate,
         ..Default::default()

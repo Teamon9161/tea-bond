@@ -31,10 +31,7 @@ pub extern "C" fn create_tf_evaluator(
     };
 
     let bond = match tea_bond::CachedBond::new(bond_code, None) {
-        Ok(b) => BondYtm {
-            bond: b,
-            ytm: bond_ytm,
-        },
+        Ok(b) => BondYtm::new(b, bond_ytm),
         Err(e) => {
             eprintln!("Failed to create bond {bond_code}: {e:?}");
             return std::ptr::null_mut();
@@ -78,10 +75,7 @@ pub extern "C" fn create_tf_evaluator_with_reinvest(
     };
 
     let bond = match tea_bond::CachedBond::new(bond_code, None) {
-        Ok(b) => BondYtm {
-            bond: b,
-            ytm: bond_ytm,
-        },
+        Ok(b) => BondYtm::new(b, bond_ytm),
         Err(e) => {
             eprintln!("Failed to create bond {bond_code}: {e:?}");
             return std::ptr::null_mut();
@@ -419,7 +413,7 @@ pub extern "C" fn tf_evaluator_future_code(evaluator: *const TfEvaluator) -> *mu
 #[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_bond_ytm(evaluator: *const TfEvaluator) -> f64 {
     let evaluator = unsafe { &*evaluator };
-    evaluator.bond.ytm
+    evaluator.bond.ytm()
 }
 
 /// 获取期货价格
@@ -489,10 +483,7 @@ pub extern "C" fn tf_evaluator_update_info(
         && bond_code != evaluator.bond.bond.bond_code()
     {
         match tea_bond::CachedBond::new(bond_code, None) {
-            Ok(b) => BondYtm {
-                bond: b,
-                ytm: bond_ytm,
-            },
+            Ok(b) => BondYtm::new(b, bond_ytm),
             Err(e) => {
                 eprintln!("Failed to create bond {bond_code}: {e:?}");
                 return 0;

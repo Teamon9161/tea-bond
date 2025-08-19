@@ -4,6 +4,7 @@ use crate::SmallStr;
 use anyhow::{Error, Result};
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 impl TryFrom<&str> for Bond {
     type Error = Error;
@@ -91,9 +92,51 @@ impl TryFrom<&PathBuf> for Bond {
     }
 }
 
-impl From<(CachedBond, f64)> for BondYtm {
+macro_rules! try_into_cached_bond {
+    ($($T: ty),*) => {
+        $(impl TryFrom<$T> for CachedBond {
+            type Error = Error;
+
+            #[inline]
+            fn try_from(s: $T) -> Result<Self> {
+                let bond: Bond = s.try_into()?;
+                Ok(CachedBond::from_bond(bond))
+            }
+        })*
+    };
+}
+
+try_into_cached_bond!(
+    &str,
+    usize,
+    i32,
+    String,
+    &String,
+    Cow<'_, str>,
+    SmallStr,
+    &Path,
+    &PathBuf
+);
+
+impl From<Bond> for CachedBond {
     #[inline]
-    fn from(t: (CachedBond, f64)) -> Self {
-        BondYtm::new(t.0, t.1)
+    fn from(bond: Bond) -> CachedBond {
+        Arc::new(bond).into()
+    }
+}
+
+impl From<Arc<Bond>> for CachedBond {
+    #[inline]
+    fn from(bond: Arc<Bond>) -> Self {
+        Self::from_bond(bond)
+    }
+}
+
+impl<S: TryInto<CachedBond>> TryFrom<(S, f64)> for BondYtm {
+    type Error = S::Error;
+
+    #[inline]
+    fn try_from(t: (S, f64)) -> Result<Self, Self::Error> {
+        BondYtm::try_new(t.0, t.1)
     }
 }

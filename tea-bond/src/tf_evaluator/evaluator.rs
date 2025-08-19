@@ -1,10 +1,10 @@
 use crate::{
     bond::BondYtm,
-    day_counter::{DayCountRule, ACTUAL},
-    future::{calc_cf, FuturePrice},
+    day_counter::{ACTUAL, DayCountRule},
+    future::{FuturePrice, calc_cf},
     utils::month_delta,
 };
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 use chrono::NaiveDate;
 
 #[derive(Clone, smart_default::SmartDefault)]
@@ -173,7 +173,7 @@ impl TfEvaluator {
         if self.dirty_price.is_none() {
             let mut out = self.with_remain_cp_num()?;
             out.dirty_price = Some(out.bond.calc_dirty_price_with_ytm(
-                out.bond.ytm,
+                out.bond.ytm(),
                 out.date,
                 out.cp_dates,
                 out.remain_cp_num,
@@ -202,7 +202,7 @@ impl TfEvaluator {
         if self.duration.is_none() {
             let mut out = self.with_remain_cp_num()?;
             out.duration = Some(out.bond.calc_duration(
-                out.bond.ytm,
+                out.bond.ytm(),
                 out.date,
                 out.cp_dates,
                 out.remain_cp_num,

@@ -1,12 +1,12 @@
 use super::Bond;
 use super::CachedBond;
-use anyhow::{Error, Result};
+use anyhow::Result;
 use std::ops::Deref;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BondYtm {
     pub bond: CachedBond,
-    pub ytm: f64,
+    ytm: f64,
 }
 
 impl Default for BondYtm {
@@ -35,7 +35,7 @@ impl BondYtm {
     }
 
     #[inline]
-    pub fn try_new(bond: impl TryInto<CachedBond, Error = Error>, ytm: f64) -> Result<Self> {
+    pub fn try_new<B: TryInto<CachedBond>>(bond: B, ytm: f64) -> Result<Self, B::Error> {
         Ok(Self::new(bond.try_into()?, ytm))
     }
 
@@ -43,5 +43,10 @@ impl BondYtm {
     pub fn with_ytm(self, ytm: f64) -> Self {
         let ytm = self.bond.check_ytm(ytm);
         BondYtm { ytm, ..self }
+    }
+
+    #[inline]
+    pub fn ytm(&self) -> f64 {
+        self.ytm
     }
 }

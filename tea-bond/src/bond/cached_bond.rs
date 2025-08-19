@@ -69,20 +69,6 @@ impl std::fmt::Debug for CachedBond {
     }
 }
 
-impl From<Bond> for CachedBond {
-    #[inline]
-    fn from(bond: Bond) -> Self {
-        Self::from_bond(bond)
-    }
-}
-
-impl From<Arc<Bond>> for CachedBond {
-    #[inline]
-    fn from(bond: Arc<Bond>) -> Self {
-        Self::from_bond(bond)
-    }
-}
-
 impl CachedBond {
     /// Creates a new `CachedBond` from a bond code and an optional path.
     ///

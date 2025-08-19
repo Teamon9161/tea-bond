@@ -39,10 +39,7 @@ impl PyTfEvaluator {
             future: future.0,
             price: future_price,
         };
-        let bond = BondYtm {
-            bond: bond.0,
-            ytm: bond_ytm,
-        };
+        let bond = BondYtm::new(bond.0, bond_ytm);
         Ok(Self(TfEvaluator {
             date,
             future,
@@ -97,7 +94,7 @@ impl PyTfEvaluator {
     #[getter]
     /// 获取债券收益率
     fn bond_ytm(&self) -> f64 {
-        self.0.bond.ytm
+        self.0.bond.ytm()
     }
 
     #[getter]
@@ -347,7 +344,7 @@ impl PyTfEvaluator {
             self.0.capital_rate
         };
         let future_price = future_price.unwrap_or(self.0.future.price);
-        let bond_ytm = bond_ytm.unwrap_or(self.0.bond.ytm);
+        let bond_ytm = bond_ytm.unwrap_or(self.0.bond.ytm());
         Ok(Self(self.0.clone().update_with_new_info(
             date,
             (future, future_price),
