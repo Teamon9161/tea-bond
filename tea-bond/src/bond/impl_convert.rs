@@ -91,21 +91,9 @@ impl TryFrom<&PathBuf> for Bond {
     }
 }
 
-impl<S: TryInto<Bond>> TryFrom<(S, f64)> for BondYtm {
-    type Error = S::Error;
-
-    #[inline]
-    fn try_from(t: (S, f64)) -> core::result::Result<Self, Self::Error> {
-        let bond: CachedBond = t.0.try_into()?.into();
-        let ytm = bond.check_ytm(t.1);
-        Ok(Self { bond, ytm })
-    }
-}
-
 impl From<(CachedBond, f64)> for BondYtm {
     #[inline]
     fn from(t: (CachedBond, f64)) -> Self {
-        let ytm = t.0.check_ytm(t.1);
-        Self { bond: t.0, ytm }
+        BondYtm::new(t.0, t.1)
     }
 }

@@ -28,14 +28,14 @@ impl Deref for BondYtm {
 
 impl BondYtm {
     #[inline]
-    pub fn new(bond: impl Into<Bond>, ytm: f64) -> Self {
-        let bond = CachedBond::from_bond(bond.into());
+    pub fn new(bond: impl Into<CachedBond>, ytm: f64) -> Self {
+        let bond = bond.into();
         let ytm = bond.check_ytm(ytm);
         BondYtm { bond, ytm }
     }
 
     #[inline]
-    pub fn try_new(bond: impl TryInto<Bond, Error = Error>, ytm: f64) -> Result<Self> {
+    pub fn try_new(bond: impl TryInto<CachedBond, Error = Error>, ytm: f64) -> Result<Self> {
         Ok(Self::new(bond.try_into()?, ytm))
     }
 
