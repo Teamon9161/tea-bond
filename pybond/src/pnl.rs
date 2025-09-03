@@ -8,18 +8,18 @@ macro_rules! auto_cast {
     // for one expression
     ($arm: ident ($se: expr)) => {
         if let DataType::$arm = $se.dtype() {
-            $se.clone()
+            $se
         } else {
-            $se.cast(&DataType::$arm)?
+            &$se.cast(&DataType::$arm)?
         }
     };
     // for multiple expressions
     ($arm: ident ($($se: expr),*)) => {
         ($(
             if let DataType::$arm = $se.dtype() {
-                $se.clone()
+                $se
             } else {
-                $se.cast(&DataType::$arm)?
+                &$se.cast(&DataType::$arm)?
             }
         ),*)
     };
@@ -101,20 +101,56 @@ fn get_output_type(_input_fields: &[Field]) -> PolarsResult<Field> {
     Ok(Field::new("pnl_report".into(), dtype))
 }
 
+// #[polars_expr(output_type_func=get_output_type)]
+// fn calc_bond_trade_pnl(inputs: &[Series], kwargs: BondTradePnlOpt) -> PolarsResult<Series> {
+//     let (time, qty, clean_price, clean_close) = (&inputs[0], &inputs[1], &inputs[2], &inputs[3]);
+//     let (qty, clean_price, clean_close) = auto_cast!(Float64(qty, clean_price, clean_close));
+//     let time = match time.dtype() {
+//         DataType::Date => time.clone(),
+//         _ => time.cast(&DataType::Date)?,
+//     };
+//     let profit_vec = pnl::calc_bond_trade_pnl(
+//         time.date()?.physical(),
+//         qty.f64()?,
+//         clean_price.f64()?,
+//         clean_close.f64()?,
+//         &kwargs,
+//     );
+//     let out = pnl_report_vec_to_series(&profit_vec);
+//     Ok(out)
+// }
+
+
+
 #[polars_expr(output_type_func=get_output_type)]
 fn calc_bond_trade_pnl(inputs: &[Series], kwargs: BondTradePnlOpt) -> PolarsResult<Series> {
-    let (time, qty, clean_price, clean_close) = (&inputs[0], &inputs[1], &inputs[2], &inputs[3]);
+    let (symbol, time, qty, clean_price, clean_close) = (&inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4]);
+    let symbol = auto_cast!(String(symbol));
+    let symbol = if let Some(s) = symbol.str()?.iter().next() {
+        s
+    } else {
+        return Ok(pnl_report_vec_to_series(&[]))
+    };
     let (qty, clean_price, clean_close) = auto_cast!(Float64(qty, clean_price, clean_close));
     let time = match time.dtype() {
         DataType::Date => time.clone(),
         _ => time.cast(&DataType::Date)?,
     };
+    let opt = BondTradePnlOpt {
+        bond_info_path: kwargs.bond_info_path,
+        multiplier: kwargs.multiplier,
+        fee: kwargs.fee,
+        borrowing_cost: kwargs.borrowing_cost,
+        capital_rate: kwargs.capital_rate,
+        begin_state: kwargs.begin_state
+    };
     let profit_vec = pnl::calc_bond_trade_pnl(
+        symbol,
         time.date()?.physical(),
         qty.f64()?,
         clean_price.f64()?,
         clean_close.f64()?,
-        &kwargs,
+        &opt,
     );
     let out = pnl_report_vec_to_series(&profit_vec);
     Ok(out)

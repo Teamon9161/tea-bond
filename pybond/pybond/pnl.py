@@ -56,11 +56,12 @@ class PercentFee(Fee):
 
 
 def calc_bond_trade_pnl(
+    symbol: IntoExpr,
     settle_time: IntoExpr,
     qty: IntoExpr,
     clean_price: IntoExpr,
     clean_close: IntoExpr,
-    symbol: str = "",
+    # symbol: str = "",
     bond_info_path: str | None = None,
     multiplier: float = 1,
     fee: str | Fee = "",
@@ -70,6 +71,7 @@ def calc_bond_trade_pnl(
 ) -> pl.Expr:
     if isinstance(fee, Fee):
         fee = fee.str
+    symbol = parse_into_expr(symbol)
     settle_time = parse_into_expr(settle_time)
     qty = parse_into_expr(qty)
     clean_price = parse_into_expr(clean_price)
@@ -92,7 +94,7 @@ def calc_bond_trade_pnl(
             "fee": 0,
         }
     kwargs = {
-        "symbol": symbol,
+        # "symbol": symbol,
         "multiplier": multiplier,
         "fee": fee,
         "borrowing_cost": borrowing_cost,
@@ -101,7 +103,7 @@ def calc_bond_trade_pnl(
         "bond_info_path": bond_info_path,
     }
     return register_plugin(
-        args=[settle_time, qty, clean_price, clean_close],
+        args=[symbol, settle_time, qty, clean_price, clean_close],
         kwargs=kwargs,
         symbol="calc_bond_trade_pnl",
         is_elementwise=False,

@@ -27,7 +27,7 @@ pub struct PnlReport {
 
 #[derive(Deserialize)]
 pub struct BondTradePnlOpt {
-    pub symbol: SmallStr,
+    // pub symbol: SmallStr,
     pub bond_info_path: Option<PathBuf>,
     pub multiplier: f64,
     pub fee: SmallStr,
@@ -37,6 +37,7 @@ pub struct BondTradePnlOpt {
 }
 
 pub fn calc_bond_trade_pnl<T, V, VT>(
+    symbol: Option<&str>,
     settle_time_vec: &VT,
     qty_vec: &V,
     clean_price_vec: &V,
@@ -58,11 +59,12 @@ where
     let mut last_settle_time = None;
     let mut last_cp_date = EPOCH;
     let mut accrued_interest = 0.;
-    let symbol = if opt.symbol.is_empty() {
-        None
-    } else {
-        Some(CachedBond::new(&opt.symbol, opt.bond_info_path.as_deref()).unwrap())
-    };
+    // let symbol = if symbol.is_empty() {
+    //     None
+    // } else {
+    //     Some(CachedBond::new(&opt.symbol, opt.bond_info_path.as_deref()).unwrap())
+    // };
+    let symbol = symbol.map(|s| CachedBond::new(s, opt.bond_info_path.as_deref()).unwrap());
     let coupon_paid = symbol.as_ref().map(|bond| bond.get_coupon()).unwrap_or(0.);
     izip!(
         settle_time_vec.titer(),
