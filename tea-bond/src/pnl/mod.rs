@@ -59,12 +59,15 @@ where
     let mut last_settle_time = None;
     let mut last_cp_date = EPOCH;
     let mut accrued_interest = 0.;
-    // let symbol = if symbol.is_empty() {
-    //     None
-    // } else {
-    //     Some(CachedBond::new(&opt.symbol, opt.bond_info_path.as_deref()).unwrap())
-    // };
-    let symbol = symbol.map(|s| CachedBond::new(s, opt.bond_info_path.as_deref()).unwrap());
+    let symbol = if let Some(bond) = symbol {
+        if bond.is_empty() {
+            None
+        } else {
+            Some(CachedBond::new(bond, opt.bond_info_path.as_deref()).unwrap())
+        }
+    } else {
+        None
+    };
     let coupon_paid = symbol.as_ref().map(|bond| bond.get_coupon()).unwrap_or(0.);
     izip!(
         settle_time_vec.titer(),
