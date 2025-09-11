@@ -22,7 +22,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux manylinux2014 + manylinux_2_28 + musllinux_1_2
           - os: ubuntu-latest
             kind: manylinux2014
             target: x86_64
@@ -32,11 +31,9 @@ jobs:
           - os: ubuntu-latest
             kind: musllinux_1_2
             target: x86_64
-          # Windows
           - os: windows-latest
             kind: windows
             target: x86_64
-          # macOS universal2 (x86_64 + arm64)
           - os: macos-latest
             kind: macos_universal2
             target: universal2
@@ -57,7 +54,6 @@ jobs:
           path: ~/.cache/pip
           key: pip-${{ runner.os }}-${{ env.PYTHON_VERSION }}
 
-      # Build wheels + sdist
       - uses: PyO3/maturin-action@v1
         with:
           working-directory: ${{ env.PROJECT_DIR }}
@@ -67,18 +63,25 @@ jobs:
             --sdist
           manylinux: ${{ startsWith(matrix.kind,'manylinux') && matrix.kind || (startsWith(matrix.kind,'musllinux') && matrix.kind) || 'off' }}
           target: ${{ matrix.target }}
+          before-script-linux: |
+            yum install -y pkg-config openssl-devel
         env:
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.kind == 'macos_universal2' && '10.13' || '' }}
 
-      # Smoke test
       - name: Smoke test
-        shell: bash
         run: |
           python -m venv .venv
-          source .venv/bin/activate || source .venv/Scripts/activate
-          pip install -U pip
-          pip install ${{ env.DIST_DIR }}/*.whl
-          python -c "import pybond; print('pybond version:', getattr(pybond,'__version__','?'))"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            .\.venv\Scripts\python.exe -m pip install -U pip
+            .\.venv\Scripts\python.exe -m pip install ${{ env.DIST_DIR }}/*.whl
+            .\.venv\Scripts\python.exe -c "import pybond; print(pybond.__version__)"
+          else
+            source .venv/bin/activate
+            pip install -U pip
+            pip install ${{ env.DIST_DIR }}/*.whl
+            python -c "import pybond; print(pybond.__version__)"
+          fi
+        shell: bash
 
       - uses: actions/upload-artifact@v4
         with:
