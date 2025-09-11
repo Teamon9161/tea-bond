@@ -22,15 +22,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux (build inside manylinux/musllinux containers)
+          # Linux (build inside manylinux containers)
           - os: ubuntu-latest
             kind: manylinux2014
             target: x86_64
           - os: ubuntu-latest
             kind: manylinux_2_28
-            target: x86_64
-          - os: ubuntu-latest
-            kind: musllinux_1_2
             target: x86_64
           # Windows
           - os: windows-latest
@@ -78,10 +75,6 @@ jobs:
               microdnf install -y pkgconf-pkg-config openssl-devel
             elif [ -x /usr/bin/dnf ]; then
               dnf install -y pkgconf-pkg-config openssl-devel
-            elif [ -x /sbin/apk ] || [ -x /bin/apk ] || [ -x /usr/bin/apk ]; then
-              /sbin/apk add --no-cache pkgconf openssl-dev || \
-              /bin/apk add --no-cache  pkgconf openssl-dev || \
-              /usr/bin/apk add --no-cache pkgconf openssl-dev
             else
               echo "Missing package manager; install OpenSSL dev & pkg-config manually." >&2
               exit 1
