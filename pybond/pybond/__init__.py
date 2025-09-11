@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from .bond import Bond
-from .pybond import Future, Ib, Sse
+from .pybond import Future, Ib, Sse, get_version
 from .pybond import TfEvaluator as _TfEvaluatorRS
+
+__version__ = get_version()
 
 
 class TfEvaluator(_TfEvaluatorRS):
@@ -13,4 +15,4 @@ class TfEvaluator(_TfEvaluatorRS):
         return super().__new__(cls, future, bond, *args, **kwargs)
 
 
-__all__ = ["Bond", "Future", "Ib", "Sse", "TfEvaluator"]
+__all__ = ["Bond", "Future", "Ib", "Sse", "TfEvaluator", "__version__"]
