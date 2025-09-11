@@ -4,80 +4,197 @@ on:
   push:
     tags:
       - 'pybond*'
-permissions:
-  contents: write
-  
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit SHA
+        type: string
+      dry-run:
+        description: Dry run
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: '3.10'
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  build:
-    name: Build ${{ matrix.platform.os }}
+  create-sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+
+      - name: Set swap space for Linux
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 10
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install maturin
+        run: pip install maturin
+
+      - name: Create source distribution
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: >
+            --manifest-path pybond/Cargo.toml
+            --out dist
+          maturin-version: 1.8.3
+
+      - name: Test sdist
+        run: |
+          pip install --force-reinstall --verbose dist/*.tar.gz
+          python -c 'import pybond'
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist-pybond
+          path: dist/*.tar.gz
+
+  build-wheels:
     runs-on: ${{ matrix.platform.os }}
     strategy:
       fail-fast: false
       matrix:
         platform:
           - os: ubuntu-latest
-            wheel-name: manylinux
+            wheel-name: manylinux_2_34_x86_64
+            container: quay.io/pypa/manylinux_2_34_x86_64
+            architecture: x86-64
+          - os: ubuntu-latest
+            wheel-name: manylinux_2_24_x86_64
+            container: quay.io/pypa/manylinux_2_24_x86_64
+            architecture: x86-64
+          - os: ubuntu-latest
+            wheel-name: manylinux2014_x86_64
+            container: quay.io/pypa/manylinux2014_x86_64
+            architecture: x86-64
+          - os: ubuntu-latest
+            wheel-name: manylinux_2_24_aarch64
+            container: quay.io/pypa/manylinux_2_24_aarch64
+            architecture: aarch64
           - os: windows-latest
-            wheel-name: win
-          - os: macos-latest
-            wheel-name: macos
+            wheel-name: win_amd64
+            architecture: x86-64
+          - os: macos-13
+            wheel-name: macosx_10_15_x86_64
+            architecture: x86-64
+          - os: macos-15
+            wheel-name: macosx_11_0_arm64
+            architecture: aarch64
 
+    container: ${{ matrix.platform.container }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+
+      - name: Set swap space for Linux
+        if: matrix.platform.os == 'ubuntu-latest'
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 10
 
       - name: Set up Python
+        if: ${{ !matrix.platform.container }}
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install maturin
-        run: pip install maturin
+        run: |
+          if [ -n "${{ matrix.platform.container }}" ]; then
+            /opt/python/cp310-cp310/bin/pip install maturin
+          else
+            pip install maturin
+          fi
+
+      - name: Set Rust target for aarch64
+        if: matrix.platform.architecture == 'aarch64' && !matrix.platform.container
+        id: target
+        run: |
+          TARGET=$(
+            if [[ "${{ matrix.platform.os }}" == "macos-15" ]]; then
+              echo "aarch64-apple-darwin"
+            fi
+          )
+          echo "target=$TARGET" >> $GITHUB_OUTPUT
 
       - name: Build wheel
-        working-directory: ./pybond
-        run: maturin build --release
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          target: ${{ steps.target.outputs.target || matrix.platform.wheel-name }}
+          args: >
+            --release
+            --manifest-path pybond/Cargo.toml
+            --out dist
+          manylinux: ${{ matrix.platform.container && matrix.platform.wheel-name || 'auto' }}
+          maturin-version: 1.8.3
+
+      - name: Test wheel
+        if: matrix.platform.architecture == 'x86-64' || startsWith(matrix.platform.os, 'macos') || startsWith(matrix.platform.os, 'windows')
+        run: |
+          if [ -n "${{ matrix.platform.container }}" ]; then
+            /opt/python/cp310-cp310/bin/pip install --force-reinstall --verbose dist/*.whl
+            /opt/python/cp310-cp310/bin/python -c 'import pybond'
+          else
+            pip install --force-reinstall --verbose dist/*.whl
+            python -c 'import pybond'
+          fi
 
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.platform.wheel-name }}
-          path: target/wheels/*.whl
+          name: wheel-pybond-${{ matrix.platform.wheel-name }}
+          path: dist/*.whl
 
   release:
-    name: Create Release
-    needs: build
+    needs: [create-sdist, build-wheels]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      # Use to sign the release artifacts
       id-token: write
-      # Used to upload release artifacts
       contents: write
-      # Used to generate artifact attestation
       attestations: write
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          path: wheels
+          path: dist
+          merge-multiple: true
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
-          subject-path: "wheels/**/*.whl"
+          subject-path: "dist/**/*.whl dist/**/*.tar.gz"
 
       - name: Create GitHub Release
+        if: inputs.dry-run == false
         uses: softprops/action-gh-release@v1
         with:
-          files: wheels/**/*.whl
+          files: dist/**/*.whl dist/**/*.tar.gz
           draft: false
           prerelease: false
           generate_release_notes: true
-      
+
       - name: Publish to PyPI
-        uses: PyO3/maturin-action@v1
-        env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        if: inputs.dry-run == false
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          command: upload
-          args: --non-interactive --skip-existing wheels/**/*.whl
+          verbose: true
