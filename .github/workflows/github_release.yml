@@ -57,15 +57,14 @@ jobs:
           path: ~/.cache/pip
           key: pip-${{ runner.os }}-${{ env.PYTHON_VERSION }}
 
-      # Build wheels + sdist; install OpenSSL dev & pkg-config in container before build
-      - name: Build with maturin
+      # Build wheels (no sdist here)
+      - name: Build wheels with maturin
         uses: PyO3/maturin-action@v1
         with:
           working-directory: ${{ env.PROJECT_DIR }}
           args: >
             --release
             --out ${{ github.workspace }}/${{ env.DIST_DIR }}
-            --sdist
           manylinux: ${{ startsWith(matrix.kind,'manylinux') && matrix.kind || (startsWith(matrix.kind,'musllinux') && matrix.kind) || 'off' }}
           target: ${{ matrix.target }}
           before-script-linux: |
@@ -82,6 +81,30 @@ jobs:
         env:
           # Enable universal2 on macOS runners
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.kind == 'macos_universal2' && '10.13' || '' }}
+
+      # Build sdist only once on manylinux_2_28
+      - name: Build sdist
+        if: matrix.kind == 'manylinux_2_28'
+        uses: PyO3/maturin-action@v1
+        with:
+          working-directory: ${{ env.PROJECT_DIR }}
+          args: >
+            --release
+            --out ${{ github.workspace }}/${{ env.DIST_DIR }}
+            --sdist
+          manylinux: ${{ matrix.kind }}
+          target: ${{ matrix.target }}
+          before-script-linux: |
+            if [ -x /usr/bin/microdnf ]; then
+              microdnf install -y pkgconf-pkg-config openssl-devel
+            elif [ -x /usr/bin/dnf ]; then
+              dnf install -y pkgconf-pkg-config openssl-devel
+            elif [ -x /usr/bin/yum ]; then
+              yum install -y pkgconfig openssl-devel
+            else
+              echo "Missing package manager; install OpenSSL dev & pkg-config manually." >&2
+              exit 1
+            fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
