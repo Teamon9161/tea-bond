@@ -113,37 +113,42 @@ jobs:
           path: ${{ env.DIST_DIR }}/*
 
   release:
-    name: Release
+    name: Create Release
     needs: build
     runs-on: ubuntu-latest
-    # Only release on tag push (workflow_dispatch won't release)
-    if: startsWith(github.ref, 'refs/tags/pybond')
     environment: pypi
     permissions:
       id-token: write
       contents: write
       attestations: write
     steps:
-      - name: Download artifacts
+      - name: Download artifacts (flatten)
         uses: actions/download-artifact@v4
         with:
+          pattern: wheels-*
           path: artifacts
+          merge-multiple: true
 
-      - name: Generate provenance attestation
+      - name: List collected files
+        run: ls -l artifacts
+
+      - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
-          subject-path: "artifacts/**"
+          subject-path: "artifacts/*"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          files: artifacts/*
+          draft: false
+          prerelease: false
           generate_release_notes: true
 
-      - name: Upload to PyPI (skip-existing)
+      - name: Publish to PyPI
         uses: PyO3/maturin-action@v1
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
           command: upload
-          args: --non-interactive --skip-existing artifacts/**/*
+          args: --non-interactive --skip-existing artifacts/*.whl artifacts/*.tar.gz
