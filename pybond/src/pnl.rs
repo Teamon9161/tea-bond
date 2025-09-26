@@ -86,7 +86,7 @@ pub fn pnl_report_vec_to_series(reports: &[PnlReport]) -> Series {
     res.into_series()
 }
 
-fn get_output_type(_input_fields: &[Field]) -> PolarsResult<Field> {
+fn get_pnl_output_type(_input_fields: &[Field]) -> PolarsResult<Field> {
     let dtype = DataType::Struct(vec![
         Field::new("pos".into(), DataType::Float64),
         Field::new("avg_price".into(), DataType::Float64),
@@ -101,48 +101,20 @@ fn get_output_type(_input_fields: &[Field]) -> PolarsResult<Field> {
     Ok(Field::new("pnl_report".into(), dtype))
 }
 
-// #[polars_expr(output_type_func=get_output_type)]
-// fn calc_bond_trade_pnl(inputs: &[Series], kwargs: BondTradePnlOpt) -> PolarsResult<Series> {
-//     let (time, qty, clean_price, clean_close) = (&inputs[0], &inputs[1], &inputs[2], &inputs[3]);
-//     let (qty, clean_price, clean_close) = auto_cast!(Float64(qty, clean_price, clean_close));
-//     let time = match time.dtype() {
-//         DataType::Date => time.clone(),
-//         _ => time.cast(&DataType::Date)?,
-//     };
-//     let profit_vec = pnl::calc_bond_trade_pnl(
-//         time.date()?.physical(),
-//         qty.f64()?,
-//         clean_price.f64()?,
-//         clean_close.f64()?,
-//         &kwargs,
-//     );
-//     let out = pnl_report_vec_to_series(&profit_vec);
-//     Ok(out)
-// }
-
-
-
-#[polars_expr(output_type_func=get_output_type)]
+#[polars_expr(output_type_func=get_pnl_output_type)]
 fn calc_bond_trade_pnl(inputs: &[Series], kwargs: BondTradePnlOpt) -> PolarsResult<Series> {
-    let (symbol, time, qty, clean_price, clean_close) = (&inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4]);
+    let (symbol, time, qty, clean_price, clean_close) =
+        (&inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4]);
     let symbol = auto_cast!(String(symbol));
     let symbol = if let Some(s) = symbol.str()?.iter().next() {
         s
     } else {
-        return Ok(pnl_report_vec_to_series(&[]))
+        return Ok(pnl_report_vec_to_series(&[]));
     };
     let (qty, clean_price, clean_close) = auto_cast!(Float64(qty, clean_price, clean_close));
     let time = match time.dtype() {
         DataType::Date => time.clone(),
         _ => time.cast(&DataType::Date)?,
-    };
-    let opt = BondTradePnlOpt {
-        bond_info_path: kwargs.bond_info_path,
-        multiplier: kwargs.multiplier,
-        fee: kwargs.fee,
-        borrowing_cost: kwargs.borrowing_cost,
-        capital_rate: kwargs.capital_rate,
-        begin_state: kwargs.begin_state
     };
     let profit_vec = pnl::calc_bond_trade_pnl(
         symbol,
@@ -150,8 +122,39 @@ fn calc_bond_trade_pnl(inputs: &[Series], kwargs: BondTradePnlOpt) -> PolarsResu
         qty.f64()?,
         clean_price.f64()?,
         clean_close.f64()?,
-        &opt,
+        &kwargs,
     );
     let out = pnl_report_vec_to_series(&profit_vec);
+    Ok(out)
+}
+
+fn get_trading_output_type(input_fields: &[Field]) -> PolarsResult<Field> {
+    let dtype = DataType::Struct(vec![
+        input_fields[0].clone(), // time
+        Field::new("price".into(), DataType::Float64),
+        Field::new("qty".into(), DataType::Float64),
+    ]);
+    Ok(Field::new("pnl_report".into(), dtype))
+}
+
+#[polars_expr(output_type_func=get_trading_output_type)]
+fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> PolarsResult<Series> {
+    let (time, pos, open, finish_price) = (&inputs[0], &inputs[1], &inputs[2], &inputs[3]);
+    let (pos, open, finish_price) = auto_cast!(Float64(pos, open, finish_price));
+    if let Some(p) = finish_price.f64()?.iter().next() {
+        kwargs.finish_price = p
+    };
+    match time.dtype() {
+        DataType::Date => {
+            let trade_vec = pnl::trading_from_pos(time.date()?.physical(), pos.f64()?, open.f64()?, &kwargs);
+        }
+        _ => let trade_vec = pnl::trading_from_pos(
+            time.datetime()?.physical(),
+            pos.f64()?,
+            open.f64()?,
+            &kwargs,
+        );,
+    };
+    let out = pnl_report_vec_to_series(&trade_vec);
     Ok(out)
 }
