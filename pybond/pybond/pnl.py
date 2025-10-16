@@ -108,3 +108,33 @@ def calc_bond_trade_pnl(
         symbol="calc_bond_trade_pnl",
         is_elementwise=False,
     )
+
+
+def trading_from_pos(
+    time: IntoExpr,
+    pos: IntoExpr,
+    open: IntoExpr,
+    finish_price: IntoExpr | None = None,
+    cash: float = 1e8,
+    multiplier: float = 1,
+    qty_tick: float = 1.0,
+    *,
+    stop_on_finish: bool = False,
+) -> pl.Expr:
+    time = parse_into_expr(time)
+    pos = parse_into_expr(pos)
+    open = parse_into_expr(open)
+    finish_price = parse_into_expr(finish_price)
+    kwargs = {
+        "cash": cash,
+        "multiplier": multiplier,
+        "qty_tick": qty_tick,
+        "stop_on_finish": stop_on_finish,
+        "finish_price": None,
+    }
+    return register_plugin(
+        args=[time, pos, open, finish_price],
+        kwargs=kwargs,
+        symbol="trading_from_pos",
+        is_elementwise=False,
+    )

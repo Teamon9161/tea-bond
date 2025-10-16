@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-import pandas as pd
+from typing import TYPE_CHECKING
+
 import polars as pl
 
 from .pl import Bonds as PlBonds
 from .pl import Futures as PlFutures
 from .pl import TfEvaluators as PlTfEvaluators
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 class TfEvaluators:

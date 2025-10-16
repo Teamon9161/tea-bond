@@ -1,6 +1,6 @@
 use itertools::izip;
 use serde::Deserialize;
-use tevec::prelude::{IsNone, Number, Vec1View};
+use tevec::prelude::{EPS, IsNone, Number, Vec1View};
 // use super::EPOCH;
 
 pub struct Trade<T> {
@@ -39,14 +39,15 @@ pub fn trading_from_pos<DT, T, VT, V>(
     opt: &TradeFromPosOpt,
 ) -> Vec<Trade<DT>>
 where
-    DT: Clone, // 从迭代器借出的 time 需要可 clone（或你可改为 DT: Copy）
+    DT: Clone,
     T: IsNone,
     T::Inner: Number,
     VT: Vec1View<DT>,
     V: Vec1View<T>,
 {
     let mut last_pos = 0.;
-    let mut open_qty = 0.;
+    let mut open_price: f64 = 0.;
+    let mut open_qty: f64 = 0.;
     let mut trades = Vec::with_capacity(INIT_TRADE_COUNT);
 
     // 记录最后一个可用 (time, price)，用于 stop_on_finish
@@ -61,12 +62,23 @@ where
             last_tp = Some((time.clone(), price));
 
             let dpos = pos - last_pos;
-            if dpos.abs() > 0.0 {
+            if dpos.abs() > EPS {
                 // 目标名义 -> 成交量（正买负卖）
-                let raw_qty = dpos * opt.cash / (price * opt.multiplier);
-
-                // 量化到最小变动单位（朝 0 截断，避免超买/超卖）
-                let qty = quantize_inside(raw_qty, opt.qty_tick);
+                let qty = if pos.abs() > EPS {
+                    let p = if open_price > 0. { open_price } else { price };
+                    let raw_qty = dpos * opt.cash / (p * opt.multiplier);
+                    // 量化到最小变动单位（朝 0 截断，避免超买/超卖）
+                    quantize_inside(raw_qty, opt.qty_tick)
+                } else {
+                    -open_qty
+                };
+                if dpos.signum() == open_qty.signum() {
+                    open_price = (open_price * open_qty + qty * price) / (qty + open_qty)
+                } else if open_qty.abs() > qty.abs() {
+                    // 反向加仓, 价格为新的开仓价格
+                    open_price = price
+                };
+                // 减仓情况的价格不改变
 
                 // 若量化后仍非 0，则下单
                 if qty.abs() > 0.0 {
