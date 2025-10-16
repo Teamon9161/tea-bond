@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import os
-from datetime import date
 from importlib.util import find_spec
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .pybond import Bond as _BondRS
 from .pybond import Future, download_bond
 
-# from .ffi.utils import set_bond_data_path
+if TYPE_CHECKING:
+    from datetime import date
+
 
 WIND_AVAILABLE = find_spec("WindPy") is not None
 

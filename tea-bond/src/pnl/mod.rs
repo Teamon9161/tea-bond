@@ -1,4 +1,7 @@
 mod fee;
+mod trade_from_signal;
+
+pub use trade_from_signal::{TradeFromPosOpt, trading_from_pos};
 
 use std::path::PathBuf;
 

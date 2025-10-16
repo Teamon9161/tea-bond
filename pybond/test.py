@@ -2,6 +2,7 @@ import datetime
 
 import numpy as np
 import polars as pl
+from IPython.display import display
 
 # import os
 # os.environ["POLARS_VERBOSE"] = "1"
@@ -10,6 +11,34 @@ from pybond.pd import Bonds as PdBonds
 from pybond.pd import TfEvaluators as PdTfEvaluators
 from pybond.pd import find_workday as pd_find_workday
 from pybond.pl import Bonds, TfEvaluators, find_workday, is_business_day
+from pybond.pnl import trading_from_pos
+
+signal_df = (
+    pl.DataFrame(
+        {
+            "time": pl.date_range(
+                start=datetime.date(2025, 8, 1),
+                end=datetime.date(2025, 8, 8),
+                eager=True,
+            ),
+            "pos": [1.0, 0.5, 0.2, 0.4, 0, -0.1, -0.1, 1],
+            "price": [100, 101, 102, 103, 104, 105, 106, 107],
+        }
+    )
+    .select(
+        trading_from_pos(
+            pl.col("time").cast(pl.Datetime("ms")),
+            "pos",
+            "price",
+            finish_price=110,
+            cash=10000,
+            stop_on_finish=True,
+        )
+    )
+    .unnest("time")
+    .with_columns(cum_qty=pl.col("qty").cum_sum())
+)
+display(signal_df)
 
 e = TfEvaluator("T2509", 250205, "2025-07-15", 100, 0.02, 0.018)
 e.net_basis_spread

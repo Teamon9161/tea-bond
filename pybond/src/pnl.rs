@@ -86,7 +86,7 @@ pub fn pnl_report_vec_to_series(reports: &[PnlReport]) -> Series {
     res.into_series()
 }
 
-fn get_output_type(_input_fields: &[Field]) -> PolarsResult<Field> {
+fn get_pnl_output_type(_input_fields: &[Field]) -> PolarsResult<Field> {
     let dtype = DataType::Struct(vec![
         Field::new("pos".into(), DataType::Float64),
         Field::new("avg_price".into(), DataType::Float64),
@@ -101,48 +101,20 @@ fn get_output_type(_input_fields: &[Field]) -> PolarsResult<Field> {
     Ok(Field::new("pnl_report".into(), dtype))
 }
 
-// #[polars_expr(output_type_func=get_output_type)]
-// fn calc_bond_trade_pnl(inputs: &[Series], kwargs: BondTradePnlOpt) -> PolarsResult<Series> {
-//     let (time, qty, clean_price, clean_close) = (&inputs[0], &inputs[1], &inputs[2], &inputs[3]);
-//     let (qty, clean_price, clean_close) = auto_cast!(Float64(qty, clean_price, clean_close));
-//     let time = match time.dtype() {
-//         DataType::Date => time.clone(),
-//         _ => time.cast(&DataType::Date)?,
-//     };
-//     let profit_vec = pnl::calc_bond_trade_pnl(
-//         time.date()?.physical(),
-//         qty.f64()?,
-//         clean_price.f64()?,
-//         clean_close.f64()?,
-//         &kwargs,
-//     );
-//     let out = pnl_report_vec_to_series(&profit_vec);
-//     Ok(out)
-// }
-
-
-
-#[polars_expr(output_type_func=get_output_type)]
+#[polars_expr(output_type_func=get_pnl_output_type)]
 fn calc_bond_trade_pnl(inputs: &[Series], kwargs: BondTradePnlOpt) -> PolarsResult<Series> {
-    let (symbol, time, qty, clean_price, clean_close) = (&inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4]);
+    let (symbol, time, qty, clean_price, clean_close) =
+        (&inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4]);
     let symbol = auto_cast!(String(symbol));
     let symbol = if let Some(s) = symbol.str()?.iter().next() {
         s
     } else {
-        return Ok(pnl_report_vec_to_series(&[]))
+        return Ok(pnl_report_vec_to_series(&[]));
     };
     let (qty, clean_price, clean_close) = auto_cast!(Float64(qty, clean_price, clean_close));
     let time = match time.dtype() {
         DataType::Date => time.clone(),
         _ => time.cast(&DataType::Date)?,
-    };
-    let opt = BondTradePnlOpt {
-        bond_info_path: kwargs.bond_info_path,
-        multiplier: kwargs.multiplier,
-        fee: kwargs.fee,
-        borrowing_cost: kwargs.borrowing_cost,
-        capital_rate: kwargs.capital_rate,
-        begin_state: kwargs.begin_state
     };
     let profit_vec = pnl::calc_bond_trade_pnl(
         symbol,
@@ -150,8 +122,78 @@ fn calc_bond_trade_pnl(inputs: &[Series], kwargs: BondTradePnlOpt) -> PolarsResu
         qty.f64()?,
         clean_price.f64()?,
         clean_close.f64()?,
-        &opt,
+        &kwargs,
     );
     let out = pnl_report_vec_to_series(&profit_vec);
     Ok(out)
+}
+
+fn get_trading_output_type(input_fields: &[Field]) -> PolarsResult<Field> {
+    let dtype = DataType::Struct(vec![
+        input_fields[0].clone(), // time
+        Field::new("price".into(), DataType::Float64),
+        Field::new("qty".into(), DataType::Float64),
+    ]);
+    Ok(Field::new("pnl_report".into(), dtype))
+}
+
+#[polars_expr(output_type_func=get_trading_output_type)]
+fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> PolarsResult<Series> {
+    use pyo3_polars::export::polars_core::utils::CustomIterTools;
+    use tevec::export::polars::prelude::*;
+    let (time, pos, open, finish_price) = (&inputs[0], &inputs[1], &inputs[2], &inputs[3]);
+    let (pos, open, finish_price) = auto_cast!(Float64(pos, open, finish_price));
+    if let Some(p) = finish_price.f64()?.iter().next() {
+        kwargs.finish_price = p
+    };
+    let res = match time.dtype() {
+        DataType::Date => {
+            let trade_vec =
+                pnl::trading_from_pos(time.date()?.physical(), pos.f64()?, open.f64()?, &kwargs);
+            let time: Int32Chunked = trade_vec.iter().map(|t| t.time).collect_trusted();
+            let time = time.into_date().into_series();
+            let price: Float64Chunked = trade_vec.iter().map(|t| Some(t.price)).collect_trusted();
+            let price = price.into_series();
+            let qty: Float64Chunked = trade_vec.iter().map(|t| Some(t.qty)).collect_trusted();
+            StructChunked::from_series(
+                "trade".into(),
+                time.len(),
+                [
+                    time.with_name("time".into()),
+                    price.into_series().with_name("price".into()),
+                    qty.into_series().with_name("qty".into()),
+                ]
+                .iter(),
+            )
+            .unwrap()
+            .into_series()
+        }
+        _ => {
+            let time_ca = time.datetime()?;
+            let time_unit = time_ca.time_unit();
+            let time_zone = time_ca.time_zone();
+            let trade_vec =
+                pnl::trading_from_pos(time_ca.physical(), pos.f64()?, open.f64()?, &kwargs);
+            let time: Int64Chunked = trade_vec.iter().map(|t| t.time).collect_trusted();
+            let time = time
+                .into_datetime(time_unit, time_zone.clone())
+                .into_series();
+            let price: Float64Chunked = trade_vec.iter().map(|t| Some(t.price)).collect_trusted();
+            let price = price.into_series();
+            let qty: Float64Chunked = trade_vec.iter().map(|t| Some(t.qty)).collect_trusted();
+            StructChunked::from_series(
+                "trade".into(),
+                time.len(),
+                [
+                    time.with_name("time".into()),
+                    price.into_series().with_name("price".into()),
+                    qty.into_series().with_name("qty".into()),
+                ]
+                .iter(),
+            )
+            .unwrap()
+            .into_series()
+        }
+    };
+    Ok(res)
 }
