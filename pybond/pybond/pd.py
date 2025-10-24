@@ -291,6 +291,12 @@ class TfEvaluators:
             "last_trading_date"
         ].to_pandas()
 
+    @property
+    def remain_year(self):
+        return self.pl_df.select(remain_year=self._evaluators.remain_year)[
+            "remain_year"
+        ].to_pandas()
+
 
 class Bonds:
     """
@@ -385,6 +391,12 @@ class Bonds:
         df = pl.DataFrame({"bond": self.bond, "date": date})
         return df.select(remain_cp_num=PlBonds("bond").remain_cp_num("date"))[
             "remain_cp_num"
+        ].to_pandas()
+
+    def remain_year(self, date: str | pd.Series):
+        df = pl.DataFrame({"bond": self.bond, "date": date})
+        return df.select(remain_year=PlBonds("bond").remain_year("date"))[
+            "remain_year"
         ].to_pandas()
 
 

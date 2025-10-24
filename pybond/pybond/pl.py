@@ -269,6 +269,19 @@ class TfEvaluators:
         """
         return self._call_plugin("evaluators_last_trading_date")
 
+    @property
+    def remain_year(self):
+        """
+        Calculate bond remaining year (债券剩余期限).
+
+        Args:
+            date: Evaluation date column expression
+
+        Returns:
+            Polars expression for bond remaining year
+        """
+        return self._call_plugin("evaluators_remain_year")
+
 
 class Bonds:
     """
@@ -309,6 +322,12 @@ class Bonds:
             capital_rate=None,
             reinvest_rate=None,
         )
+
+    def remain_year(self, date: IntoExpr = "date"):
+        """
+        Calculate remain year for the bond (剩余期限).
+        """
+        return self._evaluator(date=date).remain_year
 
     def accrued_interest(self, date: IntoExpr = "date"):
         """

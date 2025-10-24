@@ -524,6 +524,26 @@ fn evaluators_last_trading_date(
     Ok(result.into_date().into_series())
 }
 
+#[polars_expr(output_type=Date)]
+fn evaluators_remain_year(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Float64Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e,
+        |e: &TfEvaluator| {
+            Some(e.bond.remain_year(e.date))
+        },
+        false,
+        true,
+    )?
+    .into_iter()
+    .collect_trusted();
+    Ok(result.into_series())
+}
+
 #[derive(Deserialize)]
 struct FindWorkdayKwargs {
     market: Market,

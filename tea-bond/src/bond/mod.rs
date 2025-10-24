@@ -115,6 +115,7 @@ impl Bond {
             0 => Ok(Months::new(0)),
             1 => Ok(Months::new(12)),
             2 => Ok(Months::new(6)),
+            4 => Ok(Months::new(3)),
             _ => bail!("Invalid inst_freq: {}", self.inst_freq),
         }
     }

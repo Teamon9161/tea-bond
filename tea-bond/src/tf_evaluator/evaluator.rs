@@ -139,8 +139,12 @@ impl TfEvaluator {
     }
     /// 计算剩余付息次数
     #[inline]
-    pub fn with_remain_cp_num(self) -> Result<Self> {
+    pub fn with_remain_cp_num(mut self) -> Result<Self> {
         if self.remain_cp_num.is_none() {
+            if self.bond.is_zero_coupon() {
+                self.remain_cp_num = Some(0);
+                return Ok(self);
+            }
             let mut out = self.with_nearest_cp_dates()?;
             out.remain_cp_num = Some(
                 out.bond
@@ -198,8 +202,12 @@ impl TfEvaluator {
 
     /// 计算久期
     #[inline]
-    pub fn with_duration(self) -> Result<Self> {
+    pub fn with_duration(mut self) -> Result<Self> {
         if self.duration.is_none() {
+            if self.bond.is_zero_coupon() {
+                self.duration = Some(self.bond.remain_year(self.date));
+                return Ok(self);
+            }
             let mut out = self.with_remain_cp_num()?;
             out.duration = Some(out.bond.calc_duration(
                 out.bond.ytm(),
