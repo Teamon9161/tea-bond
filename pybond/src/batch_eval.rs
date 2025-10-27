@@ -207,7 +207,7 @@ fn evaluators_net_basis_spread(
         inputs,
         kwargs,
         |e: TfEvaluator| e.with_net_basis_spread().unwrap(),
-        |e: &TfEvaluator| e.net_basis_spread,
+        |e: &TfEvaluator| e.net_basis_spread.filter(|v| !v.is_nan()),
         true,
         true,
     )?
@@ -273,7 +273,7 @@ fn evaluators_dirty_price(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Po
         inputs,
         kwargs,
         |e: TfEvaluator| e.with_dirty_price().unwrap(),
-        |e: &TfEvaluator| e.dirty_price,
+        |e: &TfEvaluator| e.dirty_price.filter(|v| !v.is_nan()),
         false,
         true,
     )?
@@ -288,7 +288,7 @@ fn evaluators_clean_price(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Po
         inputs,
         kwargs,
         |e: TfEvaluator| e.with_clean_price().unwrap(),
-        |e: &TfEvaluator| e.clean_price,
+        |e: &TfEvaluator| e.clean_price.filter(|v| !v.is_nan()),
         false,
         true,
     )?
@@ -306,7 +306,7 @@ fn evaluators_future_dirty_price(
         inputs,
         kwargs,
         |e: TfEvaluator| e.with_future_dirty_price().unwrap(),
-        |e: &TfEvaluator| e.future_dirty_price,
+        |e: &TfEvaluator| e.future_dirty_price.filter(|v| !v.is_nan()),
         true,
         true,
     )?
@@ -324,7 +324,7 @@ fn evaluators_deliver_cost(
         inputs,
         kwargs,
         |e: TfEvaluator| e.with_deliver_cost().unwrap(),
-        |e: &TfEvaluator| e.deliver_cost,
+        |e: &TfEvaluator| e.deliver_cost.filter(|v| !v.is_nan()),
         true,
         true,
     )?
@@ -342,7 +342,7 @@ fn evaluators_basis_spread(
         inputs,
         kwargs,
         |e: TfEvaluator| e.with_basis_spread().unwrap(),
-        |e: &TfEvaluator| e.basis_spread,
+        |e: &TfEvaluator| e.basis_spread.filter(|v| !v.is_nan()),
         true,
         true,
     )?
@@ -357,7 +357,7 @@ fn evaluators_f_b_spread(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Pol
         inputs,
         kwargs,
         |e: TfEvaluator| e.with_f_b_spread().unwrap(),
-        |e: &TfEvaluator| e.f_b_spread,
+        |e: &TfEvaluator| e.f_b_spread.filter(|v| !v.is_nan()),
         true,
         true,
     )?
@@ -372,7 +372,7 @@ fn evaluators_carry(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsRe
         inputs,
         kwargs,
         |e: TfEvaluator| e.with_carry().unwrap(),
-        |e: &TfEvaluator| e.carry,
+        |e: &TfEvaluator| e.carry.filter(|v| !v.is_nan()),
         true,
         true,
     )?
@@ -387,7 +387,7 @@ fn evaluators_duration(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Polar
         inputs,
         kwargs,
         |e: TfEvaluator| e.with_duration().unwrap(),
-        |e: &TfEvaluator| e.duration,
+        |e: &TfEvaluator| e.duration.filter(|v| !v.is_nan()),
         false,
         true,
     )?
@@ -402,7 +402,7 @@ fn evaluators_irr(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResu
         inputs,
         kwargs,
         |e: TfEvaluator| e.with_irr().unwrap(),
-        |e: &TfEvaluator| e.irr,
+        |e: &TfEvaluator| e.irr.filter(|v| !v.is_nan()),
         true,
         true,
     )?
@@ -417,7 +417,7 @@ fn evaluators_future_ytm(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Pol
         inputs,
         kwargs,
         |e: TfEvaluator| e.with_future_ytm().unwrap(),
-        |e: &TfEvaluator| e.future_ytm,
+        |e: &TfEvaluator| e.future_ytm.filter(|v| !v.is_nan()),
         true,
         true,
     )?

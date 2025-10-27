@@ -158,8 +158,12 @@ impl TfEvaluator {
 
     /// 计算应计利息
     #[inline]
-    pub fn with_accrued_interest(self) -> Result<Self> {
+    pub fn with_accrued_interest(mut self) -> Result<Self> {
         if self.accrued_interest.is_none() {
+            if self.bond.is_zero_coupon() {
+                self.accrued_interest = Some(0.);
+                return Ok(self);
+            }
             let mut out = self.with_nearest_cp_dates()?;
             out.accrued_interest = Some(
                 out.bond
@@ -173,8 +177,13 @@ impl TfEvaluator {
 
     /// 计算债券全价
     #[inline]
-    pub fn with_dirty_price(self) -> Result<Self> {
+    pub fn with_dirty_price(mut self) -> Result<Self> {
         if self.dirty_price.is_none() {
+            if self.bond.is_zero_coupon() {
+                let remain_year = self.bond.remain_year(self.date);
+                self.dirty_price = Some(100.0 / (1.0+self.bond.ytm()).powf(remain_year));
+                return Ok(self);
+            }
             let mut out = self.with_remain_cp_num()?;
             out.dirty_price = Some(out.bond.calc_dirty_price_with_ytm(
                 out.bond.ytm(),
