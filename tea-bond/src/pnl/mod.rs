@@ -88,24 +88,25 @@ where
             .checked_add_days(Days::new(settle_time.unwrap() as u64))
             .unwrap();
         let (trade_price, close): (Option<f64>, Option<f64>) = if let Some(bond) = &symbol {
-            if last_settle_time != Some(settle_time) {
-                // 新的一天重新计算相关信息
-                let cp_dates = bond.get_nearest_cp_date(settle_time).unwrap();
-                accrued_interest = bond
-                    .calc_accrued_interest(settle_time, Some(cp_dates))
-                    .unwrap();
-                last_cp_date = bond.mkt.find_workday(cp_dates.0, 0);
-                // 当天初始仓位会产生的票息
-                if settle_time == last_cp_date {
-                    state.coupon_paid += coupon_paid * multiplier * state.pos;
+            if !bond.is_zero_coupon() {
+                if last_settle_time != Some(settle_time) {
+                    // 新的一天重新计算相关信息
+                    let cp_dates = bond.get_nearest_cp_date(settle_time).unwrap();
+                    accrued_interest = bond
+                        .calc_accrued_interest(settle_time, Some(cp_dates))
+                        .unwrap();
+                    last_cp_date = bond.mkt.find_workday(cp_dates.0, 0);
+                    // 当天初始仓位会产生的票息
+                    if settle_time == last_cp_date {
+                        state.coupon_paid += coupon_paid * multiplier * state.pos;
+                    }
+                    last_settle_time = Some(settle_time);
                 }
-                last_settle_time = Some(settle_time);
+                // 当前需要付息
+                if settle_time == last_cp_date {
+                    state.coupon_paid += coupon_paid * multiplier * qty;
+                }
             }
-            // 当前需要付息
-            if settle_time == last_cp_date {
-                state.coupon_paid += coupon_paid * multiplier * qty;
-            }
-
             (
                 clean_price.map(|v| v.f64() + accrued_interest),
                 clean_close.map(|v| v.f64() + accrued_interest),

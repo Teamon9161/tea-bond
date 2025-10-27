@@ -11,8 +11,7 @@ pub struct Trade<T> {
 
 #[derive(Deserialize)]
 pub struct TradeFromPosOpt {
-    // pub symbol: SmallStr,
-    pub cash: f64,
+    pub cash: Option<f64>,
     pub multiplier: f64,
     pub qty_tick: f64,
     pub stop_on_finish: bool,
@@ -48,6 +47,7 @@ where
     let mut last_pos = 0.;
     let mut open_price: f64 = 0.;
     let mut open_qty: f64 = 0.;
+    let cash = opt.cash.unwrap();
     let mut trades = Vec::with_capacity(INIT_TRADE_COUNT);
 
     // 记录最后一个可用 (time, price)，用于 stop_on_finish
@@ -66,7 +66,7 @@ where
                 // 目标名义 -> 成交量（正买负卖）
                 let qty = if pos.abs() > EPS {
                     let p = if open_price > 0. { open_price } else { price };
-                    let raw_qty = dpos * opt.cash / (p * opt.multiplier);
+                    let raw_qty = dpos * cash / (p * opt.multiplier);
                     // 量化到最小变动单位（朝 0 截断，避免超买/超卖）
                     quantize_inside(raw_qty, opt.qty_tick)
                 } else {

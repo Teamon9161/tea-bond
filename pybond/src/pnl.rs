@@ -141,10 +141,13 @@ fn get_trading_output_type(input_fields: &[Field]) -> PolarsResult<Field> {
 fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> PolarsResult<Series> {
     use pyo3_polars::export::polars_core::utils::CustomIterTools;
     use tevec::export::polars::prelude::*;
-    let (time, pos, open, finish_price) = (&inputs[0], &inputs[1], &inputs[2], &inputs[3]);
-    let (pos, open, finish_price) = auto_cast!(Float64(pos, open, finish_price));
+    let (time, pos, open, finish_price, cash) = (&inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4]);
+    let (pos, open, finish_price, cash) = auto_cast!(Float64(pos, open, finish_price, cash));
     if let Some(p) = finish_price.f64()?.iter().next() {
         kwargs.finish_price = p
+    };
+    if let Some(c) = cash.f64()?.iter().next() {
+        kwargs.cash = c
     };
     let res = match time.dtype() {
         DataType::Date => {

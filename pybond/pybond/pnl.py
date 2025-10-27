@@ -115,7 +115,7 @@ def trading_from_pos(
     pos: IntoExpr,
     open: IntoExpr,
     finish_price: IntoExpr | None = None,
-    cash: float = 1e8,
+    cash: IntoExpr = 1e8,
     multiplier: float = 1,
     qty_tick: float = 1.0,
     *,
@@ -125,15 +125,16 @@ def trading_from_pos(
     pos = parse_into_expr(pos)
     open = parse_into_expr(open)
     finish_price = parse_into_expr(finish_price)
+    cash = parse_into_expr(cash)
     kwargs = {
-        "cash": cash,
+        "cash": None,
         "multiplier": multiplier,
         "qty_tick": qty_tick,
         "stop_on_finish": stop_on_finish,
         "finish_price": None,
     }
     return register_plugin(
-        args=[time, pos, open, finish_price],
+        args=[time, pos, open, finish_price, cash],
         kwargs=kwargs,
         symbol="trading_from_pos",
         is_elementwise=False,
