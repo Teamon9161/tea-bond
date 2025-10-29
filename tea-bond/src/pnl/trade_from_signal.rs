@@ -57,7 +57,6 @@ where
         if pos.not_none() && open.not_none() {
             let pos = pos.unwrap().f64();
             let price = open.unwrap().f64();
-
             // 记录最新可用的时间与价格
             last_tp = Some((time.clone(), price));
 
@@ -72,11 +71,14 @@ where
                 } else {
                     -open_qty
                 };
-                if dpos.signum() == open_qty.signum() {
-                    open_price = (open_price * open_qty + qty * price) / (qty + open_qty)
+                if open_qty == 0. {
+                    // 开仓情况
+                    open_price = price;
+                } else if dpos.signum() == open_qty.signum() {
+                    open_price = (open_price * open_qty + qty * price) / (qty + open_qty);
                 } else if open_qty.abs() > qty.abs() {
                     // 反向加仓, 价格为新的开仓价格
-                    open_price = price
+                    open_price = price;
                 };
                 // 减仓情况的价格不改变
 
@@ -97,7 +99,7 @@ where
     });
 
     // 收尾是否强制平仓
-    if opt.stop_on_finish && open_qty != 0.0 {
+    if opt.stop_on_finish && (open_qty != 0.0) {
         if let Some((t, p)) = last_tp {
             let p = if let Some(p) = opt.finish_price { p } else { p };
             trades.push(Trade {

@@ -128,8 +128,8 @@ def trading_from_pos(
     cash = parse_into_expr(cash)
     kwargs = {
         "cash": None,
-        "multiplier": multiplier,
-        "qty_tick": qty_tick,
+        "multiplier": float(multiplier),
+        "qty_tick": float(qty_tick),
         "stop_on_finish": stop_on_finish,
         "finish_price": None,
     }

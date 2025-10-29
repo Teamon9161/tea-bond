@@ -98,12 +98,14 @@ where
                     last_cp_date = bond.mkt.find_workday(cp_dates.0, 0);
                     // 当天初始仓位会产生的票息
                     if settle_time == last_cp_date {
+                        // 调节应计利息
+                        accrued_interest = coupon_paid;
                         state.coupon_paid += coupon_paid * multiplier * state.pos;
                     }
                     last_settle_time = Some(settle_time);
                 }
-                // 当前需要付息
-                if settle_time == last_cp_date {
+                // 交易当天会产生付息
+                if (settle_time == last_cp_date) & (qty != 0.) {
                     state.coupon_paid += coupon_paid * multiplier * qty;
                 }
             }

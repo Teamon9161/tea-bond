@@ -152,7 +152,7 @@ impl Bond {
                 self.carry_date
             );
             return Ok(self.carry_date);
-        } else if date >= self.maturity_date {
+        } else if date > self.maturity_date {
             eprintln!(
                 "Calculating date {} is after the bond {} 's maturity date {}, the result may be incorrect",
                 date,

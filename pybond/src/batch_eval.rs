@@ -525,7 +525,7 @@ fn evaluators_last_trading_date(
 }
 
 #[polars_expr(output_type=Date)]
-fn evaluators_remain_year(
+fn bonds_remain_year(
     inputs: &[Series],
     kwargs: EvaluatorBatchParams,
 ) -> PolarsResult<Series> {
@@ -542,6 +542,46 @@ fn evaluators_remain_year(
     .into_iter()
     .collect_trusted();
     Ok(result.into_series())
+}
+
+#[polars_expr(output_type=Date)]
+fn bonds_carry_date(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Int32Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e,
+        |e: &TfEvaluator| {
+            Some(e.bond.carry_date.num_days_from_ce() - EPOCH_DAYS_FROM_CE)
+        },
+        false,
+        true,
+    )?
+    .into_iter()
+    .collect_trusted();
+    Ok(result.into_date().into_series())
+}
+
+#[polars_expr(output_type=Date)]
+fn bonds_maturity_date(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let result: Int32Chunked = batch_eval(
+        inputs,
+        kwargs,
+        |e: TfEvaluator| e,
+        |e: &TfEvaluator| {
+            Some(e.bond.maturity_date.num_days_from_ce() - EPOCH_DAYS_FROM_CE)
+        },
+        false,
+        true,
+    )?
+    .into_iter()
+    .collect_trusted();
+    Ok(result.into_date().into_series())
 }
 
 #[derive(Deserialize)]
