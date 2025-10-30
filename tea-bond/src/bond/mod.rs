@@ -345,6 +345,15 @@ impl Bond {
     ) -> Result<f64> {
         match self.interest_type {
             InterestType::Fixed => {
+                if self.is_zero_coupon() {
+                    let remain_year = self.remain_year(date);
+                    if remain_year >= 1. {
+                        return Ok((self.par_value / dirty_price).powf(1.0 / remain_year) - 1.)
+                    } else {
+                        return Ok((self.par_value / dirty_price - 1.) * remain_year)
+                    }
+                    
+                }
                 let inst_freq = self.inst_freq as f64;
                 let coupon = self.get_coupon();
                 let (pre_cp_date, next_cp_date) =

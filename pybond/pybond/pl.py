@@ -406,7 +406,27 @@ class Bonds:
         """
         return self._evaluator(date=date).remain_cp_num
 
-    # TODO(Teamon): 实现向量化根据净价反推ytm的函数
+    def calc_ytm_with_price(
+        self,
+        date: IntoExpr = "date",
+        dirty_price: IntoExpr = "dirty_price",
+        clean_price: IntoExpr | None = None,
+    ):
+        bond = parse_into_expr(self.bond)
+        date = parse_into_expr(date)
+        if clean_price is None:
+            dirty_price = parse_into_expr(dirty_price)
+        else:
+            assert dirty_price == "dirty_price", (
+                "should not set dirty_price when clean_price is set"
+            )
+            clean_price = parse_into_expr(clean_price)
+            dirty_price = clean_price + self.accrued_interest(date)
+        return register_plugin(
+            args=[bond, date, dirty_price],
+            symbol="bonds_calc_ytm_with_price",
+            is_elementwise=False,
+        )
 
 
 class Futures:

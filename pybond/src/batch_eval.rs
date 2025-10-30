@@ -183,6 +183,7 @@ where
     let (future_price, bond_ytm, capital_rate) =
         auto_cast!(Float64(future_price, bond_ytm, capital_rate));
     let date = auto_cast!(Date(date));
+    let bond = auto_cast!(String(bond));
     Ok(batch_eval_impl(
         future.str()?,
         bond.str()?,
@@ -524,7 +525,7 @@ fn evaluators_last_trading_date(
     Ok(result.into_date().into_series())
 }
 
-#[polars_expr(output_type=Date)]
+#[polars_expr(output_type=Float64)]
 fn bonds_remain_year(
     inputs: &[Series],
     kwargs: EvaluatorBatchParams,
@@ -582,6 +583,63 @@ fn bonds_maturity_date(
     .into_iter()
     .collect_trusted();
     Ok(result.into_date().into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn bonds_calc_ytm_with_price(
+    inputs: &[Series]
+) -> PolarsResult<Series> {
+    let dirty_price_se = auto_cast!(Float64(&inputs[2]));
+    let bond_se = auto_cast!(String(&inputs[0]));
+    let date_se = auto_cast!(Date(&inputs[1]));
+    let len = dirty_price_se.len();
+    let bond = bond_se.str()?;
+    let date = date_se.date()?;
+    let dirty_price = dirty_price_se.f64()?;
+    let mut bond_iter = bond.iter();
+    let mut date_iter = date.physical().iter();
+    let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None).unwrap();
+    let mut dirty_price_iter = dirty_price.iter();
+    let mut date_physical = date_iter.next().unwrap().unwrap_or(0);
+    let mut date = EPOCH
+        .checked_add_days(Days::new(date_physical as u64))
+        .unwrap();
+    let mut dirty_price = dirty_price_iter.next().unwrap().unwrap_or(f64::NAN);
+    let mut result = Vec::with_capacity(len);
+    if bond.bond_code().is_empty() {
+        result.push(None)
+    } else {
+        result.push(bond.calc_ytm_with_price(dirty_price, date, None, None).ok().filter(|v| !v.is_nan()))
+    }
+    for _ in 1..len {
+        if let Some(dp) = dirty_price_iter.next() {
+            dirty_price = dp.unwrap_or(f64::NAN);
+        };
+        if let Some(dt) = date_iter.next() {
+            let dt = dt.unwrap_or(0);
+            if dt != date_physical {
+                date_physical = dt;
+                date = EPOCH.checked_add_days(Days::new(dt as u64)).unwrap()
+            }
+        };
+        if let Some(b) = bond_iter.next() {
+            if let Some(b) = b {
+                if b != bond.code() && bond.bond_code != b {
+                    bond = CachedBond::new(b, None).unwrap();
+                }
+            } else {
+                result.push(None);
+                continue;
+            }
+        };
+        if bond.bond_code().is_empty() {
+            result.push(None);
+        } else {
+            result.push(bond.calc_ytm_with_price(dirty_price, date, None, None).ok().filter(|v| !v.is_nan()))
+        }
+    }
+    let result: Float64Chunked = result.into_iter().collect_trusted();
+    Ok(result.into_series())
 }
 
 #[derive(Deserialize)]
