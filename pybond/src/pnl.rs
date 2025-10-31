@@ -130,7 +130,7 @@ fn calc_bond_trade_pnl(inputs: &[Series], kwargs: BondTradePnlOpt) -> PolarsResu
 
 fn get_trading_output_type(input_fields: &[Field]) -> PolarsResult<Field> {
     let dtype = DataType::Struct(vec![
-        input_fields[0].clone(), // time
+        Field::new("time".into(), input_fields[0].dtype().clone()),
         Field::new("price".into(), DataType::Float64),
         Field::new("qty".into(), DataType::Float64),
     ]);
