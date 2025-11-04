@@ -47,8 +47,8 @@ impl Bond {
     pub(crate) fn check_ytm(&self, ytm: f64) -> f64 {
         if ytm > 1.0 {
             eprintln!(
-                "Warning: Bond: {}, YTM exceeds 100%, dividing by 100 by default.",
-                self.bond_code()
+                "Warning: Bond: {}, YTM: {} exceeds 100%, dividing by 100 by default.",
+                self.bond_code(), ytm
             );
             ytm * 0.01
         } else {

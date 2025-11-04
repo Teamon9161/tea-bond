@@ -62,6 +62,7 @@ where
     let mut last_settle_time = None;
     let mut last_cp_date = EPOCH;
     let mut accrued_interest = 0.;
+    let mut next_day_coupon: f64 = 0.;
     let symbol = if let Some(bond) = symbol {
         if bond.is_empty() {
             None
@@ -90,6 +91,10 @@ where
         let (trade_price, close): (Option<f64>, Option<f64>) = if let Some(bond) = &symbol {
             if !bond.is_zero_coupon() {
                 if last_settle_time != Some(settle_time) {
+                    if next_day_coupon != 0. {
+                        state.coupon_paid += next_day_coupon;
+                        next_day_coupon = 0.;
+                    }
                     // 新的一天重新计算相关信息
                     let cp_dates = bond.get_nearest_cp_date(settle_time).unwrap();
                     accrued_interest = bond
@@ -100,13 +105,13 @@ where
                     if settle_time == last_cp_date {
                         // 调节应计利息
                         accrued_interest = coupon_paid;
-                        state.coupon_paid += coupon_paid * multiplier * state.pos;
+                        next_day_coupon += coupon_paid * multiplier * state.pos;
                     }
                     last_settle_time = Some(settle_time);
                 }
                 // 交易当天会产生付息
                 if (settle_time == last_cp_date) & (qty != 0.) {
-                    state.coupon_paid += coupon_paid * multiplier * qty;
+                    next_day_coupon += coupon_paid * multiplier * qty;
                 }
             }
             (
