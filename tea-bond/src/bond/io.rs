@@ -32,10 +32,6 @@ impl Bond {
     pub fn read_json(code: impl AsRef<str>, path: Option<&Path>) -> Result<Self> {
         let code = code.as_ref();
         let code: Cow<'_, str> = if !code.contains('.') {
-            // dbg!(
-            //     "Read bond from json file,code doesn't contain market type, use IB as default: {}",
-            //     code
-            // );
             format!("{code}.IB").into()
         } else {
             code.into()

@@ -19,28 +19,52 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Bond {
+    #[serde(default)]
     pub bond_code: SmallStr,         // 债券代码
+    #[serde(default)]
     pub mkt: Market,                 // 市场
+    #[serde(default)]
     pub abbr: SmallStr,              // 债券简称
+    #[serde(default="default_par_value")]
     pub par_value: f64,              // 债券面值
+    #[serde(default)]
     pub cp_type: CouponType,         // 息票品种
+    #[serde(default)]
     pub interest_type: InterestType, // 息票利率类型
-    #[serde(alias = "cp_rate_1st")]
+    #[serde(default="default_cp_rate", alias = "cp_rate_1st")]
     pub cp_rate: f64, // 票面利率, 浮动付息债券仅表示发行时票面利率
+    #[serde(default)]
     pub base_rate: Option<f64>,      // 基准利率, 浮动付息债券适用
+    #[serde(default)]
     pub rate_spread: Option<f64>,    // 固定利差, 浮动付息债券适用
+    #[serde(default="default_inst_freq")]
     pub inst_freq: i32,              // 年付息次数
     #[serde(
+        default,
         deserialize_with = "deserialize_date",
         serialize_with = "serialize_date"
     )]
     pub carry_date: NaiveDate, // 起息日
     #[serde(
+        default,
         deserialize_with = "deserialize_date",
         serialize_with = "serialize_date"
     )]
     pub maturity_date: NaiveDate, // 到期日
+    #[serde(default)]
     pub day_count: BondDayCount,     // 计息基准, 如A/365F
+}
+
+const fn default_par_value() -> f64 {
+    100.0
+}
+
+const fn default_inst_freq() -> i32 {
+    2
+}
+
+const fn default_cp_rate() -> f64 {
+    0.03
 }
 
 impl Bond {
@@ -90,15 +114,6 @@ impl Bond {
     pub fn issue_year(&self) -> i32 {
         self.maturity_date.year() - self.carry_date.year()
     }
-
-    // #[inline]
-    // /// 确保不是零息债券
-    // fn ensure_not_zero_coupon(&self) -> Result<()> {
-    //     if self.is_zero_coupon() {
-    //         bail!("Zero Coupon bond does not have coupon dates");
-    //     }
-    //     Ok(())
-    // }
 
     #[inline]
     /// 获取区间付息（单个付息周期的利息金额）
@@ -459,6 +474,9 @@ mod tests {
         }
         "#;
 
+        let bond_attributes: Bond = serde_json::from_str(json_str).unwrap();
+        println!("{:?}", bond_attributes);
+        let json_str = r#"{"cp_rate": 0.0167}"#;
         let bond_attributes: Bond = serde_json::from_str(json_str).unwrap();
         println!("{:?}", bond_attributes);
     }
