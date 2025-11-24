@@ -526,17 +526,12 @@ fn evaluators_last_trading_date(
 }
 
 #[polars_expr(output_type=Float64)]
-fn bonds_remain_year(
-    inputs: &[Series],
-    kwargs: EvaluatorBatchParams,
-) -> PolarsResult<Series> {
+fn bonds_remain_year(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
         |e: TfEvaluator| e,
-        |e: &TfEvaluator| {
-            Some(e.bond.remain_year(e.date))
-        },
+        |e: &TfEvaluator| Some(e.bond.remain_year(e.date)),
         false,
         true,
     )?
@@ -546,17 +541,12 @@ fn bonds_remain_year(
 }
 
 #[polars_expr(output_type=Date)]
-fn bonds_carry_date(
-    inputs: &[Series],
-    kwargs: EvaluatorBatchParams,
-) -> PolarsResult<Series> {
+fn bonds_carry_date(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
     let result: Int32Chunked = batch_eval(
         inputs,
         kwargs,
         |e: TfEvaluator| e,
-        |e: &TfEvaluator| {
-            Some(e.bond.carry_date.num_days_from_ce() - EPOCH_DAYS_FROM_CE)
-        },
+        |e: &TfEvaluator| Some(e.bond.carry_date.num_days_from_ce() - EPOCH_DAYS_FROM_CE),
         false,
         true,
     )?
@@ -566,17 +556,12 @@ fn bonds_carry_date(
 }
 
 #[polars_expr(output_type=Date)]
-fn bonds_maturity_date(
-    inputs: &[Series],
-    kwargs: EvaluatorBatchParams,
-) -> PolarsResult<Series> {
+fn bonds_maturity_date(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
     let result: Int32Chunked = batch_eval(
         inputs,
         kwargs,
         |e: TfEvaluator| e,
-        |e: &TfEvaluator| {
-            Some(e.bond.maturity_date.num_days_from_ce() - EPOCH_DAYS_FROM_CE)
-        },
+        |e: &TfEvaluator| Some(e.bond.maturity_date.num_days_from_ce() - EPOCH_DAYS_FROM_CE),
         false,
         true,
     )?
@@ -586,9 +571,7 @@ fn bonds_maturity_date(
 }
 
 #[polars_expr(output_type=Float64)]
-fn bonds_calc_ytm_with_price(
-    inputs: &[Series]
-) -> PolarsResult<Series> {
+fn bonds_calc_ytm_with_price(inputs: &[Series]) -> PolarsResult<Series> {
     let dirty_price_se = auto_cast!(Float64(&inputs[2]));
     let bond_se = auto_cast!(String(&inputs[0]));
     let date_se = auto_cast!(Date(&inputs[1]));
@@ -609,7 +592,11 @@ fn bonds_calc_ytm_with_price(
     if bond.bond_code().is_empty() {
         result.push(None)
     } else {
-        result.push(bond.calc_ytm_with_price(dirty_price, date, None, None).ok().filter(|v| !v.is_nan()))
+        result.push(
+            bond.calc_ytm_with_price(dirty_price, date, None, None)
+                .ok()
+                .filter(|v| !v.is_nan()),
+        )
     }
     for _ in 1..len {
         if let Some(dp) = dirty_price_iter.next() {
@@ -635,7 +622,11 @@ fn bonds_calc_ytm_with_price(
         if bond.bond_code().is_empty() {
             result.push(None);
         } else {
-            result.push(bond.calc_ytm_with_price(dirty_price, date, None, None).ok().filter(|v| !v.is_nan()))
+            result.push(
+                bond.calc_ytm_with_price(dirty_price, date, None, None)
+                    .ok()
+                    .filter(|v| !v.is_nan()),
+            )
         }
     }
     let result: Float64Chunked = result.into_iter().collect_trusted();

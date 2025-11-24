@@ -1,4 +1,7 @@
 use pyo3_polars::derive::polars_expr;
+use serde::Deserialize;
+use std::path::PathBuf;
+use tea_bond::SmallStr;
 use tea_bond::pnl::{self, BondTradePnlOpt, PnlReport};
 use tevec::export::arrow as polars_arrow;
 use tevec::export::polars::prelude::*;
@@ -101,10 +104,34 @@ fn get_pnl_output_type(_input_fields: &[Field]) -> PolarsResult<Field> {
     Ok(Field::new("pnl_report".into(), dtype))
 }
 
+#[derive(Deserialize)]
+pub struct PyBondTradePnlOpt {
+    // pub symbol: SmallStr,
+    pub bond_info_path: Option<PathBuf>,
+    pub multiplier: f64,
+    pub fee: SmallStr,
+    pub borrowing_cost: f64,
+    pub capital_rate: f64,
+}
+
+impl PyBondTradePnlOpt {
+    fn to_rs_opt(self, begin_state: PnlReport) -> BondTradePnlOpt {
+        BondTradePnlOpt {
+            bond_info_path: self.bond_info_path,
+            multiplier: self.multiplier,
+            fee: self.fee,
+            borrowing_cost: self.borrowing_cost,
+            capital_rate: self.capital_rate,
+            begin_state,
+        }
+    }
+}
+
 #[polars_expr(output_type_func=get_pnl_output_type)]
-fn calc_bond_trade_pnl(inputs: &[Series], kwargs: BondTradePnlOpt) -> PolarsResult<Series> {
-    let (symbol, time, qty, clean_price, clean_close) =
-        (&inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4]);
+fn calc_bond_trade_pnl(inputs: &[Series], kwargs: PyBondTradePnlOpt) -> PolarsResult<Series> {
+    let (symbol, time, qty, clean_price, clean_close, state) = (
+        &inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4], &inputs[5],
+    );
     let symbol = auto_cast!(String(symbol));
     let symbol = if let Some(s) = symbol.str()?.iter().next() {
         s
@@ -116,13 +143,70 @@ fn calc_bond_trade_pnl(inputs: &[Series], kwargs: BondTradePnlOpt) -> PolarsResu
         DataType::Date => time.clone(),
         _ => time.cast(&DataType::Date)?,
     };
+    let state = state.struct_()?;
+    let begin_state = PnlReport {
+        pos: state
+            .field_by_name("pos")?
+            .cast(&DataType::Float64)?
+            .f64()?
+            .first()
+            .unwrap_or(0.),
+        avg_price: state
+            .field_by_name("avg_price")?
+            .cast(&DataType::Float64)?
+            .f64()?
+            .first()
+            .unwrap_or(0.),
+        pnl: state
+            .field_by_name("pnl")?
+            .cast(&DataType::Float64)?
+            .f64()?
+            .first()
+            .unwrap_or(0.),
+        realized_pnl: state
+            .field_by_name("realized_pnl")?
+            .cast(&DataType::Float64)?
+            .f64()?
+            .first()
+            .unwrap_or(0.),
+        pos_price: state
+            .field_by_name("pos_price")?
+            .cast(&DataType::Float64)?
+            .f64()?
+            .first()
+            .unwrap_or(0.),
+        unrealized_pnl: state
+            .field_by_name("unrealized_pnl")?
+            .cast(&DataType::Float64)?
+            .f64()?
+            .first()
+            .unwrap_or(0.),
+        coupon_paid: state
+            .field_by_name("coupon_paid")?
+            .cast(&DataType::Float64)?
+            .f64()?
+            .first()
+            .unwrap_or(0.),
+        amt: state
+            .field_by_name("amt")?
+            .cast(&DataType::Float64)?
+            .f64()?
+            .first()
+            .unwrap_or(0.),
+        fee: state
+            .field_by_name("fee")?
+            .cast(&DataType::Float64)?
+            .f64()?
+            .first()
+            .unwrap_or(0.),
+    };
     let profit_vec = pnl::calc_bond_trade_pnl(
         symbol,
         time.date()?.physical(),
         qty.f64()?,
         clean_price.f64()?,
         clean_close.f64()?,
-        &kwargs,
+        &kwargs.to_rs_opt(begin_state),
     );
     let out = pnl_report_vec_to_series(&profit_vec);
     Ok(out)
@@ -141,7 +225,8 @@ fn get_trading_output_type(input_fields: &[Field]) -> PolarsResult<Field> {
 fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> PolarsResult<Series> {
     use pyo3_polars::export::polars_core::utils::CustomIterTools;
     use tevec::export::polars::prelude::*;
-    let (time, pos, open, finish_price, cash) = (&inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4]);
+    let (time, pos, open, finish_price, cash) =
+        (&inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4]);
     let (pos, open, finish_price, cash) = auto_cast!(Float64(pos, open, finish_price, cash));
     if let Some(p) = finish_price.f64()?.iter().next() {
         kwargs.finish_price = p

@@ -10,7 +10,7 @@ mod tf_evaluator;
 mod utils;
 
 pub use bond::{
-    free_bond_dict, Bond, BondDayCount, BondYtm, CachedBond, CouponType, InterestType, Market,
+    Bond, BondDayCount, BondYtm, CachedBond, CouponType, InterestType, Market, free_bond_dict,
 };
 pub use future::{Future, FuturePrice, FutureType};
 pub use tf_evaluator::TfEvaluator;

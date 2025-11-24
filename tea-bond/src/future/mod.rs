@@ -6,9 +6,9 @@ pub use future_price::FuturePrice;
 pub use future_type::FutureType;
 
 use crate::SmallStr;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use chrono::{Datelike, Duration, NaiveDate, Weekday};
-use tea_calendar::{china::CFFEX, Calendar};
+use tea_calendar::{Calendar, china::CFFEX};
 
 const CFFEX_DEFAULT_CP_RATE: f64 = 0.03;
 

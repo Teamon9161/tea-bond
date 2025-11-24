@@ -20,25 +20,25 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Bond {
     #[serde(default)]
-    pub bond_code: SmallStr,         // 债券代码
+    pub bond_code: SmallStr, // 债券代码
     #[serde(default)]
-    pub mkt: Market,                 // 市场
+    pub mkt: Market, // 市场
     #[serde(default)]
-    pub abbr: SmallStr,              // 债券简称
-    #[serde(default="default_par_value")]
-    pub par_value: f64,              // 债券面值
+    pub abbr: SmallStr, // 债券简称
+    #[serde(default = "default_par_value")]
+    pub par_value: f64, // 债券面值
     #[serde(default)]
-    pub cp_type: CouponType,         // 息票品种
+    pub cp_type: CouponType, // 息票品种
     #[serde(default)]
     pub interest_type: InterestType, // 息票利率类型
-    #[serde(default="default_cp_rate", alias = "cp_rate_1st")]
+    #[serde(default = "default_cp_rate", alias = "cp_rate_1st")]
     pub cp_rate: f64, // 票面利率, 浮动付息债券仅表示发行时票面利率
     #[serde(default)]
-    pub base_rate: Option<f64>,      // 基准利率, 浮动付息债券适用
+    pub base_rate: Option<f64>, // 基准利率, 浮动付息债券适用
     #[serde(default)]
-    pub rate_spread: Option<f64>,    // 固定利差, 浮动付息债券适用
-    #[serde(default="default_inst_freq")]
-    pub inst_freq: i32,              // 年付息次数
+    pub rate_spread: Option<f64>, // 固定利差, 浮动付息债券适用
+    #[serde(default = "default_inst_freq")]
+    pub inst_freq: i32, // 年付息次数
     #[serde(
         default,
         deserialize_with = "deserialize_date",
@@ -52,7 +52,7 @@ pub struct Bond {
     )]
     pub maturity_date: NaiveDate, // 到期日
     #[serde(default)]
-    pub day_count: BondDayCount,     // 计息基准, 如A/365F
+    pub day_count: BondDayCount, // 计息基准, 如A/365F
 }
 
 const fn default_par_value() -> f64 {
@@ -72,7 +72,8 @@ impl Bond {
         if ytm > 1.0 {
             eprintln!(
                 "Warning: Bond: {}, YTM: {} exceeds 100%, dividing by 100 by default.",
-                self.bond_code(), ytm
+                self.bond_code(),
+                ytm
             );
             ytm * 0.01
         } else {
@@ -363,11 +364,10 @@ impl Bond {
                 if self.is_zero_coupon() {
                     let remain_year = self.remain_year(date);
                     if remain_year >= 1. {
-                        return Ok((self.par_value / dirty_price).powf(1.0 / remain_year) - 1.)
+                        return Ok((self.par_value / dirty_price).powf(1.0 / remain_year) - 1.);
                     } else {
-                        return Ok((self.par_value / dirty_price - 1.) * remain_year)
+                        return Ok((self.par_value / dirty_price - 1.) * remain_year);
                     }
-                    
                 }
                 let inst_freq = self.inst_freq as f64;
                 let coupon = self.get_coupon();

@@ -162,7 +162,8 @@ impl TfEvaluator {
         if self.accrued_interest.is_none() {
             if self.bond.is_zero_coupon() {
                 let days = ACTUAL.count_days(self.bond.carry_date, self.date);
-                self.accrued_interest = Some(self.bond.cp_rate * self.bond.par_value * days as f64 / 365.);
+                self.accrued_interest =
+                    Some(self.bond.cp_rate * self.bond.par_value * days as f64 / 365.);
                 return Ok(self);
             }
             let mut out = self.with_nearest_cp_dates()?;
@@ -183,9 +184,11 @@ impl TfEvaluator {
             if self.bond.is_zero_coupon() {
                 let remain_year = self.bond.remain_year(self.date);
                 if remain_year > 1. {
-                    self.dirty_price = Some(self.bond.par_value / (1.0+self.bond.ytm()).powf(remain_year));
+                    self.dirty_price =
+                        Some(self.bond.par_value / (1.0 + self.bond.ytm()).powf(remain_year));
                 } else {
-                    self.dirty_price = Some(self.bond.par_value / (1.0+self.bond.ytm() * remain_year));
+                    self.dirty_price =
+                        Some(self.bond.par_value / (1.0 + self.bond.ytm() * remain_year));
                 }
                 return Ok(self);
             }

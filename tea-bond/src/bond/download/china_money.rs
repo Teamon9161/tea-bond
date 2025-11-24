@@ -1,6 +1,6 @@
-use crate::bond::{Bond, BondDayCount, CouponType, InterestType};
 use crate::SmallStr;
-use anyhow::{bail, Result};
+use crate::bond::{Bond, BondDayCount, CouponType, InterestType};
+use anyhow::{Result, bail};
 use std::sync::OnceLock;
 
 const IB_SEARCH_URL: &str = "https://www.chinamoney.com.cn/ags/ms/cm-u-md-bond/CbtPri";

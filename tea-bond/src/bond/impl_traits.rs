@@ -1,6 +1,6 @@
 use super::{
-    enums::{BondDayCount, CouponType, InterestType, Market},
     Bond,
+    enums::{BondDayCount, CouponType, InterestType, Market},
 };
 use chrono::NaiveDate;
 use serde::{Deserialize, Deserializer};

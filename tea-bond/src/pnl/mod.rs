@@ -85,12 +85,12 @@ where
         } else {
             qty.unwrap().f64()
         };
-        
+
         let (trade_price, close): (Option<f64>, Option<f64>) = if let Some(bond) = &symbol {
             if !bond.is_zero_coupon() {
                 let settle_time = EPOCH
-                .checked_add_days(Days::new(settle_time.unwrap() as u64))
-                .unwrap();
+                    .checked_add_days(Days::new(settle_time.unwrap() as u64))
+                    .unwrap();
                 if last_settle_time != Some(settle_time) {
                     if next_day_coupon != 0. {
                         state.coupon_paid += next_day_coupon;

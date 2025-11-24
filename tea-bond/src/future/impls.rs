@@ -2,8 +2,8 @@ use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use super::future_price::FuturePrice;
 use super::Future;
+use super::future_price::FuturePrice;
 
 impl From<&str> for Future {
     #[inline]

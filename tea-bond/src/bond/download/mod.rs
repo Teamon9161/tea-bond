@@ -1,7 +1,7 @@
 mod china_money;
 mod sse;
 use super::{Bond, Market};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 impl Bond {
     pub async fn download(code: &str) -> Result<Bond> {

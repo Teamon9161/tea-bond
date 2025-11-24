@@ -1,6 +1,6 @@
-use crate::bond::{Bond, BondDayCount, CouponType, InterestType};
 use crate::SmallStr;
-use anyhow::{anyhow, bail, Result};
+use crate::bond::{Bond, BondDayCount, CouponType, InterestType};
+use anyhow::{Result, anyhow, bail};
 use chrono::NaiveDate;
 use compact_str::ToCompactString;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -106,7 +106,9 @@ impl Bond {
                     res["INTEREST_TYPE"].as_str().unwrap(),
                 )?;
                 let (base_rate, rate_spread) = if let InterestType::Floating = interest_type {
-                    bail!("Get base rate & rate spread for floating bond in SSE is not implemented yet");
+                    bail!(
+                        "Get base rate & rate spread for floating bond in SSE is not implemented yet"
+                    );
                 } else {
                     (None, None)
                 };
