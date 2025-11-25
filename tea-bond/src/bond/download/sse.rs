@@ -139,6 +139,7 @@ impl Bond {
                         "%Y%m%d",
                     )?,
                     day_count: BondDayCount::default(),
+                    issue_price: None,
                 };
                 return Ok(bond);
             }

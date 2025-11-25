@@ -55,6 +55,8 @@ pub struct Bond {
     pub maturity_date: NaiveDate, // 到期日
     #[serde(default)]
     pub day_count: BondDayCount, // 计息基准, 如A/365F
+    #[serde(default)]
+    pub issue_price: Option<f64>, // 发行价
 }
 
 const fn default_par_value() -> f64 {
@@ -100,9 +102,15 @@ impl Bond {
     }
 
     #[inline]
-    /// 是否为零息债券
+    /// 是否为零息债券(贴现)
     pub fn is_zero_coupon(&self) -> bool {
         self.cp_type == CouponType::ZeroCoupon
+    }
+
+    #[inline]
+    /// 是否为到期一次还本付息债券
+    pub fn is_one_time(&self) -> bool {
+        self.cp_type == CouponType::OneTime
     }
 
     #[inline]
@@ -204,6 +212,11 @@ impl Bond {
 
     /// 剩余的付息次数
     pub fn remain_cp_num(&self, date: NaiveDate, next_cp_date: Option<NaiveDate>) -> Result<i32> {
+        if self.is_zero_coupon() {
+            return Ok(0);
+        } else if self.is_one_time() {
+            return Ok(1);
+        }
         use tea_calendar::Calendar;
         let mut next_cp_date =
             next_cp_date.unwrap_or_else(|| self.get_nearest_cp_date(date).unwrap().1);
@@ -227,6 +240,9 @@ impl Bond {
         until_date: NaiveDate,
         next_cp_date: Option<NaiveDate>,
     ) -> Result<i32> {
+        if self.is_zero_coupon() {
+            return Ok(0);
+        }
         let mut next_cp_date =
             next_cp_date.unwrap_or_else(|| self.get_nearest_cp_date(date).unwrap().1);
         if next_cp_date > until_date {
@@ -251,6 +267,9 @@ impl Bond {
         until_date: NaiveDate,
         next_cp_date: Option<NaiveDate>,
     ) -> Result<Vec<NaiveDate>> {
+        if self.is_zero_coupon() {
+            return Ok(vec![]);
+        }
         let mut next_cp_date =
             next_cp_date.unwrap_or_else(|| self.get_nearest_cp_date(date).unwrap().1);
         if next_cp_date >= until_date {
@@ -272,28 +291,41 @@ impl Bond {
         calculating_date: NaiveDate,
         cp_dates: Option<(NaiveDate, NaiveDate)>, // 前后付息日，如果已经计算完成可以直接传入避免重复计算
     ) -> Result<f64> {
-        if self.is_zero_coupon() {
-            return Ok(0.0);
-        }
-        let (pre_cp_date, next_cp_date) = if let Some(cp_dates) = cp_dates {
-            cp_dates
-        } else {
-            self.get_nearest_cp_date(calculating_date)?
-        };
-        match self.mkt {
-            Market::IB => {
-                // 银行间是算头不算尾，计算实际天数（自然日）
-                let inst_accrued_days = ACTUAL.count_days(pre_cp_date, calculating_date);
-                let coupon = self.cp_rate * self.par_value / self.inst_freq as f64;
-                // 当前付息周期实际天数
-                let present_cp_period_days = ACTUAL.count_days(pre_cp_date, next_cp_date);
-                Ok(coupon * inst_accrued_days as f64 / present_cp_period_days as f64)
-            }
-            Market::SH | Market::SSE | Market::SZE | Market::SZ => {
-                // 交易所是算头又算尾
-                let inst_accrued_days = 1 + ACTUAL.count_days(pre_cp_date, calculating_date);
-                Ok(self.cp_rate * self.par_value * inst_accrued_days as f64 / 365.0)
-            }
+        match self.cp_type {
+            CouponType::ZeroCoupon => { 
+                // 贴现债券
+                if let Some(issue_price) = self.issue_price {
+                    // TODO: 交易所债券的计算规则有所不同, 可参考Wind计算说明进行实现
+                    Ok((self.par_value - issue_price) * ACTUAL.count_days(self.carry_date, calculating_date) as f64 / ACTUAL.count_days(self.carry_date, self.maturity_date) as f64)
+                } else {
+                    // 近似算法
+                    let days = ACTUAL.count_days(self.carry_date, calculating_date);
+                    Ok(self.cp_rate * self.par_value * days as f64 / 365.)
+                }
+            },
+            CouponType::OneTime => bail!("Accrued interest for one-time coupon is not supported yet"),
+            CouponType::CouponBear => {
+                let (pre_cp_date, next_cp_date) = if let Some(cp_dates) = cp_dates {
+                    cp_dates
+                } else {
+                    self.get_nearest_cp_date(calculating_date)?
+                };
+                match self.mkt {
+                    Market::IB => {
+                        // 银行间是算头不算尾，计算实际天数（自然日）
+                        let inst_accrued_days = ACTUAL.count_days(pre_cp_date, calculating_date);
+                        let coupon = self.cp_rate * self.par_value / self.inst_freq as f64;
+                        // 当前付息周期实际天数
+                        let present_cp_period_days = ACTUAL.count_days(pre_cp_date, next_cp_date);
+                        Ok(coupon * inst_accrued_days as f64 / present_cp_period_days as f64)
+                    }
+                    Market::SH | Market::SSE | Market::SZE | Market::SZ => {
+                        // 交易所是算头又算尾
+                        let inst_accrued_days = 1 + ACTUAL.count_days(pre_cp_date, calculating_date);
+                        Ok(self.cp_rate * self.par_value * inst_accrued_days as f64 / 365.0)
+                    }
+                }
+            },
         }
     }
 
@@ -305,6 +337,15 @@ impl Bond {
         cp_dates: Option<(NaiveDate, NaiveDate)>,
         remain_cp_num: Option<i32>,
     ) -> Result<f64> {
+        if self.is_zero_coupon() {
+            let remain_year = self.remain_year(date);
+            assert!(remain_year < 1.);
+            // if remain_year > 1. {
+            //     return Ok(self.par_value / (1.0 + ytm).powf(remain_year));
+            // } else {
+            return Ok(self.par_value / (1.0 + ytm * remain_year));
+            // }
+        }
         let ytm = self.check_ytm(ytm);
         let inst_freq = self.inst_freq as f64;
         let coupon = self.get_coupon();
@@ -341,15 +382,14 @@ impl Bond {
         remain_cp_num: Option<i32>,
     ) -> Result<f64> {
         let cp_dates = if let Some(cd) = cp_dates {
-            cd
+            Some(cd)
         } else {
-            self.get_nearest_cp_date(date)?
+            self.get_nearest_cp_date(date).ok()
         };
-        let remain_cp_num =
-            remain_cp_num.unwrap_or_else(|| self.remain_cp_num(date, None).unwrap());
+        let remain_cp_num = remain_cp_num.or_else(|| self.remain_cp_num(date, None).ok());
         let dirty_price =
-            self.calc_dirty_price_with_ytm(ytm, date, Some(cp_dates), Some(remain_cp_num))?;
-        let accrued_interest = self.calc_accrued_interest(date, Some(cp_dates))?;
+            self.calc_dirty_price_with_ytm(ytm, date, cp_dates, remain_cp_num)?;
+        let accrued_interest = self.calc_accrued_interest(date, cp_dates)?;
         Ok(dirty_price - accrued_interest)
     }
 
@@ -361,46 +401,37 @@ impl Bond {
         cp_dates: Option<(NaiveDate, NaiveDate)>,
         remain_cp_num: Option<i32>,
     ) -> Result<f64> {
-        match self.interest_type {
-            InterestType::Fixed => {
-                if self.is_zero_coupon() {
-                    let remain_year = self.remain_year(date);
-                    if remain_year >= 1. {
-                        return Ok((self.par_value / dirty_price).powf(1.0 / remain_year) - 1.);
-                    } else {
-                        return Ok((self.par_value / dirty_price - 1.) * remain_year);
-                    }
-                }
-                let inst_freq = self.inst_freq as f64;
-                let coupon = self.get_coupon();
-                let (pre_cp_date, next_cp_date) =
-                    cp_dates.unwrap_or_else(|| self.get_nearest_cp_date(date).unwrap());
-                let remain_days = ACTUAL.count_days(date, next_cp_date) as f64;
+        if self.is_zero_coupon() {
+            let ty = ACTUAL.count_days(self.carry_date, self.carry_date + chrono::Months::new(12)) as f64;
+            return Ok((self.par_value / dirty_price - 1.) * ty / ACTUAL.count_days(date, self.maturity_date) as f64);
+        }
+        let inst_freq = self.inst_freq as f64;
+        let coupon = self.get_coupon();
+        let (pre_cp_date, next_cp_date) =
+            cp_dates.unwrap_or_else(|| self.get_nearest_cp_date(date).unwrap());
+        let remain_days = ACTUAL.count_days(date, next_cp_date) as f64;
 
-                let n = remain_cp_num.unwrap_or_else(|| self.remain_cp_num(date, None).unwrap());
-                if n > 1 {
-                    let ty = ACTUAL.count_days(pre_cp_date, next_cp_date) as f64;
-                    // 不在最后一个付息周期内
-                    use crate::utils::bisection_find_ytm;
-                    let f = |ytm: f64| {
-                        let coupon_cf = (0..n).fold(0., |acc, i| {
-                            let discount_factor =
-                                (1. + ytm / inst_freq).powf(remain_days / ty + i as f64);
-                            acc + coupon / discount_factor
-                        });
-                        let discount_factor =
-                            (1. + ytm / inst_freq).powf(remain_days / ty + (n - 1) as f64);
-                        self.par_value / discount_factor + coupon_cf - dirty_price
-                    };
-                    Ok(bisection_find_ytm(f, 1e-4, 0.3, Some(12)))
-                } else {
-                    let ty = self.get_last_cp_year_days()? as f64;
-                    // 只剩最后一次付息
-                    let forward_value = self.par_value + coupon;
-                    Ok((forward_value - dirty_price) / dirty_price / (remain_days / ty))
-                }
-            }
-            _ => bail!("Unsupported interest type: {:?}", self.interest_type),
+        let n = remain_cp_num.unwrap_or_else(|| self.remain_cp_num(date, None).unwrap());
+        if n > 1 {
+            let ty = ACTUAL.count_days(pre_cp_date, next_cp_date) as f64;
+            // 不在最后一个付息周期内
+            use crate::utils::bisection_find_ytm;
+            let f = |ytm: f64| {
+                let coupon_cf = (0..n).fold(0., |acc, i| {
+                    let discount_factor =
+                        (1. + ytm / inst_freq).powf(remain_days / ty + i as f64);
+                    acc + coupon / discount_factor
+                });
+                let discount_factor =
+                    (1. + ytm / inst_freq).powf(remain_days / ty + (n - 1) as f64);
+                self.par_value / discount_factor + coupon_cf - dirty_price
+            };
+            Ok(bisection_find_ytm(f, 1e-4, 0.3, Some(12)))
+        } else {
+            let ty = self.get_last_cp_year_days()? as f64;
+            // 只剩最后一次付息
+            let forward_value = self.par_value + coupon;
+            Ok((forward_value - dirty_price) / dirty_price / (remain_days / ty))
         }
     }
 
@@ -446,6 +477,9 @@ impl Bond {
         cp_dates: Option<(NaiveDate, NaiveDate)>,
         remain_cp_num: Option<i32>,
     ) -> Result<f64> {
+        if self.is_zero_coupon() {
+            return Ok(self.remain_year(date))
+        }
         let ytm = self.check_ytm(ytm);
         let duration = self.calc_macaulay_duration(ytm, date, cp_dates, remain_cp_num)?;
         Ok(duration / (1. + ytm / self.inst_freq as f64))

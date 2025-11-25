@@ -129,6 +129,7 @@ impl Bond {
                 carry_date: info["frstValueDate"].as_str().unwrap().parse().unwrap(),
                 maturity_date: info["mrtyDate"].as_str().unwrap().parse().unwrap(),
                 day_count: BondDayCount::default(),
+                issue_price: None,
             };
             if bond.cp_rate != 0. {
                 assert!(bond.cp_type != CouponType::ZeroCoupon);

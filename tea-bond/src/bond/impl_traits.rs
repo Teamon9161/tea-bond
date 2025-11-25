@@ -21,6 +21,7 @@ impl Default for Bond {
             carry_date: NaiveDate::default(),
             maturity_date: NaiveDate::default(),
             day_count: BondDayCount::default(),
+            issue_price: None,
         }
     }
 }

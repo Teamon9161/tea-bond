@@ -8,7 +8,7 @@ pub enum CouponType {
     #[serde(alias = "Coupon_Bear")]
     #[default]
     CouponBear,
-    /// 零息债券
+    /// 零息债券(贴现债券)
     #[serde(alias = "Zero_Coupon")]
     ZeroCoupon,
     /// 一次性付息
