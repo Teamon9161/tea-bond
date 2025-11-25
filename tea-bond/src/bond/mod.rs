@@ -2,6 +2,8 @@ mod bond_ytm;
 mod cached_bond;
 #[cfg(feature = "download")]
 mod download;
+#[cfg(feature = "duckdb")]
+mod duck_io;
 mod enums;
 mod impl_convert;
 mod impl_traits;

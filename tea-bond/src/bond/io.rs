@@ -7,9 +7,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-
-// pub static mut BONDS_INFO_PATH: Option<PathBuf> = None;
-
 impl Bond {
     fn default_bonds_info_dir() -> PathBuf {
         match std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
