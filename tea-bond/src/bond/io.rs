@@ -2,22 +2,36 @@ use super::Bond;
 use anyhow::Result;
 use std::{
     borrow::Cow,
-    fs::File,
+    fs::{self, File},
     io::BufReader,
     path::{Path, PathBuf},
 };
 
+
 // pub static mut BONDS_INFO_PATH: Option<PathBuf> = None;
 
 impl Bond {
-    pub fn get_save_path(code: &str, path: Option<&Path>) -> PathBuf {
-        if let Some(path) = path {
-            PathBuf::from(path).join(format!("{code}.json"))
-        } else if let Ok(path) = std::env::var("BONDS_INFO_PATH") {
-            PathBuf::from(path).join(format!("{code}.json"))
-        } else {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!("bonds_info/{code}.json"))
+    fn default_bonds_info_dir() -> PathBuf {
+        match std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+            Some(home) => PathBuf::from(home).join("tea-bond").join("bonds_info"),
+            None => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("bonds_info"),
         }
+    }
+
+    pub fn get_save_path(code: &str, path: Option<&Path>) -> PathBuf {
+        let base_dir = if let Some(path) = path {
+            PathBuf::from(path)
+        } else if let Ok(path) = std::env::var("BONDS_INFO_PATH") {
+            PathBuf::from(path)
+        } else {
+            Bond::default_bonds_info_dir()
+        };
+
+        if let Err(err) = fs::create_dir_all(&base_dir) {
+            eprintln!("Failed to create bonds_info dir {:?}: {}", base_dir, err);
+        }
+
+        base_dir.join(format!("{code}.json"))
     }
 
     /// 从本地json文件读取Bond
@@ -88,7 +102,7 @@ impl Bond {
 
         // Create the parent directory if it doesn't exist
         if let Some(parent) = final_path.parent() {
-            std::fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent)?;
         }
 
         // Create the file and write the bond data

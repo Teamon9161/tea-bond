@@ -19,7 +19,14 @@ if os.environ.get("BONDS_INFO_PATH") is not None:
     bonds_info_path = Path(os.environ.get("BONDS_INFO_PATH"))
 else:
     bonds_info_environ_flag = False
-    bonds_info_path = Path(__file__).parent / "data" / "bonds_info"
+    old_default_path = Path(__file__).parent / "data" / "bonds_info"
+    bonds_info_path = Path.home() / "tea-bond" / "bonds_info"
+    if old_default_path.exists() and not bonds_info_path.exists():
+        import shutil
+
+        shutil.move(str(old_default_path), str(bonds_info_path))
+    if not bonds_info_path.exists():
+        bonds_info_path.mkdir(parents=True)
     os.environ["BONDS_INFO_PATH"] = str(bonds_info_path)
 
 if not bonds_info_path.exists():
