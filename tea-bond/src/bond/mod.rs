@@ -292,18 +292,22 @@ impl Bond {
         cp_dates: Option<(NaiveDate, NaiveDate)>, // 前后付息日，如果已经计算完成可以直接传入避免重复计算
     ) -> Result<f64> {
         match self.cp_type {
-            CouponType::ZeroCoupon => { 
+            CouponType::ZeroCoupon => {
                 // 贴现债券
                 if let Some(issue_price) = self.issue_price {
                     // TODO: 交易所债券的计算规则有所不同, 可参考Wind计算说明进行实现
-                    Ok((self.par_value - issue_price) * ACTUAL.count_days(self.carry_date, calculating_date) as f64 / ACTUAL.count_days(self.carry_date, self.maturity_date) as f64)
+                    Ok((self.par_value - issue_price)
+                        * ACTUAL.count_days(self.carry_date, calculating_date) as f64
+                        / ACTUAL.count_days(self.carry_date, self.maturity_date) as f64)
                 } else {
                     // 近似算法
                     let days = ACTUAL.count_days(self.carry_date, calculating_date);
                     Ok(self.cp_rate * self.par_value * days as f64 / 365.)
                 }
-            },
-            CouponType::OneTime => bail!("Accrued interest for one-time coupon is not supported yet"),
+            }
+            CouponType::OneTime => {
+                bail!("Accrued interest for one-time coupon is not supported yet")
+            }
             CouponType::CouponBear => {
                 let (pre_cp_date, next_cp_date) = if let Some(cp_dates) = cp_dates {
                     cp_dates
@@ -321,11 +325,12 @@ impl Bond {
                     }
                     Market::SH | Market::SSE | Market::SZE | Market::SZ => {
                         // 交易所是算头又算尾
-                        let inst_accrued_days = 1 + ACTUAL.count_days(pre_cp_date, calculating_date);
+                        let inst_accrued_days =
+                            1 + ACTUAL.count_days(pre_cp_date, calculating_date);
                         Ok(self.cp_rate * self.par_value * inst_accrued_days as f64 / 365.0)
                     }
                 }
-            },
+            }
         }
     }
 
@@ -387,8 +392,7 @@ impl Bond {
             self.get_nearest_cp_date(date).ok()
         };
         let remain_cp_num = remain_cp_num.or_else(|| self.remain_cp_num(date, None).ok());
-        let dirty_price =
-            self.calc_dirty_price_with_ytm(ytm, date, cp_dates, remain_cp_num)?;
+        let dirty_price = self.calc_dirty_price_with_ytm(ytm, date, cp_dates, remain_cp_num)?;
         let accrued_interest = self.calc_accrued_interest(date, cp_dates)?;
         Ok(dirty_price - accrued_interest)
     }
@@ -402,8 +406,10 @@ impl Bond {
         remain_cp_num: Option<i32>,
     ) -> Result<f64> {
         if self.is_zero_coupon() {
-            let ty = ACTUAL.count_days(self.carry_date, self.carry_date + chrono::Months::new(12)) as f64;
-            return Ok((self.par_value / dirty_price - 1.) * ty / ACTUAL.count_days(date, self.maturity_date) as f64);
+            let ty = ACTUAL.count_days(self.carry_date, self.carry_date + chrono::Months::new(12))
+                as f64;
+            return Ok((self.par_value / dirty_price - 1.) * ty
+                / ACTUAL.count_days(date, self.maturity_date) as f64);
         }
         let inst_freq = self.inst_freq as f64;
         let coupon = self.get_coupon();
@@ -418,8 +424,7 @@ impl Bond {
             use crate::utils::bisection_find_ytm;
             let f = |ytm: f64| {
                 let coupon_cf = (0..n).fold(0., |acc, i| {
-                    let discount_factor =
-                        (1. + ytm / inst_freq).powf(remain_days / ty + i as f64);
+                    let discount_factor = (1. + ytm / inst_freq).powf(remain_days / ty + i as f64);
                     acc + coupon / discount_factor
                 });
                 let discount_factor =
@@ -478,7 +483,7 @@ impl Bond {
         remain_cp_num: Option<i32>,
     ) -> Result<f64> {
         if self.is_zero_coupon() {
-            return Ok(self.remain_year(date))
+            return Ok(self.remain_year(date));
         }
         let ytm = self.check_ytm(ytm);
         let duration = self.calc_macaulay_duration(ytm, date, cp_dates, remain_cp_num)?;

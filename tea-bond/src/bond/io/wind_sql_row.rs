@@ -1,8 +1,8 @@
-use crate::bond::{Bond, BondDayCount, CouponType, InterestType, Market};
 use crate::SmallStr;
+use crate::bond::{Bond, BondDayCount, CouponType, InterestType, Market};
 use chrono::NaiveDate;
 // use serde::{Deserialize, Serialize};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 // use crate::bond::impl_traits::{deserialize_date, serialize_date};
 
 #[derive(Debug, Clone)]
@@ -21,12 +21,11 @@ pub struct WindSqlRow {
     pub b_info_issueprice: Option<f64>,
 }
 
-
 impl Default for WindSqlRow {
     fn default() -> Self {
         Self {
             s_info_windcode: "".into(),
-            s_info_name: "" .into(),
+            s_info_name: "".into(),
             b_info_par: 100.0,
             b_info_coupon: 505001000,
             b_info_interesttype: None,
@@ -41,12 +40,11 @@ impl Default for WindSqlRow {
     }
 }
 
-
 fn get_coupon_type(i: i32) -> Result<CouponType> {
     match i {
-        505001000 => Ok(CouponType::CouponBear),  // 附息
-        505002000 => Ok(CouponType::OneTime),  // 到期一次还本付息
-        505003000 => Ok(CouponType::ZeroCoupon),  // 贴现
+        505001000 => Ok(CouponType::CouponBear), // 附息
+        505002000 => Ok(CouponType::OneTime),    // 到期一次还本付息
+        505003000 => Ok(CouponType::ZeroCoupon), // 贴现
         _ => bail!("Unknown coupon type enum: {}", i),
     }
 }
@@ -54,10 +52,10 @@ fn get_coupon_type(i: i32) -> Result<CouponType> {
 fn get_interest_type(i: Option<i32>) -> Result<InterestType> {
     match i {
         Some(501001000) => Ok(InterestType::Floating), // 浮动利率
-        Some(501002000) => Ok(InterestType::Fixed), // 固定利率
-        Some(501003000) => Ok(InterestType::Progressive),  // 累进利率
+        Some(501002000) => Ok(InterestType::Fixed),    // 固定利率
+        Some(501003000) => Ok(InterestType::Progressive), // 累进利率
         Some(i) => bail!("Unknown interest type enum: {}", i),
-        None => Ok(InterestType::Zero),  // 零息
+        None => Ok(InterestType::Zero), // 零息
     }
 }
 
@@ -77,18 +75,20 @@ fn get_coupon_rate(cp_rate: Option<f64>, float_rate: Option<f64>) -> f64 {
 
 fn get_inst_freq(coupon_type: &CouponType, freq: Option<&str>) -> i32 {
     match coupon_type {
-        CouponType::CouponBear => if let Some(freq) = freq {
-            match freq {
-                "Y1" => 1,
-                "M6" => 2,
-                "M4" => 3,
-                "M3" => 4,
-                "M2" => 6,
-                _ => todo!(),
+        CouponType::CouponBear => {
+            if let Some(freq) = freq {
+                match freq {
+                    "Y1" => 1,
+                    "M6" => 2,
+                    "M4" => 3,
+                    "M3" => 4,
+                    "M2" => 6,
+                    _ => todo!(),
+                }
+            } else {
+                0
             }
-        } else {
-            0
-        },
+        }
         CouponType::OneTime => 1,
         CouponType::ZeroCoupon => 0,
     }
@@ -97,11 +97,12 @@ fn get_inst_freq(coupon_type: &CouponType, freq: Option<&str>) -> i32 {
 impl TryFrom<WindSqlRow> for Bond {
     type Error = anyhow::Error;
     fn try_from(row: WindSqlRow) -> Result<Self> {
-        let market = row.s_info_windcode
-                .split('.')
-                .nth(1)
-                .and_then(|m| m.parse::<Market>().ok())
-                .unwrap_or_default();
+        let market = row
+            .s_info_windcode
+            .split('.')
+            .nth(1)
+            .and_then(|m| m.parse::<Market>().ok())
+            .unwrap_or_default();
         let cp_type = get_coupon_type(row.b_info_coupon)?;
         Ok(Bond {
             bond_code: row.s_info_windcode,

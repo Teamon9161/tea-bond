@@ -1,6 +1,6 @@
-mod wind_sql_row;
 #[cfg(feature = "duckdb")]
-mod duckdb;
+mod duck;
+mod wind_sql_row;
 
 use super::Bond;
 use anyhow::Result;
@@ -46,9 +46,11 @@ impl Bond {
         };
         #[cfg(feature = "duckdb")]
         {
-            use duckdb::DUCKDB_TABLE_CON;
-            if let Ok(bond) = Bond::read_duckdb(&*DUCKDB_TABLE_CON.lock(), None, code.as_ref()) {
-                return Ok(bond);
+            use duck::DUCKDB_TABLE_PATH;
+            if let Ok(con) = duckdb::Connection::open(DUCKDB_TABLE_PATH.as_str()) {
+                if let Ok(bond) = Bond::read_duckdb(&con, None, code.as_ref()) {
+                    return Ok(bond);
+                }
             }
         }
         Bond::read_json(code, path)
