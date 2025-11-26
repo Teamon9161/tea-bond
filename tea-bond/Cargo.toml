@@ -5,7 +5,7 @@ edition = { workspace = true }
 exclude = []                   # 不再需要排除 pybond，因为它现在是单独的 crate
 
 [features]
-default = ["download", "pnl", "batch", "duckdb"]
+default = ["download"]
 download = ["reqwest", "tokio", "rand"]
 pnl = ["tevec", "itertools"]
 batch = ["tevec", "itertools"]

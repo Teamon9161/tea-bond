@@ -1,9 +1,15 @@
 use crate::bond::Bond;
 use anyhow::{bail, Context, Result};
 use duckdb::{params, Connection, Row};
-use super::WindSqlRow;
-use std::sync::Arc;
+use parking_lot::Mutex;
+use super::{default_dir, WindSqlRow};
+use std::{sync::{Arc, LazyLock}};
 use chrono::NaiveDate;
+
+pub static DUCKDB_TABLE_CON: LazyLock<Arc<Mutex<Connection>>> = LazyLock::new(|| {
+    let table_path = std::env::var("BONDS_INFO_DUCKDB_TABLE").unwrap_or_else(|_| default_dir().join("bonds_info.duckdb").to_string_lossy().into());
+    Arc::new(Mutex::new(Connection::open(table_path).unwrap()))
+});
 
 impl TryFrom<&Row<'_>> for WindSqlRow {
     type Error = duckdb::Error;

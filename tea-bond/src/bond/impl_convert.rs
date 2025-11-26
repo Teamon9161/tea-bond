@@ -11,7 +11,7 @@ impl TryFrom<&str> for Bond {
 
     #[inline]
     fn try_from(s: &str) -> Result<Self> {
-        Self::read_json(s, None)
+        Self::read(s, None)
     }
 }
 
@@ -79,7 +79,7 @@ impl TryFrom<&Path> for Bond {
             .and_then(|s| s.to_str())
             .unwrap_or_default();
         let folder = path.parent();
-        Self::read_json(code, folder)
+        Self::read(code, folder)
     }
 }
 

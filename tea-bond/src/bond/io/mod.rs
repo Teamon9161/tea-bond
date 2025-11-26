@@ -13,22 +13,21 @@ use std::{
 
 pub use wind_sql_row::WindSqlRow;
 
+pub fn default_dir() -> PathBuf {
+    match std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+        Some(home) => PathBuf::from(home).join("tea-bond"),
+        None => PathBuf::from(env!("CARGO_MANIFEST_DIR")),
+    }
+}
 
 impl Bond {
-    fn default_bonds_info_dir() -> PathBuf {
-        match std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
-            Some(home) => PathBuf::from(home).join("tea-bond").join("bonds_info"),
-            None => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("bonds_info"),
-        }
-    }
-
-    pub fn get_save_path(code: &str, path: Option<&Path>) -> PathBuf {
+    pub fn get_json_save_path(code: &str, path: Option<&Path>) -> PathBuf {
         let base_dir = if let Some(path) = path {
             PathBuf::from(path)
         } else if let Ok(path) = std::env::var("BONDS_INFO_PATH") {
             PathBuf::from(path)
         } else {
-            Bond::default_bonds_info_dir()
+            default_dir().join("bonds_info")
         };
 
         if let Err(err) = fs::create_dir_all(&base_dir) {
@@ -36,6 +35,23 @@ impl Bond {
         }
 
         base_dir.join(format!("{code}.json"))
+    }
+
+    pub fn read(code: impl AsRef<str>, path: Option<&Path>) -> Result<Self> {
+        let code = code.as_ref();
+        let code: Cow<'_, str> = if !code.contains('.') {
+            format!("{code}.IB").into()
+        } else {
+            code.into()
+        };
+        #[cfg(feature = "duckdb")]
+        {
+            use duckdb::DUCKDB_TABLE_CON;
+            if let Ok(bond) = Bond::read_duckdb(&*DUCKDB_TABLE_CON.lock(), None, code.as_ref()) {
+                return Ok(bond);
+            }
+        }
+        Bond::read_json(code, path)
     }
 
     /// 从本地json文件读取Bond
@@ -54,7 +70,7 @@ impl Bond {
         } else {
             code.into()
         };
-        let path = Bond::get_save_path(&code, path);
+        let path = Bond::get_json_save_path(&code, path);
         if let Ok(file) = File::open(&path) {
             Ok(serde_json::from_reader(BufReader::new(file))?)
         } else {

@@ -64,7 +64,7 @@ impl PyBond {
     ///     IOError: If the bond data cannot be saved to the specified path.
     #[pyo3(signature = (path=None))]
     fn save(&self, path: Option<PathBuf>) -> PyResult<()> {
-        let path = Bond::get_save_path(self.bond_code(), path.as_deref());
+        let path = Bond::get_json_save_path(self.bond_code(), path.as_deref());
         self.0.save(path).map_err(Into::into)
     }
 

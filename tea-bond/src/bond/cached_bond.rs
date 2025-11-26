@@ -96,7 +96,7 @@ impl CachedBond {
             }
         }
         // Read the bond from the specified path or default path
-        let bond_rs = Arc::new(Bond::read_json(bond_code, path)?);
+        let bond_rs = Arc::new(Bond::read(bond_code, path)?);
         {
             // Insert the bond into the cache
             BOND_DICT.lock().insert(bond_code.into(), bond_rs.clone());
