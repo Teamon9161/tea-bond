@@ -60,7 +60,7 @@ impl Bond {
                 Ok(bond)
             }
             #[cfg(not(feature = "download"))]
-            bail!("Read bond {} error: Can not open {:?}", code, &path)
+            anyhow::bail!("Read bond {} error: Can not open {:?}", code, &path)
         }
     }
 
