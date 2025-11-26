@@ -2,15 +2,15 @@ mod bond_ytm;
 mod cached_bond;
 #[cfg(feature = "download")]
 mod download;
-#[cfg(feature = "duckdb")]
-mod duck_io;
 mod enums;
 mod impl_convert;
 mod impl_traits;
 mod io;
+
 pub use bond_ytm::BondYtm;
 pub use cached_bond::{CachedBond, free_bond_dict};
 pub use enums::{BondDayCount, CouponType, InterestType, Market};
+pub use io::WindSqlRow;
 
 use crate::SmallStr;
 use crate::day_counter::{ACTUAL, DayCountRule};
@@ -64,7 +64,7 @@ const fn default_par_value() -> f64 {
 }
 
 const fn default_inst_freq() -> i32 {
-    2
+    1
 }
 
 const fn default_cp_rate() -> f64 {

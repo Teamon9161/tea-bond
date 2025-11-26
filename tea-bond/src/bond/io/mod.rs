@@ -1,3 +1,7 @@
+mod wind_sql_row;
+#[cfg(feature = "duckdb")]
+mod duckdb;
+
 use super::Bond;
 use anyhow::Result;
 use std::{
@@ -6,6 +10,9 @@ use std::{
     io::BufReader,
     path::{Path, PathBuf},
 };
+
+pub use wind_sql_row::WindSqlRow;
+
 
 impl Bond {
     fn default_bonds_info_dir() -> PathBuf {
@@ -63,6 +70,8 @@ impl Bond {
             anyhow::bail!("Read bond {} error: Can not open {:?}", code, &path)
         }
     }
+
+    // pub fn read_wind_sql_row()
 
     /// Saves the `Bond` instance to a JSON file at the specified path.
     ///
