@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 
@@ -11,16 +12,18 @@ from .polars_utils import parse_into_expr, register_plugin
 
 
 class Fee:
-    """Represents a fee for a trade."""
+    def to_dict(self) -> dict[str, Any]:
+        raise NotImplementedError
 
-    def __init__(self, fee_str: str = ""):
-        self.str = fee_str
-
-    def __add__(self, other: Fee) -> Fee:
-        return Fee(self.str + "+" + other.str)
-
-    def __radd__(self, other: Fee) -> Fee:
-        return Fee(other.str + "+" + self.str)
+    def __add__(self, other: Fee) -> FeeSum:
+        if isinstance(self, FeeSum):
+            if isinstance(other, FeeSum):
+                return FeeSum(items=self.items + other.items)
+            return FeeSum(items=[*self.items, other])
+        else:
+            if isinstance(other, FeeSum):
+                return FeeSum(items=[self, *other.items])
+            return FeeSum(items=[self, other])
 
     @staticmethod
     def trade(fee) -> TradeFee:
@@ -35,25 +38,109 @@ class Fee:
         return PercentFee(fee)
 
 
-class TradeFee(Fee):
-    """Represents a fixed fee for a trade."""
-
-    def __init__(self, fee: float):
-        self.str = f"Trade({fee})"
-
-
-class QtyFee(Fee):
-    """Represents a fee based on the quantity of a trade."""
-
-    def __init__(self, fee: float):
-        self.str = f"Qty({fee})"
+@dataclass
+class FeeZero(Fee):
+    def to_dict(self):
+        return {"kind": "zero"}
 
 
+@dataclass
 class PercentFee(Fee):
-    """Represents a fee based on a percentage of the trade amount."""
+    rate: float
 
-    def __init__(self, fee: float):
-        self.str = f"Percent({fee})"
+    def to_dict(self):
+        return {"kind": "percent", "rate": self.rate}
+
+
+@dataclass
+class QtyFee(Fee):
+    per_qty: float
+
+    def to_dict(self):
+        return {"kind": "per_qty", "per_qty": self.per_qty}
+
+
+@dataclass
+class TradeFee(Fee):
+    per_trade: float
+
+    def to_dict(self):
+        return {"kind": "per_trade", "per_trade": self.per_trade}
+
+
+@dataclass
+class FeeSum(Fee):
+    items: list[Fee] = field(default_factory=list)
+
+    def to_dict(self):
+        return {
+            "kind": "sum",
+            "items": [f.to_dict() for f in self.items],
+        }
+
+
+@dataclass
+class MinFee(Fee):
+    cap: float
+    fee: Fee
+
+    def to_dict(self):
+        return {"kind": "min", "cap": self.cap, "fee": self.fee.to_dict()}
+
+
+@dataclass
+class MaxFee(Fee):
+    floor: float
+    fee: Fee
+
+    def to_dict(self):
+        return {"kind": "max", "floor": self.floor, "fee": self.fee.to_dict()}
+
+
+# class Fee:
+#     """Represents a fee for a trade."""
+
+#     def __init__(self, fee_str: str = ""):
+#         self.str = fee_str
+
+#     def __add__(self, other: Fee) -> Fee:
+#         return Fee(self.str + "+" + other.str)
+
+#     def __radd__(self, other: Fee) -> Fee:
+#         return Fee(other.str + "+" + self.str)
+
+#     @staticmethod
+#     def trade(fee) -> TradeFee:
+#         return TradeFee(fee)
+
+#     @staticmethod
+#     def qty(fee) -> QtyFee:
+#         return QtyFee(fee)
+
+#     @staticmethod
+#     def percent(fee) -> PercentFee:
+#         return PercentFee(fee)
+
+
+# class TradeFee(Fee):
+#     """Represents a fixed fee for a trade."""
+
+#     def __init__(self, fee: float):
+#         self.str = f"Trade({fee})"
+
+
+# class QtyFee(Fee):
+#     """Represents a fee based on the quantity of a trade."""
+
+#     def __init__(self, fee: float):
+#         self.str = f"Qty({fee})"
+
+
+# class PercentFee(Fee):
+#     """Represents a fee based on a percentage of the trade amount."""
+
+#     def __init__(self, fee: float):
+#         self.str = f"Percent({fee})"
 
 
 def calc_bond_trade_pnl(
@@ -64,13 +151,14 @@ def calc_bond_trade_pnl(
     clean_close: IntoExpr,
     bond_info_path: str | None = None,
     multiplier: float = 1,
-    fee: str | Fee = "",
+    fee: Fee | None = None,
     borrowing_cost: float = 0,
     capital_rate: float = 0,
     begin_state: IntoExpr | None = None,
 ) -> pl.Expr:
-    if isinstance(fee, Fee):
-        fee = fee.str
+    if fee is None:
+        fee = FeeZero()
+    fee = fee.to_dict()
     symbol = parse_into_expr(symbol)
     settle_time = parse_into_expr(settle_time)
     qty = parse_into_expr(qty)
@@ -120,6 +208,7 @@ def trading_from_pos(
     cash: IntoExpr = 1e8,
     multiplier: float = 1,
     qty_tick: float = 1.0,
+    min_adjust_amt: float = 0.0,
     *,
     stop_on_finish: bool = False,
 ) -> pl.Expr:
@@ -134,6 +223,7 @@ def trading_from_pos(
         "qty_tick": float(qty_tick),
         "stop_on_finish": stop_on_finish,
         "finish_price": None,
+        "min_adjust_amt": float(min_adjust_amt),
     }
     return register_plugin(
         args=[time, pos, open, finish_price, cash],

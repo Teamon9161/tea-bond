@@ -1,13 +1,13 @@
 mod fee;
 mod trade_from_signal;
 
+pub use fee::Fee;
+use std::path::PathBuf;
 pub use trade_from_signal::{TradeFromPosOpt, trading_from_pos};
 
-use std::path::PathBuf;
-
-use crate::{CachedBond, SmallStr};
+use crate::CachedBond;
 use chrono::{Days, NaiveDate};
-use fee::Fee;
+
 use itertools::izip;
 use serde::Deserialize;
 use tea_calendar::Calendar;
@@ -33,7 +33,7 @@ pub struct BondTradePnlOpt {
     // pub symbol: SmallStr,
     pub bond_info_path: Option<PathBuf>,
     pub multiplier: f64,
-    pub fee: SmallStr,
+    pub fee: Fee,
     pub borrowing_cost: f64,
     pub capital_rate: f64,
     pub begin_state: PnlReport,
@@ -58,7 +58,7 @@ where
     }
     let multiplier = opt.multiplier;
     let mut state = opt.begin_state;
-    let fee: Fee = opt.fee.parse().unwrap();
+    // let fee: Fee = opt.fee.parse().unwrap();
     let mut last_settle_time = None;
     let mut last_cp_date = EPOCH;
     let mut accrued_interest = 0.;
@@ -128,7 +128,7 @@ where
             let trade_amt = qty * trade_price * multiplier; // with sign
             state.pos += qty;
             state.amt += trade_amt;
-            state.fee += fee.amount(qty, trade_amt, 1); // Fee model will take into account the sign of the trade amount and quantity.
+            state.fee += opt.fee.amount(qty, trade_amt, 1); // Fee model will take into account the sign of the trade amount and quantity.
             if prev_pos.abs() > EPS {
                 if qty.signum() != prev_pos.signum() {
                     // 减仓

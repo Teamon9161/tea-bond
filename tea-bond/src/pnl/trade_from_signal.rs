@@ -16,6 +16,7 @@ pub struct TradeFromPosOpt {
     pub qty_tick: f64,
     pub stop_on_finish: bool,
     pub finish_price: Option<f64>,
+    pub min_adjust_amt: Option<f64>,
 }
 
 const INIT_TRADE_COUNT: usize = 512;
@@ -48,6 +49,7 @@ where
     let mut open_price: f64 = 0.;
     let mut open_qty: f64 = 0.;
     let cash = opt.cash.unwrap();
+    let min_adjust_amt = opt.min_adjust_amt.unwrap_or(0.);
     let mut trades = Vec::with_capacity(INIT_TRADE_COUNT);
 
     // 记录最后一个可用 (time, price)，用于 stop_on_finish
@@ -71,30 +73,28 @@ where
                 } else {
                     -open_qty
                 };
-                if open_qty == 0. {
-                    // 开仓情况
-                    open_price = price;
-                } else if dpos.signum() == open_qty.signum() {
-                    open_price = (open_price * open_qty + qty * price) / (qty + open_qty);
-                } else if open_qty.abs() > qty.abs() {
-                    // 反向加仓, 价格为新的开仓价格
-                    open_price = price;
-                };
-                // 减仓情况的价格不改变
+                let adjust_amt = qty.abs() * price * opt.multiplier;
 
-                // 若量化后仍非 0，则下单
-                if qty.abs() > 0.0 {
+                if adjust_amt > min_adjust_amt {
+                    if open_qty == 0. {
+                        // 开仓情况
+                        open_price = price;
+                    } else if dpos.signum() == open_qty.signum() {
+                        open_price = (open_price * open_qty + qty * price) / (qty + open_qty);
+                    } else if open_qty.abs() > qty.abs() {
+                        // 反向加仓, 价格为新的开仓价格
+                        open_price = price;
+                    };
+                    // 减仓情况的价格不改变
                     trades.push(Trade {
                         time: time.clone(),
                         price,
                         qty,
                     });
                     open_qty += qty;
+                    last_pos = pos;
                 }
             }
-
-            // 维持 last_pos 为目标（策略）层面的持仓比例/规模
-            last_pos = pos;
         }
     });
 

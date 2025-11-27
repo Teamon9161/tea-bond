@@ -1,76 +1,90 @@
-use anyhow::{Error, bail};
-use std::str::FromStr;
+use serde::{Deserialize, Serialize};
+use std::ops::Add;
 
-#[derive(Debug, Clone, Copy, Default)]
-pub enum SingleFee {
-    // Represents a fixed fee for a trade.
-    Trade(f64),
-    // Represents a fee per quantity.
-    Qty(f64),
-    // Represents a percentage fee.
-    Percent(f64),
-    #[default]
-    // Represents a zero fee.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum Fee {
+    /// 按成交金额百分比：fee = rate * amount
+    Percent { rate: f64 },
+
+    /// 按成交数量：fee = per_qty * qty
+    PerQty { per_qty: f64 },
+
+    /// 按笔数：fee = per_trade * trade_num
+    PerTrade { per_trade: f64 },
+
+    /// 多个 Fee 相加
+    Sum { items: Vec<Fee> },
+
+    /// 上限： fee = min(cap, inner_fee)
+    Min { cap: f64, fee: Box<Fee> },
+
+    /// 下限（最少多少钱）： fee = max(floor, inner_fee)
+    Max { floor: f64, fee: Box<Fee> },
+
+    /// 零手续费
     Zero,
 }
 
-impl SingleFee {
-    #[inline]
-    pub fn amount(&self, qty: f64, amount: f64, trade_num: u64) -> f64 {
-        match self {
-            SingleFee::Trade(fee) => fee * trade_num as f64,
-            SingleFee::Qty(fee) => fee * qty.abs(),
-            SingleFee::Percent(fee) => fee * amount.abs(),
-            SingleFee::Zero => 0.0,
-        }
+impl Default for Fee {
+    fn default() -> Self {
+        Fee::Zero
     }
 }
-
-impl FromStr for SingleFee {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.is_empty() {
-            Ok(SingleFee::Zero)
-        } else if s.starts_with("Trade(") {
-            let fee = s[6..s.len() - 1].parse()?;
-            Ok(SingleFee::Trade(fee))
-        } else if s.starts_with("Qty(") {
-            let fee = s[4..s.len() - 1].parse()?;
-            Ok(SingleFee::Qty(fee))
-        } else if s.starts_with("Percent(") {
-            let fee = s[8..s.len() - 1].parse()?;
-            Ok(SingleFee::Percent(fee))
-        } else {
-            bail!("Invalid fee type")
-        }
-    }
-}
-
-pub struct Fee(pub Vec<SingleFee>);
 
 impl Fee {
-    #[inline]
+    /// 计算手续费
+    ///
+    /// - `qty`: 成交数量
+    /// - `amount`: 成交金额（比如价格 * 数量，如果是债券可以用净价/全价 * 面值 * 手数等）
+    /// - `trade_num`: 交易笔数（一般一次撮合就是 1）
     pub fn amount(&self, qty: f64, amount: f64, trade_num: u64) -> f64 {
-        if self.0.is_empty() {
-            0.0
-        } else {
-            self.0
-                .iter()
-                .map(|fee| fee.amount(qty, amount, trade_num))
-                .sum()
+        match self {
+            Fee::Zero => 0.0,
+
+            Fee::Percent { rate } => amount.abs() * rate,
+
+            Fee::PerQty { per_qty } => qty.abs() * per_qty,
+
+            Fee::PerTrade { per_trade } => *per_trade * trade_num as f64,
+
+            Fee::Sum { items } => items.iter().map(|f| f.amount(qty, amount, trade_num)).sum(),
+
+            // 手续费上限： min(cap, fee)
+            Fee::Min { cap, fee } => {
+                let inner = fee.amount(qty, amount, trade_num);
+                inner.min(*cap)
+            }
+
+            // 手续费下限（至少 floor）： max(floor, fee)
+            Fee::Max { floor, fee } => {
+                let inner = fee.amount(qty, amount, trade_num);
+                inner.max(*floor)
+            }
         }
     }
 }
 
-impl FromStr for Fee {
-    type Err = Error;
+impl Add for Fee {
+    type Output = Fee;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let fees = s
-            .split('+')
-            .map(|s| s.trim().parse())
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(Fee(fees))
+    fn add(self, rhs: Fee) -> Fee {
+        match (self, rhs) {
+            (Fee::Sum { mut items }, Fee::Sum { items: mut items2 }) => {
+                items.append(&mut items2);
+                Fee::Sum { items }
+            }
+            (Fee::Sum { mut items }, other) => {
+                items.push(other);
+                Fee::Sum { items }
+            }
+            (other, Fee::Sum { mut items }) => {
+                items.insert(0, other);
+                Fee::Sum { items }
+            }
+            (lhs, rhs) => Fee::Sum {
+                items: vec![lhs, rhs],
+            },
+        }
     }
 }

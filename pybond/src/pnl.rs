@@ -1,8 +1,7 @@
 use pyo3_polars::derive::polars_expr;
 use serde::Deserialize;
 use std::path::PathBuf;
-use tea_bond::SmallStr;
-use tea_bond::pnl::{self, BondTradePnlOpt, PnlReport};
+use tea_bond::pnl::{self, BondTradePnlOpt, Fee, PnlReport};
 use tevec::export::arrow as polars_arrow;
 use tevec::export::polars::prelude::*;
 use tevec::prelude::{IsNone, Vec1Collect};
@@ -109,7 +108,7 @@ pub struct PyBondTradePnlOpt {
     // pub symbol: SmallStr,
     pub bond_info_path: Option<PathBuf>,
     pub multiplier: f64,
-    pub fee: SmallStr,
+    pub fee: Fee,
     pub borrowing_cost: f64,
     pub capital_rate: f64,
 }
