@@ -9,7 +9,7 @@ name = "pybond"
 crate-type = ["cdylib"]
 
 [features]
-default = ["download", "pnl", "batch", "duckdb"]
+default = ["download", "pnl", "batch", "persist"]
 # numpy = ["dep:numpy", "tevec/ndarray"]
 download = ["tea-bond/download"]
 duckdb = ["tea-bond/duckdb"]
@@ -21,9 +21,11 @@ pnl = [
     "pyo3-polars",
 ]
 batch = ["serde", "itertools"]
+persist = ["tevec/polars", "pyo3-polars"]
 
 [dependencies]
 tea-time = { workspace = true }
+bincode = {version = "2"}
 pyo3 = { version = "0.24", features = [
     "chrono",
     "extension-module",
@@ -39,3 +41,4 @@ itertools = { version = "0.14", optional = true }
 # tevec = { version = "0.5", optional = true }
 tevec = { git = "https://github.com/teamon9161/tevec.git", rev = "8142290", optional = true }
 pyo3-polars = { version = "0.21", optional = true, features = ["derive"] }
+anyhow = "1"

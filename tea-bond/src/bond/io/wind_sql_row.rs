@@ -83,7 +83,8 @@ fn get_inst_freq(coupon_type: &CouponType, freq: Option<&str>) -> i32 {
                     "M4" => 3,
                     "M3" => 4,
                     "M2" => 6,
-                    _ => todo!(),
+                    "M1" => 12,
+                    _ => -1,
                 }
             } else {
                 0

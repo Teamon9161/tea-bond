@@ -8,6 +8,8 @@ mod bond;
 mod calendar;
 mod ffi;
 mod future;
+#[cfg(feature = "persist")]
+mod persist;
 #[cfg(feature = "pnl")]
 mod pnl;
 mod tf_evaluator;
@@ -29,6 +31,8 @@ fn pybond(m: &Bound<'_, PyModule>) -> PyResult<()> {
     #[cfg(feature = "download")]
     m.add_function(wrap_pyfunction!(bond::download_bond, m)?)?;
     m.add_function(wrap_pyfunction!(get_version, m)?)?;
+    #[cfg(feature = "persist")]
+    m.add_function(wrap_pyfunction!(persist::update_info_from_df, m)?)?;
     m.add_class::<calendar::Ib>()?;
     m.add_class::<calendar::Sse>()?;
     m.add_class::<PyBond>()?;

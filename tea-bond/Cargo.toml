@@ -20,6 +20,7 @@ smart-default = "0.7"
 chrono = { workspace = true }
 anyhow = "1"
 parking_lot = "0.12"
+bincode = { version = "2", features = ["serde"] }
 reqwest = { version = "0.12", optional = true, features = [
     "json",
     "rustls-tls",

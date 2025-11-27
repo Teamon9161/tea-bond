@@ -1,5 +1,6 @@
 #[cfg(feature = "duckdb")]
 mod duck;
+mod persist;
 mod wind_sql_row;
 
 use super::Bond;
@@ -52,6 +53,9 @@ impl Bond {
                     return Ok(bond);
                 }
             }
+        }
+        if let Ok(bond) = Bond::read_disk(&code) {
+            return Ok(bond);
         }
         Bond::read_json(code, path)
     }
