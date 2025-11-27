@@ -26,16 +26,25 @@ class Fee:
             return FeeSum(items=[self, other])
 
     @staticmethod
-    def trade(fee) -> TradeFee:
+    def trade(fee: float) -> TradeFee:
         return TradeFee(fee)
 
     @staticmethod
-    def qty(fee) -> QtyFee:
+    def qty(fee: float) -> QtyFee:
         return QtyFee(fee)
 
     @staticmethod
-    def percent(fee) -> PercentFee:
+    def percent(fee: float) -> PercentFee:
         return PercentFee(fee)
+
+    def zero(self) -> FeeZero:
+        return FeeZero()
+
+    def min(self, fee: float) -> MinFee:
+        return MinFee(fee, self)
+
+    def max(self, fee: float) -> MaxFee:
+        return MaxFee(fee, self)
 
 
 @dataclass
@@ -161,6 +170,27 @@ def calc_bond_trade_pnl(
         kwargs=kwargs,
         symbol="calc_bond_trade_pnl",
         is_elementwise=False,
+    )
+
+
+def calc_trade_pnl(
+    settle_time: IntoExpr,
+    qty: IntoExpr,
+    clean_price: IntoExpr,
+    clean_close: IntoExpr,
+    multiplier: float = 1,
+    fee: Fee | None = None,
+    begin_state: IntoExpr | None = None,
+):
+    return calc_bond_trade_pnl(
+        symbol=pl.lit(""),
+        settle_time=settle_time,
+        qty=qty,
+        clean_price=clean_price,
+        clean_close=clean_close,
+        multiplier=multiplier,
+        fee=fee,
+        begin_state=begin_state,
     )
 
 
