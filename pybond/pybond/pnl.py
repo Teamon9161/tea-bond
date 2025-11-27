@@ -46,6 +46,8 @@ class FeeZero(Fee):
 
 @dataclass
 class PercentFee(Fee):
+    """Represents a fee based on a percentage of the trade amount."""
+
     rate: float
 
     def to_dict(self):
@@ -54,6 +56,8 @@ class PercentFee(Fee):
 
 @dataclass
 class QtyFee(Fee):
+    """Represents a fee based on the quantity of a trade."""
+
     per_qty: float
 
     def to_dict(self):
@@ -62,6 +66,8 @@ class QtyFee(Fee):
 
 @dataclass
 class TradeFee(Fee):
+    """Represents a fixed fee for a trade."""
+
     per_trade: float
 
     def to_dict(self):
@@ -81,6 +87,8 @@ class FeeSum(Fee):
 
 @dataclass
 class MinFee(Fee):
+    """Represents a minimum fee for a trade."""
+
     cap: float
     fee: Fee
 
@@ -90,57 +98,13 @@ class MinFee(Fee):
 
 @dataclass
 class MaxFee(Fee):
+    """Represents a maximum fee for a trade."""
+
     floor: float
     fee: Fee
 
     def to_dict(self):
         return {"kind": "max", "floor": self.floor, "fee": self.fee.to_dict()}
-
-
-# class Fee:
-#     """Represents a fee for a trade."""
-
-#     def __init__(self, fee_str: str = ""):
-#         self.str = fee_str
-
-#     def __add__(self, other: Fee) -> Fee:
-#         return Fee(self.str + "+" + other.str)
-
-#     def __radd__(self, other: Fee) -> Fee:
-#         return Fee(other.str + "+" + self.str)
-
-#     @staticmethod
-#     def trade(fee) -> TradeFee:
-#         return TradeFee(fee)
-
-#     @staticmethod
-#     def qty(fee) -> QtyFee:
-#         return QtyFee(fee)
-
-#     @staticmethod
-#     def percent(fee) -> PercentFee:
-#         return PercentFee(fee)
-
-
-# class TradeFee(Fee):
-#     """Represents a fixed fee for a trade."""
-
-#     def __init__(self, fee: float):
-#         self.str = f"Trade({fee})"
-
-
-# class QtyFee(Fee):
-#     """Represents a fee based on the quantity of a trade."""
-
-#     def __init__(self, fee: float):
-#         self.str = f"Qty({fee})"
-
-
-# class PercentFee(Fee):
-#     """Represents a fee based on a percentage of the trade amount."""
-
-#     def __init__(self, fee: float):
-#         self.str = f"Percent({fee})"
 
 
 def calc_bond_trade_pnl(
