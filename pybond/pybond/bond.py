@@ -61,12 +61,15 @@ class Bond(_BondRS):
             return super().__new__(cls, "", path)
         if "." not in code:
             code = code + ".IB"
-        path = bonds_info_path if path is None else Path(path)
-        if (path / (code + ".json")).exists():
+        try:
             return super().__new__(cls, code, path)
-        else:
-            cls.download(code, path)
-            return super().__new__(cls, code, path)
+        except ValueError as e:
+            if download:
+                path = bonds_info_path if path is None else Path(path)
+                cls.download(code, path)
+                return super().__new__(cls, code, path)
+            else:
+                raise ValueError from e
 
     @classmethod
     def from_json(cls, data: str | dict) -> Bond:

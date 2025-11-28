@@ -123,15 +123,6 @@ impl CachedBond {
     pub fn from_bond(bond: impl Into<Arc<Bond>>) -> Self {
         let bond = bond.into();
         let code = bond.bond_code();
-        // {
-        // // Check if the bond is already in the cache
-        // let mut bond_dict = BOND_DICT.lock();
-        // if bond_dict.get(code).is_none() {
-        //     // Insert the bond into the cache
-        //     bond_dict.insert(code.into(), bond.clone());
-        // }
-        // }
-        // Self(bond)
         if let Ok(cached_bond) = Bond::read_disk(code) {
             Self(cached_bond)
         } else {
