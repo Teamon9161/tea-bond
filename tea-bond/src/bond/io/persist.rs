@@ -7,12 +7,14 @@ use std::{
     fs::File,
     io::{BufReader, BufWriter, Write},
     path::{Path, PathBuf},
-    sync::LazyLock,
+    sync::{Arc, LazyLock},
 };
+
+pub type BondMapType = HashMap<SmallStr, Arc<Bond>>;
 
 /// 全量债券数据的内存映射，按需加载。
 /// 通过 `BONDS_INFO_MAP` 控制序列化文件路径，未设置时使用 `~/.tea-bond/bonds_info.map`。
-pub(crate) static BOND_MAP: LazyLock<Mutex<Option<HashMap<SmallStr, Bond>>>> =
+pub(crate) static BOND_MAP: LazyLock<Mutex<Option<BondMapType>>> =
     LazyLock::new(|| Mutex::new(None));
 
 fn map_path() -> PathBuf {
@@ -29,7 +31,7 @@ fn normalize_code(code: &str) -> SmallStr {
     }
 }
 
-fn load_from_disk(path: &Path) -> Result<HashMap<SmallStr, Bond>> {
+fn load_from_disk(path: &Path) -> Result<HashMap<SmallStr, Arc<Bond>>> {
     let file = File::open(path).with_context(|| format!("Open bond map at {:?}", path))?;
     let mut reader = BufReader::new(file);
     let cfg = bincode::config::standard();
@@ -37,7 +39,7 @@ fn load_from_disk(path: &Path) -> Result<HashMap<SmallStr, Bond>> {
         .context("Deserialize bond map with bincode")
 }
 
-fn flush_to_disk(path: &Path, map: &HashMap<SmallStr, Bond>) -> Result<()> {
+fn flush_to_disk(path: &Path, map: &HashMap<SmallStr, Arc<Bond>>) -> Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)
             .with_context(|| format!("Create parent dir for bond map at {:?}", path))?;
@@ -69,9 +71,19 @@ fn ensure_loaded() {
     }
 }
 
+/// Clears the global bond cache (`BOND_MAP`), freeing all cached bonds.
+#[inline]
+pub fn free_bond_map() {
+    let mut guard = BOND_MAP.lock();
+    // guard.as_mut().map(|s| s.clear());
+    if let Some(s) = guard.as_mut() {
+        s.clear();
+    }
+}
+
 impl Bond {
     /// 从内存/磁盘映射读取债券；首次调用会尝试从磁盘加载。
-    pub fn read_disk(code: &str) -> Result<Self> {
+    pub fn read_disk(code: &str) -> Result<Arc<Self>> {
         ensure_loaded();
         let normalized = normalize_code(code);
         let guard = BOND_MAP.lock();
@@ -86,7 +98,7 @@ impl Bond {
         ensure_loaded();
         let mut guard = BOND_MAP.lock();
         let map = guard.as_mut().expect("bond map should be initialized");
-        map.insert(self.bond_code().into(), self.clone());
+        map.insert(self.bond_code().into(), Arc::new(self.clone()));
         if flush_all {
             let path = map_path();
             flush_to_disk(&path, map)?;

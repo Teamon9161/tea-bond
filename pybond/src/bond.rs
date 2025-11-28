@@ -65,7 +65,7 @@ impl PyBond {
     #[pyo3(signature = (path=None))]
     fn save(&self, path: Option<PathBuf>) -> PyResult<()> {
         let path = Bond::get_json_save_path(self.bond_code(), path.as_deref());
-        self.0.save(path).map_err(Into::into)
+        self.0.save_json(path).map_err(Into::into)
     }
 
     #[classmethod]

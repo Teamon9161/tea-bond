@@ -11,7 +11,7 @@ mod utils;
 
 pub use bond::{
     Bond, BondDayCount, BondYtm, CachedBond, CouponType, InterestType, Market, WindSqlRow,
-    free_bond_dict,
+    free_bond_map,
 };
 pub use future::{Future, FuturePrice, FutureType};
 pub use tf_evaluator::TfEvaluator;

@@ -34,13 +34,20 @@ if not bonds_info_path.exists():
 
 
 class Bond(_BondRS):
-    def __new__(cls, code: str | int = "", path: str | Path | None = None):
+    def __new__(
+        cls,
+        code: str | int = "",
+        path: str | Path | None = None,
+        *,
+        download: bool = True,
+    ):
         """
         Create a new Bond instance.
 
         Args:
             code (str | int): The bond code. If no extension is provided, '.IB' will be appended.
             path (str | Path | None): Path to the bond info file. If None, uses default bonds_info_path.
+            download (bool): Whether to automatically download the bond info if it doesn't exist.
 
         Returns:
             Bond: A new Bond instance, either loaded from existing JSON file or downloaded.

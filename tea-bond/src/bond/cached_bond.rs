@@ -1,18 +1,18 @@
 use super::Bond;
-use crate::SmallStr;
+// use crate::SmallStr;
 use anyhow::Result;
-use parking_lot::Mutex;
+// use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use std::{
-    collections::HashMap,
+    // collections::HashMap,
     path::Path,
-    sync::{Arc, LazyLock},
+    sync::Arc,
 };
 
-// dict to cache bonds
-static BOND_DICT: LazyLock<Mutex<HashMap<SmallStr, Arc<Bond>>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+// // dict to cache bonds
+// static BOND_DICT: LazyLock<Mutex<HashMap<SmallStr, Arc<Bond>>>> =
+//     LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// A cached bond that wraps an `Arc<Bond>` for efficient sharing and caching.
 ///
@@ -47,11 +47,11 @@ impl<'de> Deserialize<'de> for CachedBond {
     }
 }
 
-/// Clears the global bond cache (`BOND_DICT`), freeing all cached bonds.
-#[inline]
-pub fn free_bond_dict() {
-    BOND_DICT.lock().clear();
-}
+// /// Clears the global bond cache (`BOND_DICT`), freeing all cached bonds.
+// #[inline]
+// pub fn free_bond_dict() {
+//     BOND_DICT.lock().clear();
+// }
 
 impl Deref for CachedBond {
     type Target = Bond;
@@ -88,20 +88,7 @@ impl CachedBond {
             let bond = Bond::default();
             return Ok(Self::from_bond(bond));
         }
-        {
-            // Check if the bond is already in the cache
-            let bond_dict = BOND_DICT.lock();
-            if let Some(bond) = bond_dict.get(bond_code) {
-                return Ok(Self(bond.clone()));
-            }
-        }
-        // Read the bond from the specified path or default path
-        let bond_rs = Arc::new(Bond::read(bond_code, path)?);
-        {
-            // Insert the bond into the cache
-            BOND_DICT.lock().insert(bond_code.into(), bond_rs.clone());
-        }
-        Ok(Self(bond_rs))
+        Ok(Self(Bond::read(bond_code, path, false)?))
     }
 
     pub fn into_raw(self) -> *const Bond {
@@ -136,14 +123,20 @@ impl CachedBond {
     pub fn from_bond(bond: impl Into<Arc<Bond>>) -> Self {
         let bond = bond.into();
         let code = bond.bond_code();
-        {
-            // Check if the bond is already in the cache
-            let mut bond_dict = BOND_DICT.lock();
-            if bond_dict.get(code).is_none() {
-                // Insert the bond into the cache
-                bond_dict.insert(code.into(), bond.clone());
-            }
+        // {
+        // // Check if the bond is already in the cache
+        // let mut bond_dict = BOND_DICT.lock();
+        // if bond_dict.get(code).is_none() {
+        //     // Insert the bond into the cache
+        //     bond_dict.insert(code.into(), bond.clone());
+        // }
+        // }
+        // Self(bond)
+        if let Ok(cached_bond) = Bond::read_disk(code) {
+            Self(cached_bond)
+        } else {
+            bond.save_disk(false).unwrap();
+            Self(bond)
         }
-        Self(bond)
     }
 }

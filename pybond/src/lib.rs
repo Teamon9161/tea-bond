@@ -32,7 +32,7 @@ fn pybond(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(bond::download_bond, m)?)?;
     m.add_function(wrap_pyfunction!(get_version, m)?)?;
     #[cfg(feature = "persist")]
-    m.add_function(wrap_pyfunction!(persist::update_info_from_df, m)?)?;
+    m.add_function(wrap_pyfunction!(persist::update_info_from_wind_sql_df, m)?)?;
     m.add_class::<calendar::Ib>()?;
     m.add_class::<calendar::Sse>()?;
     m.add_class::<PyBond>()?;

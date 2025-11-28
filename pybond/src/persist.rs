@@ -29,7 +29,7 @@ macro_rules! auto_cast {
 }
 
 #[pyfunction]
-pub fn update_info_from_df(df: PyDataFrame) -> PyResult<()> {
+pub fn update_info_from_wind_sql_df(df: PyDataFrame) -> PyResult<()> {
     // use tevec::export::polars::prelude::Series;
     let df = df.0;
     let height = df.height();
