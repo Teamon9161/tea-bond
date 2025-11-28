@@ -5,15 +5,17 @@ mod wind_sql_row;
 
 use super::Bond;
 use anyhow::Result;
+pub use persist::free_bond_map;
 use std::{
     borrow::Cow,
     fs::{self, File},
     io::BufReader,
     path::{Path, PathBuf},
+    sync::Arc,
 };
-
 pub use wind_sql_row::WindSqlRow;
 
+#[inline]
 pub fn default_dir() -> PathBuf {
     match std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
         Some(home) => PathBuf::from(home).join("tea-bond"),
@@ -38,7 +40,7 @@ impl Bond {
         base_dir.join(format!("{code}.json"))
     }
 
-    pub fn read(code: impl AsRef<str>, path: Option<&Path>) -> Result<Self> {
+    pub fn read(code: impl AsRef<str>, path: Option<&Path>, download: bool) -> Result<Arc<Self>> {
         let code = code.as_ref();
         let code: Cow<'_, str> = if !code.contains('.') {
             format!("{code}.IB").into()
@@ -50,26 +52,29 @@ impl Bond {
             use duck::DUCKDB_TABLE_PATH;
             if let Ok(con) = duckdb::Connection::open(DUCKDB_TABLE_PATH.as_str()) {
                 if let Ok(bond) = Bond::read_duckdb(&con, None, code.as_ref()) {
-                    return Ok(bond);
+                    bond.save_disk(false)?; // save to cache
+                    return Ok(Arc::new(bond));
                 }
             }
         }
         if let Ok(bond) = Bond::read_disk(&code) {
             return Ok(bond);
         }
-        Bond::read_json(code, path)
+        let bond = Bond::read_json(code, path, download)?;
+        bond.save_disk(false)?; // save to cache
+        Ok(Arc::new(bond))
     }
 
     /// 从本地json文件读取Bond
     ///
     /// ```
     /// use tea_bond::Bond;
-    /// let bond = Bond::read_json("240006.IB", None).unwrap();
+    /// let bond = Bond::read_json("240006.IB", None, false).unwrap();
     /// assert_eq!(bond.code(), "240006");
     /// assert_eq!(bond.cp_rate, 0.0228)
     /// ```
     #[allow(clippy::collapsible_else_if)]
-    pub fn read_json(code: impl AsRef<str>, path: Option<&Path>) -> Result<Self> {
+    pub fn read_json(code: impl AsRef<str>, path: Option<&Path>, download: bool) -> Result<Self> {
         let code = code.as_ref();
         let code: Cow<'_, str> = if !code.contains('.') {
             format!("{code}.IB").into()
@@ -82,13 +87,14 @@ impl Bond {
         } else {
             // try download bond from china money
             #[cfg(feature = "download")]
-            {
+            if download {
                 let rt = tokio::runtime::Runtime::new()?;
                 let bond = rt.block_on(async { Self::download(&code).await })?;
-                bond.save(&path)?;
-                Ok(bond)
+                // bond.save_json(&path)?;
+                bond.save_disk(true)?;
+                return Ok(bond);
             }
-            #[cfg(not(feature = "download"))]
+            // #[cfg(not(feature = "download"))]
             anyhow::bail!("Read bond {} error: Can not open {:?}", code, &path)
         }
     }
@@ -115,7 +121,7 @@ impl Bond {
     /// Returns `Ok(())` if the bond is successfully saved. If an error occurs during
     /// directory creation, file creation, or JSON serialization, an error is returned.
     #[inline]
-    pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
+    pub fn save_json(&self, path: impl AsRef<Path>) -> Result<()> {
         let path = path.as_ref();
         println!("Save bond: {} to path {:?}", self.code(), &path);
 

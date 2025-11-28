@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::ops::Add;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Fee {
     /// 按成交金额百分比：fee = rate * amount
@@ -23,13 +23,8 @@ pub enum Fee {
     Max { floor: f64, fee: Box<Fee> },
 
     /// 零手续费
+    #[default]
     Zero,
-}
-
-impl Default for Fee {
-    fn default() -> Self {
-        Fee::Zero
-    }
 }
 
 impl Fee {

@@ -71,39 +71,3 @@ impl Bond {
         .with_context(|| format!("Can not find bond {} in duckdb", code))
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::day_counter::{ACTUAL, DayCountRule};
-    use chrono::NaiveDate;
-    #[test]
-    fn test_read_duckdb() {
-        let code = "259960";
-        let date = NaiveDate::from_ymd_opt(2025, 11, 25).unwrap();
-        let con = Connection::open("/home/teamon/data/wind.duckdb").unwrap();
-        let bond = Bond::read_duckdb(&con, None, code).unwrap();
-        let bond2 = Bond::read_json(code, None).unwrap();
-
-        println!("{:?}\n{:?}", bond, bond2);
-        let ai1 = bond.calc_accrued_interest(date, None).unwrap();
-        let ai2 = bond2.calc_accrued_interest(date, None).unwrap();
-        println!("{ai1}\n{ai2}");
-        println!(
-            "{}",
-            bond.calc_ytm_with_price(
-                99.69,
-                NaiveDate::from_ymd_opt(2025, 9, 25).unwrap(),
-                None,
-                None
-            )
-            .unwrap()
-        );
-        println!(
-            "{}, {}",
-            ACTUAL.count_days(bond.carry_date, date),
-            ACTUAL.count_days(bond.carry_date, bond.maturity_date)
-        );
-        todo!();
-    }
-}

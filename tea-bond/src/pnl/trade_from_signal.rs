@@ -32,6 +32,7 @@ fn quantize_inside(q: f64, tick: f64) -> f64 {
     }
 }
 
+#[allow(clippy::collapsible_if)]
 pub fn trading_from_pos<DT, T, VT, V>(
     time_vec: &VT,
     pos_vec: &V,

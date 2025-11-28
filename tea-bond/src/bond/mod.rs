@@ -8,9 +8,9 @@ mod impl_traits;
 mod io;
 
 pub use bond_ytm::BondYtm;
-pub use cached_bond::{CachedBond, free_bond_dict};
+pub use cached_bond::CachedBond;
 pub use enums::{BondDayCount, CouponType, InterestType, Market};
-pub use io::WindSqlRow;
+pub use io::{WindSqlRow, free_bond_map};
 
 use crate::SmallStr;
 use crate::day_counter::{ACTUAL, DayCountRule};

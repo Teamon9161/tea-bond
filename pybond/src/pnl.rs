@@ -114,7 +114,7 @@ pub struct PyBondTradePnlOpt {
 }
 
 impl PyBondTradePnlOpt {
-    fn to_rs_opt(self, begin_state: PnlReport) -> BondTradePnlOpt {
+    fn into_rs_opt(self, begin_state: PnlReport) -> BondTradePnlOpt {
         BondTradePnlOpt {
             bond_info_path: self.bond_info_path,
             multiplier: self.multiplier,
@@ -205,7 +205,7 @@ fn calc_bond_trade_pnl(inputs: &[Series], kwargs: PyBondTradePnlOpt) -> PolarsRe
         qty.f64()?,
         clean_price.f64()?,
         clean_close.f64()?,
-        &kwargs.to_rs_opt(begin_state),
+        &kwargs.into_rs_opt(begin_state),
     );
     let out = pnl_report_vec_to_series(&profit_vec);
     Ok(out)

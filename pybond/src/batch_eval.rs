@@ -1,4 +1,3 @@
-use chrono::{Datelike, Days, NaiveDate};
 use pyo3_polars::derive::polars_expr;
 use pyo3_polars::export::polars_core::utils::CustomIterTools;
 use serde::Deserialize;
@@ -32,9 +31,6 @@ macro_rules! auto_cast {
         ),*)
     };
 }
-
-pub const EPOCH: NaiveDate = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
-pub const EPOCH_DAYS_FROM_CE: i32 = 719163;
 
 fn batch_eval_impl<F1, F2, O>(
     future: &StringChunked,
@@ -71,17 +67,14 @@ where
     let mut bond_iter = bond.iter();
     let mut bond_ytm_iter = bond_ytm.iter();
     let mut capital_rate_iter = capital_rate.iter();
-    let mut date_iter = date.physical().iter();
+    let mut date_iter = date.as_date_iter();
 
     let mut result = Vec::with_capacity(len);
     let mut future: Arc<Future> = Future::new(future_iter.next().unwrap().unwrap_or("")).into();
     let mut future_price = future_price_iter.next().unwrap().unwrap_or(f64::NAN);
     let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None).unwrap();
     let mut bond_ytm = bond_ytm_iter.next().unwrap().unwrap_or(f64::NAN);
-    let mut date_physical = date_iter.next().unwrap().unwrap_or(0);
-    let mut date = EPOCH
-        .checked_add_days(Days::new(date_physical as u64))
-        .unwrap();
+    let mut date = date_iter.next().unwrap().unwrap_or_default();
     let mut capital_rate = capital_rate_iter.next().unwrap().unwrap_or(f64::NAN);
     let mut evaluator = TfEvaluator {
         date,
@@ -110,11 +103,7 @@ where
             capital_rate = cy.unwrap_or(f64::NAN);
         };
         if let Some(dt) = date_iter.next() {
-            let dt = dt.unwrap_or(0);
-            if dt != date_physical {
-                date_physical = dt;
-                date = EPOCH.checked_add_days(Days::new(dt as u64)).unwrap()
-            }
+            date = dt.unwrap_or_default();
         };
         if let Some(f) = future_iter.next() {
             if let Some(f) = f {
@@ -486,20 +475,19 @@ fn evaluators_deliver_date(
     inputs: &[Series],
     kwargs: EvaluatorBatchParams,
 ) -> PolarsResult<Series> {
-    let result: Int32Chunked = batch_eval(
-        inputs,
-        kwargs,
-        |e: TfEvaluator| e.with_deliver_date().unwrap(),
-        |e: &TfEvaluator| {
-            e.deliver_date
-                .map(|d| d.num_days_from_ce() - EPOCH_DAYS_FROM_CE)
-        },
-        true,
-        false,
-    )?
-    .into_iter()
-    .collect_trusted();
-    Ok(result.into_date().into_series())
+    let result = DateChunked::from_naive_date_options(
+        "".into(),
+        batch_eval(
+            inputs,
+            kwargs,
+            |e: TfEvaluator| e.with_deliver_date().unwrap(),
+            |e: &TfEvaluator| e.deliver_date,
+            true,
+            false,
+        )?
+        .into_iter(),
+    );
+    Ok(result.into_series())
 }
 
 #[polars_expr(output_type=Date)]
@@ -507,22 +495,19 @@ fn evaluators_last_trading_date(
     inputs: &[Series],
     kwargs: EvaluatorBatchParams,
 ) -> PolarsResult<Series> {
-    let result: Int32Chunked = batch_eval(
-        inputs,
-        kwargs,
-        |e: TfEvaluator| e,
-        |e: &TfEvaluator| {
-            e.future
-                .last_trading_date()
-                .ok()
-                .map(|d| d.num_days_from_ce() - EPOCH_DAYS_FROM_CE)
-        },
-        true,
-        false,
-    )?
-    .into_iter()
-    .collect_trusted();
-    Ok(result.into_date().into_series())
+    let result = DateChunked::from_naive_date_options(
+        "".into(),
+        batch_eval(
+            inputs,
+            kwargs,
+            |e: TfEvaluator| e,
+            |e: &TfEvaluator| e.future.last_trading_date().ok(),
+            true,
+            false,
+        )?
+        .into_iter(),
+    );
+    Ok(result.into_series())
 }
 
 #[polars_expr(output_type=Float64)]
@@ -542,32 +527,36 @@ fn bonds_remain_year(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsR
 
 #[polars_expr(output_type=Date)]
 fn bonds_carry_date(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
-    let result: Int32Chunked = batch_eval(
-        inputs,
-        kwargs,
-        |e: TfEvaluator| e,
-        |e: &TfEvaluator| Some(e.bond.carry_date.num_days_from_ce() - EPOCH_DAYS_FROM_CE),
-        false,
-        true,
-    )?
-    .into_iter()
-    .collect_trusted();
-    Ok(result.into_date().into_series())
+    let result = DateChunked::from_naive_date_options(
+        "".into(),
+        batch_eval(
+            inputs,
+            kwargs,
+            |e: TfEvaluator| e,
+            |e: &TfEvaluator| Some(e.bond.carry_date),
+            false,
+            true,
+        )?
+        .into_iter(),
+    );
+    Ok(result.into_series())
 }
 
 #[polars_expr(output_type=Date)]
 fn bonds_maturity_date(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
-    let result: Int32Chunked = batch_eval(
-        inputs,
-        kwargs,
-        |e: TfEvaluator| e,
-        |e: &TfEvaluator| Some(e.bond.maturity_date.num_days_from_ce() - EPOCH_DAYS_FROM_CE),
-        false,
-        true,
-    )?
-    .into_iter()
-    .collect_trusted();
-    Ok(result.into_date().into_series())
+    let result = DateChunked::from_naive_date_options(
+        "".into(),
+        batch_eval(
+            inputs,
+            kwargs,
+            |e: TfEvaluator| e,
+            |e: &TfEvaluator| Some(e.bond.maturity_date),
+            false,
+            true,
+        )?
+        .into_iter(),
+    );
+    Ok(result.into_series())
 }
 
 #[polars_expr(output_type=Float64)]
@@ -577,16 +566,13 @@ fn bonds_calc_ytm_with_price(inputs: &[Series]) -> PolarsResult<Series> {
     let date_se = auto_cast!(Date(&inputs[1]));
     let len = dirty_price_se.len();
     let bond = bond_se.str()?;
-    let date = date_se.date()?;
     let dirty_price = dirty_price_se.f64()?;
     let mut bond_iter = bond.iter();
-    let mut date_iter = date.physical().iter();
+    let mut date_iter = date_se.date()?.as_date_iter();
     let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None).unwrap();
     let mut dirty_price_iter = dirty_price.iter();
-    let mut date_physical = date_iter.next().unwrap().unwrap_or(0);
-    let mut date = EPOCH
-        .checked_add_days(Days::new(date_physical as u64))
-        .unwrap();
+    let mut date = date_iter.next().unwrap().unwrap_or_default();
+
     let mut dirty_price = dirty_price_iter.next().unwrap().unwrap_or(f64::NAN);
     let mut result = Vec::with_capacity(len);
     if bond.bond_code().is_empty() {
@@ -603,11 +589,7 @@ fn bonds_calc_ytm_with_price(inputs: &[Series]) -> PolarsResult<Series> {
             dirty_price = dp.unwrap_or(f64::NAN);
         };
         if let Some(dt) = date_iter.next() {
-            let dt = dt.unwrap_or(0);
-            if dt != date_physical {
-                date_physical = dt;
-                date = EPOCH.checked_add_days(Days::new(dt as u64)).unwrap()
-            }
+            date = dt.unwrap_or_default()
         };
         if let Some(b) = bond_iter.next() {
             if let Some(b) = b {
@@ -643,32 +625,24 @@ struct FindWorkdayKwargs {
 fn calendar_find_workday(inputs: &[Series], kwargs: FindWorkdayKwargs) -> PolarsResult<Series> {
     use tea_bond::export::calendar::china;
     let date_col = auto_cast!(Date(&inputs[0]));
-    let date_series = date_col.date()?.physical();
-    let res: Int32Chunked = match kwargs.market {
-        Market::IB => date_series
-            .iter()
-            .map(|value| {
-                value.map(|v| {
-                    let dt = EPOCH.checked_add_days(Days::new(v as u64)).unwrap();
-                    china::IB.find_workday(dt, kwargs.offset).num_days_from_ce()
-                        - EPOCH_DAYS_FROM_CE
-                })
-            })
-            .collect_trusted(),
-        Market::SSE | Market::SH | Market::SZ | Market::SZE => date_series
-            .iter()
-            .map(|value| {
-                value.map(|v| {
-                    let dt = EPOCH.checked_add_days(Days::new(v as u64)).unwrap();
-                    china::SSE
-                        .find_workday(dt, kwargs.offset)
-                        .num_days_from_ce()
-                        - EPOCH_DAYS_FROM_CE
-                })
-            })
-            .collect_trusted(),
+    let date_series = date_col.date()?;
+    let res = match kwargs.market {
+        Market::IB => DateChunked::from_naive_date_options(
+            "".into(),
+            date_series
+                .as_date_iter()
+                .map(|value| value.map(|date| china::IB.find_workday(date, kwargs.offset))),
+        ),
+        Market::SSE | Market::SH | Market::SZ | Market::SZE => {
+            DateChunked::from_naive_date_options(
+                "".into(),
+                date_series
+                    .as_date_iter()
+                    .map(|value| value.map(|date| china::SSE.find_workday(date, kwargs.offset))),
+            )
+        }
     };
-    Ok(res.into_date().into_series())
+    Ok(res.into_series())
 }
 
 #[derive(Deserialize)]
@@ -683,25 +657,15 @@ fn calendar_is_business_day(
 ) -> PolarsResult<Series> {
     use tea_bond::export::calendar::china;
     let date_col = auto_cast!(Date(&inputs[0]));
-    let date_series = date_col.date()?.physical();
+    let date_series = date_col.date()?;
     let res: BooleanChunked = match kwargs.market {
         Market::IB => date_series
-            .iter()
-            .map(|value| {
-                value.map(|v| {
-                    let dt = EPOCH.checked_add_days(Days::new(v as u64)).unwrap();
-                    china::IB.is_business_day(dt)
-                })
-            })
+            .as_date_iter()
+            .map(|value| value.map(|dt| china::IB.is_business_day(dt)))
             .collect_trusted(),
         Market::SSE | Market::SH | Market::SZ | Market::SZE => date_series
-            .iter()
-            .map(|value| {
-                value.map(|v| {
-                    let dt = EPOCH.checked_add_days(Days::new(v as u64)).unwrap();
-                    china::SSE.is_business_day(dt)
-                })
-            })
+            .as_date_iter()
+            .map(|value| value.map(|dt| china::SSE.is_business_day(dt)))
             .collect_trusted(),
     };
     Ok(res.into_series())
