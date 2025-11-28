@@ -105,7 +105,6 @@ fn get_pnl_output_type(_input_fields: &[Field]) -> PolarsResult<Field> {
 
 #[derive(Deserialize)]
 pub struct PyBondTradePnlOpt {
-    // pub symbol: SmallStr,
     pub bond_info_path: Option<PathBuf>,
     pub multiplier: f64,
     pub fee: Fee,
@@ -128,16 +127,31 @@ impl PyBondTradePnlOpt {
 
 #[polars_expr(output_type_func=get_pnl_output_type)]
 fn calc_bond_trade_pnl(inputs: &[Series], kwargs: PyBondTradePnlOpt) -> PolarsResult<Series> {
-    let (symbol, time, qty, clean_price, clean_close, state) = (
-        &inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4], &inputs[5],
-    );
+    let (symbol, time, qty, clean_price, clean_close, state) = if inputs.len() == 6 {
+        (
+            &inputs[0],
+            inputs[1].clone(),
+            inputs[2].clone(),
+            inputs[3].clone(),
+            &inputs[4],
+            &inputs[5],
+        )
+    } else {
+        assert_eq!(inputs.len(), 4);
+        let (symbol, trade, clean_close, state) = (&inputs[0], &inputs[1], &inputs[2], &inputs[3]);
+        let time = trade.struct_()?.field_by_name("time")?;
+        let qty = trade.struct_()?.field_by_name("qty")?;
+        let clean_price = trade.struct_()?.field_by_name("price")?;
+        (symbol, time, qty, clean_price, clean_close, state)
+    };
     let symbol = auto_cast!(String(symbol));
     let symbol = if let Some(s) = symbol.str()?.iter().next() {
         s
     } else {
         return Ok(pnl_report_vec_to_series(&[]));
     };
-    let (qty, clean_price, clean_close) = auto_cast!(Float64(qty, clean_price, clean_close));
+    let (qty, clean_price, clean_close) = auto_cast!(Float64(&qty, &clean_price, clean_close));
+
     let time = match time.dtype() {
         DataType::Date => time.clone(),
         _ => time.cast(&DataType::Date)?,
@@ -237,11 +251,20 @@ fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> Pola
         DataType::Date => {
             let trade_vec =
                 pnl::trading_from_pos(time.date()?.physical(), pos.f64()?, open.f64()?, &kwargs);
-            let time: Int32Chunked = trade_vec.iter().map(|t| t.time).collect_trusted();
+            let time: Int32Chunked = trade_vec
+                .iter()
+                .map(|t| t.as_ref().map(|t| t.time).flatten())
+                .collect_trusted();
             let time = time.into_date().into_series();
-            let price: Float64Chunked = trade_vec.iter().map(|t| Some(t.price)).collect_trusted();
+            let price: Float64Chunked = trade_vec
+                .iter()
+                .map(|t| t.as_ref().map(|t| t.price))
+                .collect_trusted();
             let price = price.into_series();
-            let qty: Float64Chunked = trade_vec.iter().map(|t| Some(t.qty)).collect_trusted();
+            let qty: Float64Chunked = trade_vec
+                .iter()
+                .map(|t| t.as_ref().map(|t| t.qty))
+                .collect_trusted();
             StructChunked::from_series(
                 "trade".into(),
                 time.len(),
@@ -261,13 +284,22 @@ fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> Pola
             let time_zone = time_ca.time_zone();
             let trade_vec =
                 pnl::trading_from_pos(time_ca.physical(), pos.f64()?, open.f64()?, &kwargs);
-            let time: Int64Chunked = trade_vec.iter().map(|t| t.time).collect_trusted();
+            let time: Int64Chunked = trade_vec
+                .iter()
+                .map(|t| t.as_ref().map(|t| t.time).flatten())
+                .collect_trusted();
             let time = time
                 .into_datetime(time_unit, time_zone.clone())
                 .into_series();
-            let price: Float64Chunked = trade_vec.iter().map(|t| Some(t.price)).collect_trusted();
+            let price: Float64Chunked = trade_vec
+                .iter()
+                .map(|t| t.as_ref().map(|t| t.price))
+                .collect_trusted();
             let price = price.into_series();
-            let qty: Float64Chunked = trade_vec.iter().map(|t| Some(t.qty)).collect_trusted();
+            let qty: Float64Chunked = trade_vec
+                .iter()
+                .map(|t| t.as_ref().map(|t| t.qty))
+                .collect_trusted();
             StructChunked::from_series(
                 "trade".into(),
                 time.len(),

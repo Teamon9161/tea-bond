@@ -1,12 +1,36 @@
 use itertools::izip;
 use serde::Deserialize;
 use tevec::prelude::{EPS, IsNone, Number, Vec1View};
-// use super::EPOCH;
 
+#[derive(Default)]
 pub struct Trade<T> {
     pub time: T,
     pub price: f64,
     pub qty: f64,
+}
+
+impl<T: PartialEq> std::ops::Add<Trade<T>> for Trade<T> {
+    type Output = Trade<T>;
+    #[inline]
+    fn add(self, rhs: Trade<T>) -> Trade<T> {
+        if (self.time == rhs.time) && (self.price == rhs.price) {
+            Trade {
+                time: self.time,
+                price: self.price,
+                qty: self.qty + rhs.qty,
+            }
+        } else {
+            panic!("trade time or price is not equal")
+        }
+    }
+}
+
+impl<T: PartialEq> std::ops::Add<Option<Trade<T>>> for Trade<T> {
+    type Output = Trade<T>;
+    #[inline]
+    fn add(self, rhs: Option<Trade<T>>) -> Trade<T> {
+        if let Some(rt) = rhs { self + rt } else { self }
+    }
 }
 
 #[derive(Deserialize)]
@@ -15,8 +39,12 @@ pub struct TradeFromPosOpt {
     pub multiplier: f64,
     pub qty_tick: f64,
     pub stop_on_finish: bool,
+    #[serde(default)]
     pub finish_price: Option<f64>,
+    #[serde(default)]
     pub min_adjust_amt: Option<f64>,
+    #[serde(default)]
+    pub keep_shape: Option<bool>,
 }
 
 const INIT_TRADE_COUNT: usize = 512;
@@ -38,9 +66,9 @@ pub fn trading_from_pos<DT, T, VT, V>(
     pos_vec: &V,
     open_vec: &V,
     opt: &TradeFromPosOpt,
-) -> Vec<Trade<DT>>
+) -> Vec<Option<Trade<DT>>>
 where
-    DT: Clone,
+    DT: Clone + PartialEq,
     T: IsNone,
     T::Inner: Number,
     VT: Vec1View<DT>,
@@ -52,6 +80,7 @@ where
     let cash = opt.cash.unwrap();
     let min_adjust_amt = opt.min_adjust_amt.unwrap_or(0.);
     let mut trades = Vec::with_capacity(INIT_TRADE_COUNT);
+    let keep_shape = opt.keep_shape.unwrap_or(false);
 
     // 记录最后一个可用 (time, price)，用于 stop_on_finish
     let mut last_tp: Option<(DT, f64)> = None;
@@ -87,29 +116,40 @@ where
                         open_price = price;
                     };
                     // 减仓情况的价格不改变
-                    trades.push(Trade {
+                    trades.push(Some(Trade {
                         time: time.clone(),
                         price,
                         qty,
-                    });
+                    }));
                     open_qty += qty;
                     last_pos = pos;
+                } else if keep_shape {
+                    trades.push(None);
                 }
+            } else if keep_shape {
+                trades.push(None);
             }
+        } else if keep_shape {
+            trades.push(None)
         }
     });
 
     // 收尾是否强制平仓
     if opt.stop_on_finish && (open_qty != 0.0) {
         if let Some((t, p)) = last_tp {
-            let p = if let Some(p) = opt.finish_price { p } else { p };
-            trades.push(Trade {
+            let p = opt.finish_price.unwrap_or(p);
+            let trade = Trade {
                 time: t,
                 price: p,
                 qty: -open_qty,
-            });
+            };
+            if keep_shape {
+                let last_trade = trades.pop().flatten();
+                trades.push(Some(trade + last_trade));
+            } else {
+                trades.push(Some(trade))
+            }
         }
     }
-
     trades
 }
