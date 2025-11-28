@@ -253,7 +253,7 @@ fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> Pola
                 pnl::trading_from_pos(time.date()?.physical(), pos.f64()?, open.f64()?, &kwargs);
             let time: Int32Chunked = trade_vec
                 .iter()
-                .map(|t| t.as_ref().map(|t| t.time).flatten())
+                .map(|t| t.as_ref().and_then(|t| t.time))
                 .collect_trusted();
             let time = time.into_date().into_series();
             let price: Float64Chunked = trade_vec
@@ -286,7 +286,7 @@ fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> Pola
                 pnl::trading_from_pos(time_ca.physical(), pos.f64()?, open.f64()?, &kwargs);
             let time: Int64Chunked = trade_vec
                 .iter()
-                .map(|t| t.as_ref().map(|t| t.time).flatten())
+                .map(|t| t.as_ref().and_then(|t| t.time))
                 .collect_trusted();
             let time = time
                 .into_datetime(time_unit, time_zone.clone())
