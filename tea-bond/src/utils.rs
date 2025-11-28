@@ -17,34 +17,23 @@ where
     assert!(upper > lower);
     let mut lower = lower;
     let mut upper = upper;
-    let f_lower = f(lower);
-    let f_upper = f(upper);
-    let sign = f_upper >= f_lower;
-    if sign {
-        while upper - lower > epsilon {
-            let mid = (lower + upper) / 2.0;
-            let f_mid = f(mid);
-            if f_mid == 0.0 {
-                return mid;
-            } else if f_mid < 0.0 {
-                lower = mid;
-            } else {
-                upper = mid;
-            }
+    let move_lower_on_negative = f(upper) >= f(lower);
+
+    while upper - lower > epsilon {
+        let mid = (lower + upper) / 2.0;
+        let f_mid = f(mid);
+
+        if f_mid == 0.0 {
+            return mid;
         }
-    } else {
-        while upper - lower > epsilon {
-            let mid = (lower + upper) / 2.0;
-            let f_mid = f(mid);
-            if f_mid == 0.0 {
-                return mid;
-            } else if f_mid < 0.0 {
-                upper = mid;
-            } else {
-                lower = mid;
-            }
+
+        if (f_mid < 0.0) == move_lower_on_negative {
+            lower = mid;
+        } else {
+            upper = mid;
         }
     }
+
     (lower + upper) * 0.5
 }
 
