@@ -10,10 +10,6 @@ use std::{
     sync::Arc,
 };
 
-// // dict to cache bonds
-// static BOND_DICT: LazyLock<Mutex<HashMap<SmallStr, Arc<Bond>>>> =
-//     LazyLock::new(|| Mutex::new(HashMap::new()));
-
 /// A cached bond that wraps an `Arc<Bond>` for efficient sharing and caching.
 ///
 /// This struct is used to store bonds in a global cache (`BOND_DICT`) to avoid
@@ -46,12 +42,6 @@ impl<'de> Deserialize<'de> for CachedBond {
         Ok(Self::from_bond(bond))
     }
 }
-
-// /// Clears the global bond cache (`BOND_DICT`), freeing all cached bonds.
-// #[inline]
-// pub fn free_bond_dict() {
-//     BOND_DICT.lock().clear();
-// }
 
 impl Deref for CachedBond {
     type Target = Bond;

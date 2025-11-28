@@ -62,10 +62,6 @@ fn ensure_loaded() {
             *guard = Some(map);
         }
         Err(_err) => {
-            // eprintln!(
-            //     "Bond map not loaded from {:?}: {}. Using empty map.",
-            //     path, err
-            // );
             *guard = Some(HashMap::new());
         }
     }
@@ -75,7 +71,6 @@ fn ensure_loaded() {
 #[inline]
 pub fn free_bond_map() {
     let mut guard = BOND_MAP.lock();
-    // guard.as_mut().map(|s| s.clear());
     if let Some(s) = guard.as_mut() {
         s.clear();
     }

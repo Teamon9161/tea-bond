@@ -99,8 +99,6 @@ impl Bond {
         }
     }
 
-    // pub fn read_wind_sql_row()
-
     /// Saves the `Bond` instance to a JSON file at the specified path.
     ///
     /// If the provided path is a directory, the bond will be saved as a JSON file

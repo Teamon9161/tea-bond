@@ -1,5 +1,3 @@
-#[cfg(feature = "batch")]
-pub mod batch;
 mod bond;
 pub mod day_counter;
 pub mod export;

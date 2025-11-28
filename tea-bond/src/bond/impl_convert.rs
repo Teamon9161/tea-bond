@@ -69,55 +69,6 @@ impl TryFrom<Cow<'_, str>> for CachedBond {
     }
 }
 
-// impl TryFrom<&Path> for Bond {
-//     type Error = Error;
-
-//     #[inline]
-//     fn try_from(path: &Path) -> Result<Self> {
-//         let code = path
-//             .file_stem()
-//             .and_then(|s| s.to_str())
-//             .unwrap_or_default();
-//         let folder = path.parent();
-//         Self::read(code, folder, false)
-//     }
-// }
-
-// impl TryFrom<&PathBuf> for Bond {
-//     type Error = Error;
-
-//     #[inline]
-//     fn try_from(s: &PathBuf) -> Result<Self> {
-//         Self::try_from(s.as_path())
-//     }
-// }
-
-// macro_rules! try_into_cached_bond {
-//     ($($T: ty),*) => {
-//         $(impl TryFrom<$T> for CachedBond {
-//             type Error = Error;
-
-//             #[inline]
-//             fn try_from(s: $T) -> Result<Self> {
-//                 let bond: Bond = s.try_into()?;
-//                 Ok(CachedBond::from_bond(bond))
-//             }
-//         })*
-//     };
-// }
-
-// try_into_cached_bond!(
-//     &str,
-//     usize,
-//     i32,
-//     String,
-//     &String,
-//     Cow<'_, str>,
-//     SmallStr,
-//     &Path,
-//     &PathBuf
-// );
-
 impl From<Bond> for CachedBond {
     #[inline]
     fn from(bond: Bond) -> CachedBond {

@@ -222,9 +222,6 @@ impl Bond {
             next_cp_date.unwrap_or_else(|| self.get_nearest_cp_date(date).unwrap().1);
         let mut cp_num = 0;
         let offset = self.get_cp_offset()?;
-        // TODO: 数据是否确实存在到期日不同于发行日的情况？如果存在，是后延还是提前？
-        // 当下一付息日正好等于到期日时，目前正好返回1，也是正确的
-        // let maturity_date = self.maturity_date + Duration::days(3); // 减去3天避免节假日导致的计算偏差
         let maturity_date = self.mkt.find_workday(self.maturity_date, 0);
         while next_cp_date <= maturity_date {
             cp_num += 1;
@@ -345,11 +342,7 @@ impl Bond {
         if self.is_zero_coupon() {
             let remain_year = self.remain_year(date);
             assert!(remain_year < 1.);
-            // if remain_year > 1. {
-            //     return Ok(self.par_value / (1.0 + ytm).powf(remain_year));
-            // } else {
             return Ok(self.par_value / (1.0 + ytm * remain_year));
-            // }
         }
         let ytm = self.check_ytm(ytm);
         let inst_freq = self.inst_freq as f64;
