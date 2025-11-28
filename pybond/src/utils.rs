@@ -6,7 +6,7 @@ use crate::future::PyFuture;
 use chrono::NaiveDate;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{PyList, PyTuple};
+use pyo3::types::PySequence;
 use tea_bond::{CachedBond, Future};
 
 /// Extract a NaiveDate from a Python object. Accepts either a Python date object or a date string.
@@ -29,19 +29,18 @@ pub fn extract_date(dt: &Bound<'_, PyAny>) -> PyResult<NaiveDate> {
 
 /// Extract a tuple of two NaiveDates from a Python object. Accepts either a tuple or list containing two dates.
 pub fn extract_date2(dts: &Bound<'_, PyAny>) -> PyResult<(NaiveDate, NaiveDate)> {
-    if let Ok(dts) = dts.downcast::<PyTuple>() {
-        Ok((
-            extract_date(&dts.get_item(0)?)?,
-            extract_date(&dts.get_item(1)?)?,
-        ))
-    } else if let Ok(dts) = dts.downcast::<PyList>() {
-        Ok((
-            extract_date(&dts.get_item(0)?)?,
-            extract_date(&dts.get_item(1)?)?,
-        ))
-    } else {
-        Err(PyValueError::new_err("Expect a tuple or list of two dates"))
+    let seq = dts
+        .downcast::<PySequence>()
+        .map_err(|_| PyValueError::new_err("Expect a tuple or list of two dates"))?;
+
+    if seq.len()? != 2 {
+        return Err(PyValueError::new_err("Expect a tuple or list of two dates"));
     }
+
+    Ok((
+        extract_date(&seq.get_item(0)?)?,
+        extract_date(&seq.get_item(1)?)?,
+    ))
 }
 
 /// Extract a PyFuture from a Python object. Accepts either a PyFuture object or a future code string.
