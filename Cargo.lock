@@ -1498,15 +1498,6 @@ checksum = "071ed4cc1afd86650602c7b11aa2e1ce30762a1c27193201cb5cee9c6ebb1294"
 
 [[package]]
 name = "itertools"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
@@ -1863,7 +1854,7 @@ dependencies = [
  "http-body-util",
  "humantime",
  "hyper",
- "itertools 0.14.0",
+ "itertools",
  "parking_lot",
  "percent-encoding",
  "quick-xml",
@@ -2615,7 +2606,7 @@ dependencies = [
  "anyhow",
  "bincode",
  "chrono",
- "itertools 0.14.0",
+ "itertools",
  "pyo3",
  "pyo3-polars",
  "serde",
@@ -3617,14 +3608,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e502f78cdbb8ba4718f566c418c52bc729126ffd16baee5baa718cf25dd5a69a"
 
 [[package]]
-name = "tea-agg"
-version = "0.6.0"
-source = "git+https://github.com/teamon9161/tevec.git?rev=bf76681#bf76681faac87b5dc7cd70991547f679fec7fbe7"
-dependencies = [
- "tea-core",
-]
-
-[[package]]
 name = "tea-bond"
 version = "0.4.2"
 dependencies = [
@@ -3633,7 +3616,7 @@ dependencies = [
  "chrono",
  "compact_str",
  "duckdb",
- "itertools 0.14.0",
+ "itertools",
  "parking_lot",
  "rand 0.9.1",
  "reqwest",
@@ -3714,26 +3697,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tea-map"
-version = "0.6.0"
-source = "git+https://github.com/teamon9161/tevec.git?rev=bf76681#bf76681faac87b5dc7cd70991547f679fec7fbe7"
-dependencies = [
- "itertools 0.13.0",
- "num-traits",
- "tea-core",
-]
-
-[[package]]
-name = "tea-rolling"
-version = "0.6.0"
-source = "git+https://github.com/teamon9161/tevec.git?rev=bf76681#bf76681faac87b5dc7cd70991547f679fec7fbe7"
-dependencies = [
- "num-traits",
- "tea-core",
- "tea-macros",
-]
-
-[[package]]
 name = "tea-time"
 version = "0.6.0"
 source = "git+https://github.com/teamon9161/tevec.git?rev=bf76681#bf76681faac87b5dc7cd70991547f679fec7fbe7"
@@ -3762,13 +3725,10 @@ version = "0.6.0"
 source = "git+https://github.com/teamon9161/tevec.git?rev=bf76681#bf76681faac87b5dc7cd70991547f679fec7fbe7"
 dependencies = [
  "derive_more",
- "tea-agg",
  "tea-core",
  "tea-dtype",
  "tea-dyn",
  "tea-macros",
- "tea-map",
- "tea-rolling",
 ]
 
 [[package]]
