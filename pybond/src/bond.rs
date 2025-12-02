@@ -385,7 +385,7 @@ impl PyBond {
         Ok(self.0.remain_cp_num_until(date, until_date, next_cp_date)?)
     }
 
-    /// 剩余的付息日期列表（不包含指定日期）
+    /// 剩余的付息日期列表
     #[pyo3(signature = (date, until_date, next_cp_date=None))]
     pub fn remain_cp_dates_until(
         &self,

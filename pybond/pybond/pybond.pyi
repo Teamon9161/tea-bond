@@ -116,7 +116,7 @@ class Bond:
     def remain_cp_dates_until(
         self, date: date, until_date: date, next_cp_date: date | None = None
     ) -> list[date]:
-        """剩余的付息日期列表(不包含指定日期)"""
+        """剩余的付息日期列表"""
 
     def calc_ytm_with_price(
         self,
@@ -187,7 +187,6 @@ class TfEvaluator:
         reinvest_rate: float | None = None,
     ) -> None: ...
     def copy(self) -> TfEvaluator: ...
-
     def date(self) -> date:
         """获取计算日期"""
 

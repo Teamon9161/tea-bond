@@ -3,15 +3,19 @@ import datetime
 import numpy as np
 import polars as pl
 from IPython.display import display
-
-# import os
-# os.environ["POLARS_VERBOSE"] = "1"
-from pybond import Ib, TfEvaluator
 from pybond.pd import Bonds as PdBonds
 from pybond.pd import TfEvaluators as PdTfEvaluators
 from pybond.pd import find_workday as pd_find_workday
 from pybond.pl import Bonds, TfEvaluators, find_workday, is_business_day
 from pybond.pnl import trading_from_pos
+
+# import os
+# os.environ["POLARS_VERBOSE"] = "1"
+from pybond import Bond, Ib, TfEvaluator
+
+# Bond(200004).remain_cp_dates_until("2025-01-02", "2025-09-16")
+
+# Bond(200005).accrued_interest("2025-09-16")
 
 signal_df = (
     pl.DataFrame(

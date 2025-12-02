@@ -257,7 +257,7 @@ impl Bond {
         Ok(cp_num)
     }
 
-    /// 获得剩余的付息日期列表(不包含until_date)
+    /// 获得剩余的付息日期列表
     pub fn remain_cp_dates_until(
         &self,
         date: NaiveDate,
@@ -269,12 +269,12 @@ impl Bond {
         }
         let mut next_cp_date =
             next_cp_date.unwrap_or_else(|| self.get_nearest_cp_date(date).unwrap().1);
-        if next_cp_date >= until_date {
+        if next_cp_date > until_date {
             return Ok(vec![]);
         }
         let mut cp_dates = vec![];
         let offset = self.get_cp_offset()?;
-        while next_cp_date < until_date {
+        while next_cp_date <= until_date {
             cp_dates.push(next_cp_date);
             next_cp_date = next_cp_date + offset;
         }
