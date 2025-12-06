@@ -176,6 +176,14 @@ class Future:
     def prev_future(self) -> Future:
         """获取上一季月合约"""
 
+    @staticmethod
+    def trading_futures(
+        start: date,
+        end: date | None = None,
+        future_type: str | None = None,
+    ) -> list[Future]:
+        """获取指定时间段内有交易的期货合约列表"""
+
     def future_type(self) -> str:
         """获取期货合约的类型"""
 

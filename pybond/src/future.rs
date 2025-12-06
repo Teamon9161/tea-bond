@@ -4,7 +4,8 @@ use crate::utils::extract_date;
 use chrono::NaiveDate;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use tea_bond::Future;
+use tea_bond::{Future, FutureType};
+use std::str::FromStr;
 
 #[pyclass(name = "Future")]
 #[derive(Clone)]
@@ -30,6 +31,31 @@ impl PyFuture {
     #[new]
     pub fn new(code: &str) -> Self {
         Self(Arc::new(Future::new(code)))
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (start, end=None, future_type=None))]
+    /// 获取指定时间段内有交易的期货合约
+    fn trading_futures(
+        start: &Bound<'_, PyAny>,
+        end: Option<&Bound<'_, PyAny>>,
+        future_type: Option<&str>,
+    ) -> PyResult<Vec<Self>> {
+        let start = extract_date(start)?;
+        let end = match end {
+            Some(dt) => Some(extract_date(dt)?),
+            None => None,
+        };
+        let future_type = match future_type {
+            Some(s) => Some(
+                FutureType::from_str(s)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?,
+            ),
+            None => None,
+        };
+        Future::trading_futures(start, end, future_type)
+            .map(|v| v.into_iter().map(|f| PyFuture(Arc::new(f))).collect())
+            .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
     fn copy(&self) -> Self {
