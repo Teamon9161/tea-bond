@@ -6,7 +6,7 @@ pub use future_price::FuturePrice;
 pub use future_type::FutureType;
 
 use crate::SmallStr;
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow, bail};
 use chrono::{Datelike, Duration, NaiveDate, Weekday};
 use tea_calendar::{Calendar, china::CFFEX};
 
@@ -43,6 +43,24 @@ impl Future {
                 market: None,
             }
         }
+    }
+
+    #[inline]
+    /// 获取下一季月合约
+    pub fn next_future(&self) -> Result<Self> {
+        self.shift_by_quarter(3)
+    }
+
+    #[inline]
+    /// 获取上一季月合约
+    pub fn prev_future(&self) -> Result<Self> {
+        self.shift_by_quarter(-3)
+    }
+
+    #[inline]
+    pub fn future_type(&self) -> Result<FutureType> {
+        let typ = self.code.replace(|c: char| c.is_numeric(), "");
+        typ.parse()
     }
 
     #[inline]
@@ -102,9 +120,38 @@ impl Future {
     }
 
     #[inline]
-    pub fn future_type(&self) -> Result<FutureType> {
-        let typ = self.code.replace(|c: char| c.is_numeric(), "");
-        typ.parse()
+    fn shift_by_quarter(&self, delta_months: i32) -> Result<Self> {
+        let code = self.code.as_str();
+        let (prefix, digits) = code
+            .char_indices()
+            .find(|(_, c)| c.is_ascii_digit())
+            .map(|(idx, _)| code.split_at(idx))
+            .ok_or_else(|| anyhow!("Invalid future code: {}", code))?;
+
+        if digits.len() != 4 {
+            bail!("Invalid future code: {}", code);
+        }
+
+        let yymm: u32 = digits.parse()?;
+        let year = yymm / 100;
+        let month = yymm % 100;
+
+        if !(1..=12).contains(&month) {
+            bail!("Invalid future month: {}", code);
+        }
+
+        let month_index = year as i32 * 12 + month as i32 - 1 + delta_months;
+        if month_index < 0 {
+            bail!("Future month underflow: {}", code);
+        }
+
+        let new_year = (month_index / 12) as u32;
+        let new_month = (month_index % 12 + 1) as u32;
+
+        Ok(Self {
+            code: format!("{prefix}{new_year:02}{new_month:02}").into(),
+            market: self.market.clone(),
+        })
     }
 }
 
@@ -150,4 +197,34 @@ pub fn calc_cf(
         month_number_to_next_cp_after_dlv,
         fictitious_cp_rate,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Future;
+
+    #[test]
+    fn shift_across_year() {
+        let f = Future::new("T2412");
+        assert_eq!(f.next_future().unwrap().code.as_str(), "T2503");
+        let f = Future::new("T2503");
+        assert_eq!(f.prev_future().unwrap().code.as_str(), "T2412");
+        let f = Future::new("T0812");
+        assert_eq!(f.next_future().unwrap().code.as_str(), "T0903");
+        assert_eq!(f.prev_future().unwrap().code.as_str(), "T0809");
+    }
+
+    #[test]
+    fn keep_market_suffix() {
+        let f = Future::new("TF2409.CFE");
+        let next = f.next_future().unwrap();
+        assert_eq!(next.code.as_str(), "TF2412");
+        assert_eq!(next.market.as_deref(), Some("CFE"));
+    }
+
+    #[test]
+    fn tl_quarterly_contract() {
+        let f = Future::new("TL2506");
+        assert_eq!(f.next_future().unwrap().code.as_str(), "TL2509");
+    }
 }
