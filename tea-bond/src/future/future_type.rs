@@ -34,12 +34,40 @@ fn remain_year(delivery_date: NaiveDate, maturity_date: NaiveDate) -> f64 {
 
 impl FutureType {
     #[inline]
-    pub(crate) fn prefix(&self) -> &'static str {
+    pub(crate) const fn prefix(&self) -> &'static str {
         match self {
             FutureType::TS => "TS",
             FutureType::TF => "TF",
             FutureType::T => "T",
             FutureType::TL => "TL",
+        }
+    }
+
+    #[inline]
+    pub(crate) const fn listing_start_date(&self) -> NaiveDate {
+        match self {
+            // 2年
+            FutureType::TS => NaiveDate::from_ymd_opt(2018, 8, 17).unwrap(),
+            // 5年
+            FutureType::TF => NaiveDate::from_ymd_opt(2013, 9, 6).unwrap(),
+            // 10年
+            FutureType::T => NaiveDate::from_ymd_opt(2015, 3, 20).unwrap(),
+            // 30年
+            FutureType::TL => NaiveDate::from_ymd_opt(2023, 4, 21).unwrap(),
+        }
+    }
+
+    #[inline]
+    pub(crate) const fn first_contracts(&self) -> [&'static str; 3] {
+        match self {
+            // 2年期首批：2018/12、2019/3、2019/6
+            FutureType::TS => ["TS1812", "TS1903", "TS1906"],
+            // 5年期首批：2013/12、2014/3、2014/6
+            FutureType::TF => ["TF1312", "TF1403", "TF1406"],
+            // 10年期首批：2015/9、2015/12、2016/3
+            FutureType::T => ["T1509", "T1512", "T1603"],
+            // 30年期首批：2023/6、2023/9、2023/12
+            FutureType::TL => ["TL2306", "TL2309", "TL2312"],
         }
     }
 
