@@ -170,6 +170,12 @@ class Future:
         交割日为3天,其中第2天为缴款日,即最后交易日的第2个交易日,最后交易日一定为周五,所以缴款日一定是一个周二
         """
 
+    def next_future(self) -> Future:
+        """获取下一季月合约"""
+
+    def prev_future(self) -> Future:
+        """获取上一季月合约"""
+
     def future_type(self) -> str:
         """获取期货合约的类型"""
 
