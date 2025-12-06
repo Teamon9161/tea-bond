@@ -78,6 +78,22 @@ impl PyFuture {
             .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
+    /// 获取下一季月合约
+    fn next_future(&self) -> PyResult<Self> {
+        self.0
+            .next_future()
+            .map(|f| PyFuture(Arc::new(f)))
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
+    /// 获取上一季月合约
+    fn prev_future(&self) -> PyResult<Self> {
+        self.0
+            .prev_future()
+            .map(|f| PyFuture(Arc::new(f)))
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
     /// 获取期货合约的类型
     fn future_type(&self) -> PyResult<String> {
         self.0
