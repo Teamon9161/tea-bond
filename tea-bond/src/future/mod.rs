@@ -8,6 +8,7 @@ pub use future_type::FutureType;
 use crate::SmallStr;
 use anyhow::{Result, anyhow, bail};
 use chrono::{Datelike, Duration, NaiveDate, Weekday};
+use std::collections::HashSet;
 use tea_calendar::{Calendar, china::CFFEX};
 
 const CFFEX_DEFAULT_CP_RATE: f64 = 0.03;
@@ -119,6 +120,39 @@ impl Future {
         // Ok(last_trading_date + Duration::days(4))
     }
 
+    /// 获取指定时间段内该类型期货的所有交易合约
+    ///
+    /// 每个合约的交易区间为「上一个(前3个季度)合约最后交易日的下一个交易日」到「本合约最后交易日」。
+    /// 缺省 end 使用 start。
+    pub fn trading_futures(
+        start: NaiveDate,
+        end: Option<NaiveDate>,
+        future_type: Option<FutureType>,
+    ) -> Result<Vec<Self>> {
+        let end = end.unwrap_or(start);
+        if end < start {
+            bail!("end date should not be earlier than start date");
+        }
+
+        let types: Vec<FutureType> = if let Some(t) = future_type {
+            vec![t]
+        } else {
+            vec![
+                FutureType::TS,
+                FutureType::TF,
+                FutureType::T,
+                FutureType::TL,
+            ]
+        };
+
+        let mut res = Vec::new();
+        for t in types {
+            res.extend(trading_futures_by_type(t, start, end)?);
+        }
+
+        Ok(res)
+    }
+
     #[inline]
     fn shift_by_quarter(&self, delta_months: i32) -> Result<Self> {
         let code = self.code.as_str();
@@ -153,6 +187,58 @@ impl Future {
             market: self.market.clone(),
         })
     }
+}
+
+#[inline]
+fn trading_window(future: &Future) -> Result<(NaiveDate, NaiveDate)> {
+    // 前3个季度合约的最后交易日 -> 下一个交易日
+    let prev = future.shift_by_quarter(-9)?;
+    let start = CFFEX.find_workday(prev.last_trading_date()?, 1);
+    let end = future.last_trading_date()?;
+    Ok((start, end))
+}
+
+fn trading_futures_by_type(
+    typ: FutureType,
+    start: NaiveDate,
+    end: NaiveDate,
+) -> Result<Vec<Future>> {
+    let mut result = Vec::new();
+    let mut seen = HashSet::new();
+
+    let mut current = future_from_date(typ, start);
+    loop {
+        let (s, e) = trading_window(&current)?;
+        if e < start {
+            current = current.next_future()?;
+        } else if s > start {
+            current = current.prev_future()?;
+        } else {
+            break;
+        }
+    }
+
+    let mut future = current;
+    loop {
+        let (s, e) = trading_window(&future)?;
+        if s > end {
+            break;
+        }
+
+        if e >= start && seen.insert(future.code.clone()) {
+            result.push(future.clone());
+        }
+
+        future = future.next_future()?;
+    }
+
+    Ok(result)
+}
+
+fn future_from_date(typ: FutureType, date: NaiveDate) -> Future {
+    let q_month = ((date.month() - 1) / 3) * 3 + 3;
+    let year = (date.year() % 100) as u32;
+    Future::new(format!("{}{:02}{q_month:02}", typ.prefix(), year))
 }
 
 /// [中金所转换因子计算公式](http://www.cffex.com.cn/10tf/)
@@ -201,7 +287,8 @@ pub fn calc_cf(
 
 #[cfg(test)]
 mod tests {
-    use super::Future;
+    use super::{Future, FutureType};
+    use chrono::NaiveDate;
 
     #[test]
     fn shift_across_year() {
@@ -226,5 +313,52 @@ mod tests {
     fn tl_quarterly_contract() {
         let f = Future::new("TL2506");
         assert_eq!(f.next_future().unwrap().code.as_str(), "TL2509");
+    }
+
+    #[test]
+    fn trading_futures_in_range() {
+        let futures = Future::trading_futures(
+            NaiveDate::from_ymd_opt(2025, 9, 12).unwrap(),
+            None,
+            Some(FutureType::T),
+        )
+        .unwrap();
+        assert_eq!(
+            futures,
+            vec![
+                Future::new("T2509"),
+                Future::new("T2512"),
+                Future::new("T2603")
+            ]
+        );
+        let futures = Future::trading_futures(
+            NaiveDate::from_ymd_opt(2025, 9, 15).unwrap(),
+            None,
+            Some(FutureType::T),
+        )
+        .unwrap();
+        assert_eq!(
+            futures,
+            vec![
+                Future::new("T2512"),
+                Future::new("T2603"),
+                Future::new("T2606")
+            ]
+        );
+        let futures = Future::trading_futures(
+            NaiveDate::from_ymd_opt(2025, 9, 1).unwrap(),
+            Some(NaiveDate::from_ymd_opt(2025, 9, 30).unwrap()),
+            Some(FutureType::T),
+        )
+        .unwrap();
+        assert_eq!(
+            futures,
+            vec![
+                Future::new("T2509"),
+                Future::new("T2512"),
+                Future::new("T2603"),
+                Future::new("T2606")
+            ]
+        );
     }
 }

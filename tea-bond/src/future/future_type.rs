@@ -33,6 +33,16 @@ fn remain_year(delivery_date: NaiveDate, maturity_date: NaiveDate) -> f64 {
 }
 
 impl FutureType {
+    #[inline]
+    pub(crate) fn prefix(&self) -> &'static str {
+        match self {
+            FutureType::TS => "TS",
+            FutureType::TF => "TF",
+            FutureType::T => "T",
+            FutureType::TL => "TL",
+        }
+    }
+
     /// 判断是不是可交割券
     pub fn is_deliverable(
         &self,
