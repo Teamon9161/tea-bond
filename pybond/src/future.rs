@@ -40,7 +40,7 @@ impl PyFuture {
         start: &Bound<'_, PyAny>,
         end: Option<&Bound<'_, PyAny>>,
         future_type: Option<&str>,
-    ) -> PyResult<Vec<Self>> {
+    ) -> PyResult<Vec<String>> {
         let start = extract_date(start)?;
         let end = match end {
             Some(dt) => Some(extract_date(dt)?),
@@ -54,7 +54,17 @@ impl PyFuture {
             None => None,
         };
         Future::trading_futures(start, end, future_type)
-            .map(|v| v.into_iter().map(|f| PyFuture(Arc::new(f))).collect())
+            .map(|v| {
+                v.into_iter()
+                    .map(|f| {
+                        let code = f.code.to_string();
+                        match f.market {
+                            Some(market) => format!("{code}.{market}"),
+                            None => code,
+                        }
+                    })
+                    .collect()
+            })
             .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
@@ -102,6 +112,14 @@ impl PyFuture {
         self.0
             .deliver_date()
             .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
+    fn code(&self) -> String {
+        self.0.code.to_string()
+    }
+
+    fn market(&self) -> Option<String> {
+        self.0.market.as_deref().map(ToString::to_string)
     }
 
     /// 获取下一季月合约
