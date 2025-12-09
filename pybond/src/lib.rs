@@ -6,7 +6,6 @@ use pyo3::prelude::*;
 mod batch_eval;
 mod bond;
 mod calendar;
-mod ffi;
 mod future;
 #[cfg(feature = "persist")]
 mod persist;
@@ -16,6 +15,8 @@ mod tf_evaluator;
 mod utils;
 
 use bond::PyBond;
+#[allow(unused_imports)]
+use bond_ffi::*;
 use future::PyFuture;
 use tf_evaluator::PyTfEvaluator;
 
