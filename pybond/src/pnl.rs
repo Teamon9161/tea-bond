@@ -238,6 +238,7 @@ fn get_trading_output_type(input_fields: &[Field]) -> PolarsResult<Field> {
 fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> PolarsResult<Series> {
     use pyo3_polars::export::polars_core::utils::CustomIterTools;
     use tevec::export::polars::prelude::*;
+    let keep_shape = kwargs.keep_shape.unwrap_or_default();
     let (time, pos, open, finish_price, cash) =
         (&inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4]);
     let (pos, open, finish_price, cash) = auto_cast!(Float64(pos, open, finish_price, cash));
@@ -251,11 +252,16 @@ fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> Pola
         DataType::Date => {
             let trade_vec =
                 pnl::trading_from_pos(time.date()?.physical(), pos.f64()?, open.f64()?, &kwargs);
-            let time: Int32Chunked = trade_vec
-                .iter()
-                .map(|t| t.as_ref().and_then(|t| t.time))
-                .collect_trusted();
-            let time = time.into_date().into_series();
+
+            let time = if keep_shape {
+                time.clone()
+            } else {
+                let time: Int32Chunked = trade_vec
+                    .iter()
+                    .map(|t| t.as_ref().and_then(|t| t.time))
+                    .collect_trusted();
+                time.into_date().into_series()
+            };
             let price: Float64Chunked = trade_vec
                 .iter()
                 .map(|t| t.as_ref().map(|t| t.price))
@@ -280,17 +286,20 @@ fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> Pola
         }
         _ => {
             let time_ca = time.datetime()?;
-            let time_unit = time_ca.time_unit();
-            let time_zone = time_ca.time_zone();
             let trade_vec =
                 pnl::trading_from_pos(time_ca.physical(), pos.f64()?, open.f64()?, &kwargs);
-            let time: Int64Chunked = trade_vec
-                .iter()
-                .map(|t| t.as_ref().and_then(|t| t.time))
-                .collect_trusted();
-            let time = time
-                .into_datetime(time_unit, time_zone.clone())
-                .into_series();
+            let time = if keep_shape {
+                time.clone()
+            } else {
+                let time_unit = time_ca.time_unit();
+                let time_zone = time_ca.time_zone();
+                let time: Int64Chunked = trade_vec
+                    .iter()
+                    .map(|t| t.as_ref().and_then(|t| t.time))
+                    .collect_trusted();
+                time.into_datetime(time_unit, time_zone.clone())
+                    .into_series()
+            };
             let price: Float64Chunked = trade_vec
                 .iter()
                 .map(|t| t.as_ref().map(|t| t.price))
