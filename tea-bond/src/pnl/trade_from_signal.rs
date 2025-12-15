@@ -23,7 +23,7 @@ impl<T: PartialEq> std::ops::Add<Trade<T>> for Trade<T> {
             let amt = self.qty * self.price + rhs.qty * rhs.price;
             Trade {
                 time: self.time,
-                price: (amt / (self.qty + rhs.qty)).abs(),
+                price: amt / (self.qty + rhs.qty),
                 qty: self.qty + rhs.qty,
             }
         } else {
