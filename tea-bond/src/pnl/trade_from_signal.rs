@@ -1,15 +1,17 @@
+use std::fmt::Debug;
+
 use itertools::izip;
 use serde::Deserialize;
 use tevec::prelude::{EPS, IsNone, Number, Vec1View};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Trade<T> {
     pub time: T,
     pub price: f64,
     pub qty: f64,
 }
 
-impl<T: PartialEq> std::ops::Add<Trade<T>> for Trade<T> {
+impl<T: PartialEq + Debug> std::ops::Add<Trade<T>> for Trade<T> {
     type Output = Trade<T>;
     #[inline]
     fn add(self, rhs: Trade<T>) -> Trade<T> {
@@ -19,20 +21,25 @@ impl<T: PartialEq> std::ops::Add<Trade<T>> for Trade<T> {
                 price: self.price,
                 qty: self.qty + rhs.qty,
             }
-        } else if self.time == rhs.time && self.qty + rhs.qty != 0. {
+        } else if self.time == rhs.time {
             let amt = self.qty * self.price + rhs.qty * rhs.price;
+            let price = if self.qty + rhs.qty != 0. {
+                amt / (self.qty + rhs.qty)
+            } else {
+                amt
+            };
             Trade {
                 time: self.time,
-                price: amt / (self.qty + rhs.qty),
+                price,
                 qty: self.qty + rhs.qty,
             }
         } else {
-            panic!("trade time or price is not equal")
+            panic!("trade time or price is not equal, {self:?} != {rhs:?}");
         }
     }
 }
 
-impl<T: PartialEq> std::ops::Add<Option<Trade<T>>> for Trade<T> {
+impl<T: PartialEq + Debug> std::ops::Add<Option<Trade<T>>> for Trade<T> {
     type Output = Trade<T>;
     #[inline]
     fn add(self, rhs: Option<Trade<T>>) -> Trade<T> {
@@ -75,7 +82,7 @@ pub fn trading_from_pos<DT, T, VT, V>(
     opt: &TradeFromPosOpt,
 ) -> Vec<Option<Trade<DT>>>
 where
-    DT: Clone + PartialEq,
+    DT: Clone + PartialEq + Debug,
     T: IsNone,
     T::Inner: Number,
     VT: Vec1View<DT>,
