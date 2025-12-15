@@ -420,6 +420,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bond-ffi"
+version = "0.4.4"
+dependencies = [
+ "chrono",
+ "tea-bond",
+ "tea-time",
+]
+
+[[package]]
 name = "borsh"
 version = "1.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2605,6 +2614,7 @@ version = "0.4.4"
 dependencies = [
  "anyhow",
  "bincode",
+ "bond-ffi",
  "chrono",
  "itertools",
  "pyo3",

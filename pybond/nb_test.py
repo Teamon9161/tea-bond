@@ -23,6 +23,7 @@ def test_bond():
     print(bond.duration(ytm, dt))
     print(bond.calc_ytm_with_price(bond.dirty_price(ytm, dt), dt))
 
+
 @njit
 def test_evaluator():
     dt = date(2024, 12, 30)
@@ -31,5 +32,6 @@ def test_evaluator():
     e.update(102.0, 0.01, dt, "T2503", "240018.IB", 0.018)
     print(e)
     print(e.future_ytm)
+
 
 test_evaluator()

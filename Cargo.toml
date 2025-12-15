@@ -1,6 +1,6 @@
 [workspace]
-members = ["tea-bond", "tea-calendar", "pybond"]
-default-members = ["tea-bond", "tea-calendar"]
+members = ["tea-bond", "tea-calendar", "bond-ffi", "pybond"]
+default-members = ["tea-bond", "tea-calendar", "bond-ffi"]
 resolver = "2"
 
 [workspace.package]

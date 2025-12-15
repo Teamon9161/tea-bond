@@ -73,7 +73,7 @@ impl Bond {
     /// assert_eq!(bond.code(), "240006");
     /// assert_eq!(bond.cp_rate, 0.0228)
     /// ```
-    #[allow(clippy::collapsible_else_if)]
+    #[allow(clippy::collapsible_else_if, unused_variables)]
     pub fn read_json(code: impl AsRef<str>, path: Option<&Path>, download: bool) -> Result<Self> {
         let code = code.as_ref();
         let code: Cow<'_, str> = if !code.contains('.') {
