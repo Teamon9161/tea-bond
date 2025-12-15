@@ -19,6 +19,13 @@ impl<T: PartialEq> std::ops::Add<Trade<T>> for Trade<T> {
                 price: self.price,
                 qty: self.qty + rhs.qty,
             }
+        } else if self.time == rhs.time && self.qty + rhs.qty != 0. {
+            let amt = self.qty * self.price + rhs.qty * rhs.price;
+            Trade {
+                time: self.time,
+                price: (amt / (self.qty + rhs.qty)).abs(),
+                qty: self.qty + rhs.qty,
+            }
         } else {
             panic!("trade time or price is not equal")
         }
