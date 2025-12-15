@@ -5,9 +5,9 @@ edition.workspace = true
 
 [lib]
 name = "bond_ffi"
-crate-type = ["rlib", "cdylib", "staticlib"]
+crate-type = ["rlib", "staticlib"]
 
 [dependencies]
-tea-time = { workspace = true }
+tea-time = { workspace = true}
 tea-bond = { path = "../tea-bond", default-features = false}
 chrono = { version = "0.4", default-features = false }
