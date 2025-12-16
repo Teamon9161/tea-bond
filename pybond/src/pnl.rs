@@ -220,7 +220,8 @@ fn calc_bond_trade_pnl(inputs: &[Series], kwargs: PyBondTradePnlOpt) -> PolarsRe
         clean_price.f64()?,
         clean_close.f64()?,
         &kwargs.into_rs_opt(begin_state),
-    );
+    )
+    .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
     let out = pnl_report_vec_to_series(&profit_vec);
     Ok(out)
 }

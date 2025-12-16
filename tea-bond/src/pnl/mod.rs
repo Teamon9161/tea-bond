@@ -8,11 +8,11 @@ pub use trade_from_signal::{TradeFromPosOpt, trading_from_pos};
 use crate::CachedBond;
 use chrono::{Days, NaiveDate};
 
+use anyhow::{Result, anyhow};
 use itertools::izip;
 use serde::Deserialize;
 use tea_calendar::Calendar;
 use tevec::prelude::{EPS, IsNone, Number, Vec1, Vec1View};
-
 pub const EPOCH: NaiveDate = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
 
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
@@ -46,7 +46,7 @@ pub fn calc_bond_trade_pnl<T, V, VT>(
     clean_price_vec: &V,
     clean_close_vec: &V,
     opt: &BondTradePnlOpt,
-) -> Vec<PnlReport>
+) -> Result<Vec<PnlReport>>
 where
     T: IsNone,
     T::Inner: Number,
@@ -54,11 +54,10 @@ where
     VT: Vec1View<Option<i32>>,
 {
     if qty_vec.is_empty() {
-        return Vec::empty();
+        return Ok(Vec::empty());
     }
     let multiplier = opt.multiplier;
     let mut state = opt.begin_state;
-    // let fee: Fee = opt.fee.parse().unwrap();
     let mut last_settle_time = None;
     let mut last_cp_date = EPOCH;
     let mut accrued_interest = 0.;
@@ -67,7 +66,7 @@ where
         if bond.is_empty() {
             None
         } else {
-            Some(CachedBond::new(bond, opt.bond_info_path.as_deref()).unwrap())
+            Some(CachedBond::new(bond, opt.bond_info_path.as_deref())?)
         }
     } else {
         None
@@ -89,7 +88,9 @@ where
         let (trade_price, close): (Option<f64>, Option<f64>) = if let Some(bond) = &symbol {
             if !bond.is_zero_coupon() {
                 let settle_time = EPOCH
-                    .checked_add_days(Days::new(settle_time.unwrap() as u64))
+                    .checked_add_days(Days::new(settle_time.ok_or_else(|| {
+                        anyhow!("Settle time should not be none when calc bond trade pnl")
+                    })? as u64))
                     .unwrap();
                 if last_settle_time != Some(settle_time) {
                     if next_day_coupon != 0. {
@@ -97,10 +98,8 @@ where
                         next_day_coupon = 0.;
                     }
                     // 新的一天重新计算相关信息
-                    let cp_dates = bond.get_nearest_cp_date(settle_time).unwrap();
-                    accrued_interest = bond
-                        .calc_accrued_interest(settle_time, Some(cp_dates))
-                        .unwrap();
+                    let cp_dates = bond.get_nearest_cp_date(settle_time)?;
+                    accrued_interest = bond.calc_accrued_interest(settle_time, Some(cp_dates))?;
                     last_cp_date = bond.mkt.find_workday(cp_dates.0, 0);
                     // 当天初始仓位会产生的票息
                     if settle_time == last_cp_date {
@@ -123,7 +122,9 @@ where
             (clean_price.map(|v| v.f64()), clean_close.map(|v| v.f64()))
         };
         if qty != 0. {
-            let trade_price = trade_price.unwrap().f64();
+            let trade_price = trade_price
+                .ok_or_else(|| anyhow!("Trade price should not be none"))?
+                .f64();
             let prev_pos = state.pos;
             let trade_amt = qty * trade_price * multiplier; // with sign
             state.pos += qty;
@@ -160,7 +161,7 @@ where
             state.unrealized_pnl = state.pos * (close - state.pos_price) * multiplier;
         }
         // println!("PNL Report: {:?}", state);
-        state
+        Ok(state)
     })
     .collect()
 }
