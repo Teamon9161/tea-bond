@@ -261,6 +261,8 @@ def trading_from_pos(
     time = parse_into_expr(time)
     pos = parse_into_expr(pos)
     open = parse_into_expr(open)
+    if finish_price is not None:
+        stop_on_finish = True
     finish_price = parse_into_expr(finish_price)
     cash = parse_into_expr(cash)
     kwargs = {
