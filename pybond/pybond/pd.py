@@ -399,6 +399,30 @@ class Bonds:
             "remain_year"
         ].to_pandas()
 
+    def calc_ytm_with_bond_price(
+        self,
+        date: str | pd.Series,
+        dirty_price: float | pd.Series | None = None,
+        clean_price: float | pd.Series | None = None,
+    ):
+        if clean_price is not None:
+            assert dirty_price is None, (
+                "should not set dirty_price when clean_price is set"
+            )
+            price = clean_price
+            kwargs = {"clean_price": "price"}
+        else:
+            assert clean_price is None, (
+                "should not set clean_price when dirty_price is set"
+            )
+            assert dirty_price is not None
+            price = dirty_price
+            kwargs = {"dirty_price": "price"}
+        df = pl.DataFrame({"bond": self.bond, "price": price, "date": date})
+        return df.select(
+            ytm=PlBonds("bond").calc_ytm_with_price(date="date", **kwargs)
+        )["ytm"].to_pandas()
+
 
 class Futures:
     def __init__(self, future: str | pd.Series):
