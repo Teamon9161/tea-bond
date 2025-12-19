@@ -37,7 +37,8 @@ class Fee:
     def percent(fee: float) -> PercentFee:
         return PercentFee(fee)
 
-    def zero(self) -> FeeZero:
+    @staticmethod
+    def zero() -> FeeZero:
         return FeeZero()
 
     def min(self, fee: float) -> MinFee:
