@@ -303,7 +303,17 @@ impl Bond {
                 }
             }
             CouponType::OneTime => {
-                bail!("Accrued interest for one-time coupon is not supported yet")
+                let year = ((calculating_date - self.carry_date).num_days() as f64 / 365.)
+                    .floor()
+                    .max(0.);
+                let ty = ACTUAL
+                    .count_days(calculating_date - chrono::Months::new(12), calculating_date)
+                    as f64;
+                let last_cp_date =
+                    (self.maturity_date - chrono::Months::new(12)).max(self.carry_date);
+                let t = ACTUAL.count_days(last_cp_date, calculating_date) as f64;
+                let c = self.get_coupon();
+                Ok(year * c + c / ty * t)
             }
             CouponType::CouponBear => {
                 let (pre_cp_date, next_cp_date) = if let Some(cp_dates) = cp_dates {
