@@ -4,7 +4,7 @@ default-members = ["tea-bond", "tea-calendar", "bond-ffi"]
 resolver = "2"
 
 [workspace.package]
-version = "0.4.6"
+version = "0.4.7"
 edition = "2024"
 
 [workspace.dependencies]
