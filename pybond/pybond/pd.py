@@ -399,6 +399,18 @@ class Bonds:
             "remain_year"
         ].to_pandas()
 
+    def carry_date(self):
+        df = pl.DataFrame({"bond": self.bond})
+        return df.select(carry_date=PlBonds("bond").carry_date())[
+            "carry_date"
+        ].to_pandas()
+
+    def maturity_date(self):
+        df = pl.DataFrame({"bond": self.bond})
+        return df.select(maturity_date=PlBonds("bond").maturity_date())[
+            "maturity_date"
+        ].to_pandas()
+
     def calc_ytm_with_bond_price(
         self,
         date: str | pd.Series,
