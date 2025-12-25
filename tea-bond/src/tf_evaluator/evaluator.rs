@@ -156,10 +156,7 @@ impl TfEvaluator {
     pub fn with_accrued_interest(self) -> Result<Self> {
         if self.accrued_interest.is_none() {
             let mut out = self.with_nearest_cp_dates();
-            out.accrued_interest = Some(
-                out.bond
-                    .calc_accrued_interest(out.date, Some(out.cp_dates.unwrap()))?,
-            );
+            out.accrued_interest = Some(out.bond.calc_accrued_interest(out.date, out.cp_dates)?);
             Ok(out)
         } else {
             Ok(self)
@@ -293,14 +290,14 @@ impl TfEvaluator {
             let n = out.bond.remain_cp_num_until(
                 out.date,
                 deliver_date,
-                Some(out.cp_dates.unwrap().1),
+                out.cp_dates.map(|ds| ds.1),
             )?;
             if n != 0 {
                 let coupon = out.bond.get_coupon();
                 let remain_cp_dates = out.bond.remain_cp_dates_until(
                     out.date,
                     deliver_date,
-                    Some(out.cp_dates.unwrap().1),
+                    out.cp_dates.map(|ds| ds.1),
                 )?;
                 ensure!(remain_cp_dates.len() == n as usize, "implement error");
                 out.remain_cp_to_deliver = Some(coupon * n as f64);
