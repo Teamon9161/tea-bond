@@ -1,3 +1,4 @@
+use anyhow::Result;
 use pyo3_polars::derive::polars_expr;
 use pyo3_polars::export::polars_core::utils::CustomIterTools;
 use serde::Deserialize;
@@ -44,9 +45,9 @@ fn batch_eval_impl<F1, F2, O>(
     return_func: F2,
     null_future_return_null: bool,
     null_bond_return_null: bool,
-) -> Vec<Option<O>>
+) -> PolarsResult<Vec<Option<O>>>
 where
-    F1: Fn(TfEvaluator) -> TfEvaluator,
+    F1: Fn(TfEvaluator) -> Result<TfEvaluator>,
     F2: Fn(&TfEvaluator) -> Option<O>, // O: PolarsDataType,
 {
     let reinvest_rate = Some(reinvest_rate.unwrap_or(0.0));
@@ -59,7 +60,7 @@ where
     ];
     let len = *len_vec.iter().max().unwrap();
     if *len_vec.iter().min().unwrap() == 0 {
-        return Default::default();
+        return Ok(Default::default());
     }
     // get iterators
     let mut future_iter = future.iter();
@@ -72,7 +73,9 @@ where
     let mut result = Vec::with_capacity(len);
     let mut future: Arc<Future> = Future::new(future_iter.next().unwrap().unwrap_or("")).into();
     let mut future_price = future_price_iter.next().unwrap().unwrap_or(f64::NAN);
-    let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None).unwrap();
+    let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None).map_err(|e| {
+        PolarsError::ComputeError(format!("Failed to create CachedBond: {}", e).into())
+    })?;
     let mut bond_ytm = bond_ytm_iter.next().unwrap().unwrap_or(f64::NAN);
     let mut date = date_iter.next().unwrap().unwrap_or_default();
     let mut capital_rate = capital_rate_iter.next().unwrap().unwrap_or(f64::NAN);
@@ -89,7 +92,9 @@ where
     {
         result.push(None);
     } else {
-        evaluator = evaluator_func(evaluator);
+        evaluator = evaluator_func(evaluator).map_err(|e| {
+            PolarsError::ComputeError(format!("Evaluator function error: {}", e).into())
+        })?;
         result.push(return_func(&evaluator));
     }
     for _ in 1..len {
@@ -148,10 +153,11 @@ where
             continue;
         }
         // dbg!("{} {} {}", i, date, &bond.bond_code);
-        evaluator = evaluator_func(evaluator);
+        evaluator = evaluator_func(evaluator)
+            .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
         result.push(return_func(&evaluator));
     }
-    result
+    Ok(result)
 }
 
 fn batch_eval<F1, F2, O>(
@@ -163,7 +169,7 @@ fn batch_eval<F1, F2, O>(
     null_bond_return_null: bool,
 ) -> PolarsResult<Vec<Option<O>>>
 where
-    F1: Fn(TfEvaluator) -> TfEvaluator,
+    F1: Fn(TfEvaluator) -> Result<TfEvaluator>,
     F2: Fn(&TfEvaluator) -> Option<O>,
 {
     let (future, bond, date, future_price, bond_ytm, capital_rate) = (
@@ -173,7 +179,7 @@ where
         auto_cast!(Float64(future_price, bond_ytm, capital_rate));
     let date = auto_cast!(Date(date));
     let bond = auto_cast!(String(bond));
-    Ok(batch_eval_impl(
+    batch_eval_impl(
         future.str()?,
         bond.str()?,
         date.date()?,
@@ -185,7 +191,7 @@ where
         return_func,
         null_future_return_null,
         null_bond_return_null,
-    ))
+    )
 }
 
 #[polars_expr(output_type=Float64)]
@@ -196,7 +202,7 @@ fn evaluators_net_basis_spread(
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_net_basis_spread().unwrap(),
+        |e: TfEvaluator| e.with_net_basis_spread(),
         |e: &TfEvaluator| e.net_basis_spread.filter(|v| !v.is_nan()),
         true,
         true,
@@ -214,7 +220,7 @@ fn evaluators_accrued_interest(
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_accrued_interest().unwrap(),
+        |e: TfEvaluator| e.with_accrued_interest(),
         |e: &TfEvaluator| e.accrued_interest,
         false,
         true,
@@ -232,7 +238,7 @@ fn evaluators_deliver_accrued_interest(
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_deliver_accrued_interest().unwrap(),
+        |e: TfEvaluator| e.with_deliver_accrued_interest(),
         |e: &TfEvaluator| e.deliver_accrued_interest,
         true,
         true,
@@ -247,7 +253,7 @@ fn evaluators_cf(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResul
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_cf().unwrap(),
+        |e: TfEvaluator| e.with_cf(),
         |e: &TfEvaluator| e.cf,
         true,
         true,
@@ -262,7 +268,7 @@ fn evaluators_dirty_price(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Po
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_dirty_price().unwrap(),
+        |e: TfEvaluator| e.with_dirty_price(),
         |e: &TfEvaluator| e.dirty_price.filter(|v| !v.is_nan()),
         false,
         true,
@@ -277,7 +283,7 @@ fn evaluators_clean_price(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Po
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_clean_price().unwrap(),
+        |e: TfEvaluator| e.with_clean_price(),
         |e: &TfEvaluator| e.clean_price.filter(|v| !v.is_nan()),
         false,
         true,
@@ -295,7 +301,7 @@ fn evaluators_future_dirty_price(
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_future_dirty_price().unwrap(),
+        |e: TfEvaluator| e.with_future_dirty_price(),
         |e: &TfEvaluator| e.future_dirty_price.filter(|v| !v.is_nan()),
         true,
         true,
@@ -313,7 +319,7 @@ fn evaluators_deliver_cost(
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_deliver_cost().unwrap(),
+        |e: TfEvaluator| e.with_deliver_cost(),
         |e: &TfEvaluator| e.deliver_cost.filter(|v| !v.is_nan()),
         true,
         true,
@@ -331,7 +337,7 @@ fn evaluators_basis_spread(
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_basis_spread().unwrap(),
+        |e: TfEvaluator| e.with_basis_spread(),
         |e: &TfEvaluator| e.basis_spread.filter(|v| !v.is_nan()),
         true,
         true,
@@ -346,7 +352,7 @@ fn evaluators_f_b_spread(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Pol
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_f_b_spread().unwrap(),
+        |e: TfEvaluator| e.with_f_b_spread(),
         |e: &TfEvaluator| e.f_b_spread.filter(|v| !v.is_nan()),
         true,
         true,
@@ -361,7 +367,7 @@ fn evaluators_carry(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsRe
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_carry().unwrap(),
+        |e: TfEvaluator| e.with_carry(),
         |e: &TfEvaluator| e.carry.filter(|v| !v.is_nan()),
         true,
         true,
@@ -376,7 +382,7 @@ fn evaluators_duration(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Polar
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_duration().unwrap(),
+        |e: TfEvaluator| e.with_duration(),
         |e: &TfEvaluator| e.duration.filter(|v| !v.is_nan()),
         false,
         true,
@@ -391,7 +397,7 @@ fn evaluators_irr(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResu
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_irr().unwrap(),
+        |e: TfEvaluator| e.with_irr(),
         |e: &TfEvaluator| e.irr.filter(|v| !v.is_nan()),
         true,
         true,
@@ -406,7 +412,7 @@ fn evaluators_future_ytm(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Pol
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_future_ytm().unwrap(),
+        |e: TfEvaluator| e.with_future_ytm(),
         |e: &TfEvaluator| e.future_ytm.filter(|v| !v.is_nan()),
         true,
         true,
@@ -424,7 +430,7 @@ fn evaluators_remain_cp_to_deliver(
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_remain_cp_to_deliver().unwrap(),
+        |e: TfEvaluator| e.with_remain_cp_to_deliver(),
         |e: &TfEvaluator| e.remain_cp_to_deliver,
         true,
         true,
@@ -442,7 +448,7 @@ fn evaluators_remain_cp_to_deliver_wm(
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_remain_cp_to_deliver().unwrap(),
+        |e: TfEvaluator| e.with_remain_cp_to_deliver(),
         |e: &TfEvaluator| e.remain_cp_to_deliver_wm,
         true,
         true,
@@ -460,7 +466,7 @@ fn evaluators_remain_cp_num(
     let result: Int32Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_remain_cp_num().unwrap(),
+        |e: TfEvaluator| e.with_remain_cp_num(),
         |e: &TfEvaluator| e.remain_cp_num,
         false,
         true,
@@ -480,7 +486,7 @@ fn evaluators_deliver_date(
         batch_eval(
             inputs,
             kwargs,
-            |e: TfEvaluator| e.with_deliver_date().unwrap(),
+            |e: TfEvaluator| e.with_deliver_date(),
             |e: &TfEvaluator| e.deliver_date,
             true,
             false,
@@ -500,7 +506,7 @@ fn evaluators_last_trading_date(
         batch_eval(
             inputs,
             kwargs,
-            |e: TfEvaluator| e,
+            Ok,
             |e: &TfEvaluator| e.future.last_trading_date().ok(),
             true,
             false,
@@ -515,7 +521,7 @@ fn bonds_remain_year(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsR
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e,
+        Ok,
         |e: &TfEvaluator| Some(e.bond.remain_year(e.date)),
         false,
         true,
@@ -532,7 +538,7 @@ fn bonds_carry_date(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsRe
         batch_eval(
             inputs,
             kwargs,
-            |e: TfEvaluator| e,
+            Ok,
             |e: &TfEvaluator| Some(e.bond.carry_date),
             false,
             true,
@@ -549,7 +555,7 @@ fn bonds_maturity_date(inputs: &[Series], kwargs: EvaluatorBatchParams) -> Polar
         batch_eval(
             inputs,
             kwargs,
-            |e: TfEvaluator| e,
+            Ok,
             |e: &TfEvaluator| Some(e.bond.maturity_date),
             false,
             true,
@@ -565,11 +571,15 @@ fn bonds_calc_ytm_with_price(inputs: &[Series]) -> PolarsResult<Series> {
     let bond_se = auto_cast!(String(&inputs[0]));
     let date_se = auto_cast!(Date(&inputs[1]));
     let len = dirty_price_se.len();
+    if len == 0 {
+        return Ok(Default::default());
+    }
     let bond = bond_se.str()?;
     let dirty_price = dirty_price_se.f64()?;
     let mut bond_iter = bond.iter();
     let mut date_iter = date_se.date()?.as_date_iter();
-    let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None).unwrap();
+    let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None)
+        .map_err(|e| polars_err!(ComputeError: "Failed to create bond: {}", e))?;
     let mut dirty_price_iter = dirty_price.iter();
     let mut date = date_iter.next().unwrap().unwrap_or_default();
 
