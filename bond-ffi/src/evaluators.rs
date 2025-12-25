@@ -312,13 +312,11 @@ pub extern "C" fn tf_evaluator_remain_days_to_deliver(evaluator: *mut TfEvaluato
 #[unsafe(no_mangle)]
 pub extern "C" fn tf_evaluator_remain_cp_num(evaluator: *mut TfEvaluator) -> i32 {
     let evaluator = unsafe { &mut *evaluator };
-    match evaluator.clone().with_remain_cp_num() {
-        Ok(eval) => {
-            *evaluator = eval;
-            evaluator.remain_cp_num.unwrap_or(-1)
-        }
-        Err(_) => -1,
-    }
+    evaluator
+        .clone()
+        .with_remain_cp_num()
+        .remain_cp_num
+        .unwrap_or(-1)
 }
 
 /// 计算到交割的期间付息

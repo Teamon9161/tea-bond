@@ -466,7 +466,7 @@ fn evaluators_remain_cp_num(
     let result: Int32Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_remain_cp_num(),
+        |e: TfEvaluator| Ok(e.with_remain_cp_num()),
         |e: &TfEvaluator| e.remain_cp_num,
         false,
         true,
