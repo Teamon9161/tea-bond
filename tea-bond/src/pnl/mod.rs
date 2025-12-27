@@ -66,7 +66,7 @@ where
         if bond.is_empty() {
             None
         } else {
-            Some(CachedBond::new(bond, opt.bond_info_path.as_deref())?)
+            CachedBond::new(bond, opt.bond_info_path.as_deref()).ok()
         }
     } else {
         None

@@ -124,7 +124,7 @@ def calc_bond_trade_pnl(
     clean_price: IntoExpr | None = None,
     clean_close: IntoExpr = "close",
     bond_info_path: str | None = None,
-    multiplier: float = 1,
+    multiplier: IntoExpr | None = None,
     fee: Fee | None = None,
     borrowing_cost: float = 0,
     capital_rate: float = 0,
@@ -139,7 +139,7 @@ def calc_bond_trade_pnl(
     clean_price: 成交的净价
     clean_close: 当前时间段的最新价格(净价)
     bond_info_path: 可以指定债券信息的存放⽂件夹, 不传⼊则使⽤默认路径.
-    multiplier: 合约乘数, 例如对于债券, 1000的成交对应1000w, 合约乘数应为100
+    multiplier: 合约乘数, 例如对于债券, 1000的成交对应1000w, 合约乘数应为100, 默认为1
     fee: 交易费⽤
     费⽤设置说明:
         TradeFee: 每笔成交⽀付的费⽤
@@ -154,6 +154,7 @@ def calc_bond_trade_pnl(
     symbol = parse_into_expr(symbol)
     settle_time = parse_into_expr(settle_time)
     clean_close = parse_into_expr(clean_close)
+    multiplier = parse_into_expr(multiplier)
     if begin_state is not None and not isinstance(begin_state, dict):
         begin_state = parse_into_expr(begin_state)
     if bond_info_path is None:
@@ -176,7 +177,6 @@ def calc_bond_trade_pnl(
             }
         )
     kwargs = {
-        "multiplier": multiplier,
         "fee": fee,
         "borrowing_cost": borrowing_cost,
         "capital_rate": capital_rate,
@@ -184,11 +184,19 @@ def calc_bond_trade_pnl(
     }
     if all(x is None for x in [qty, clean_price]):
         # struct settle_time, contains trade info
-        args = [symbol, settle_time, clean_close, begin_state]
+        args = [symbol, settle_time, clean_close, begin_state, multiplier]
     else:
         qty = parse_into_expr(qty)
         clean_price = parse_into_expr(clean_price)
-        args = [symbol, settle_time, qty, clean_price, clean_close, begin_state]
+        args = [
+            symbol,
+            settle_time,
+            qty,
+            clean_price,
+            clean_close,
+            begin_state,
+            multiplier,
+        ]
     return register_plugin(
         args=args,
         kwargs=kwargs,
@@ -202,7 +210,7 @@ def calc_trade_pnl(
     qty: IntoExpr | None = None,
     price: IntoExpr | None = None,
     close: IntoExpr = "close",
-    multiplier: float = 1,
+    multiplier: IntoExpr | None = None,
     fee: Fee | None = None,
     begin_state: IntoExpr | None = None,
 ):
@@ -214,7 +222,7 @@ def calc_trade_pnl(
     qty: 成交量, 正负号表⽰⽅向
     clean_price: 成交的净价
     clean_close: 当前时间段的最新价格(净价)
-    multiplier: 合约乘数, 例如对于债券, 1000的成交对应1000w, 合约乘数应为100
+    multiplier: 合约乘数, 例如对于债券, 1000的成交对应1000w, 合约乘数应为100, 默认为1
     fee: 交易费⽤
     费⽤设置说明:
         TradeFee: 每笔成交⽀付的费⽤
@@ -240,7 +248,7 @@ def trading_from_pos(
     open: IntoExpr,
     finish_price: IntoExpr | None = None,
     cash: IntoExpr = 1e8,
-    multiplier: float = 1,
+    multiplier: IntoExpr | None = None,
     qty_tick: float = 1.0,
     min_adjust_amt: float = 0.0,
     *,
@@ -253,7 +261,7 @@ def trading_from_pos(
     pos: 当前时间的实际仓位, -1 ~ 1, 表⽰百分⽐
     open: 当前周期的开仓价格
     cash: 总资⾦, ⽤于计算实际开仓⼿数
-    multiplier: 合约乘数
+    multiplier: 合约乘数, 默认为1
     qty_tick: 最⼩开仓⼿数, 例如0.01, 0.1, 1, 100
     stop_on_finish: 当前标的没有数据后是否平仓
     finish_price: 当前标的没数据时的平仓价格, ⽀持polars表达式
@@ -262,13 +270,14 @@ def trading_from_pos(
     time = parse_into_expr(time)
     pos = parse_into_expr(pos)
     open = parse_into_expr(open)
+    multiplier = parse_into_expr(multiplier)
     if finish_price is not None:
         stop_on_finish = True
     finish_price = parse_into_expr(finish_price)
     cash = parse_into_expr(cash)
     kwargs = {
         "cash": None,  # 会从表达式中获取
-        "multiplier": float(multiplier),
+        "multiplier": 0.0,  # 会从表达式中获取
         "qty_tick": float(qty_tick),
         "stop_on_finish": stop_on_finish,
         "finish_price": None,  # 会从表达式中获取
@@ -276,7 +285,7 @@ def trading_from_pos(
         "keep_shape": bool(keep_shape),
     }
     return register_plugin(
-        args=[time, pos, open, finish_price, cash],
+        args=[time, pos, open, finish_price, cash, multiplier],
         kwargs=kwargs,
         symbol="trading_from_pos",
         is_elementwise=False,
