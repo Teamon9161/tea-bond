@@ -73,9 +73,9 @@ where
     let mut result = Vec::with_capacity(len);
     let mut future: Arc<Future> = Future::new(future_iter.next().unwrap().unwrap_or("")).into();
     let mut future_price = future_price_iter.next().unwrap().unwrap_or(f64::NAN);
-    let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None).map_err(|e| {
-        PolarsError::ComputeError(format!("Failed to create CachedBond: {}", e).into())
-    })?;
+    // allow unknown bond
+    let mut bond =
+        CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None).unwrap_or_default();
     let mut bond_ytm = bond_ytm_iter.next().unwrap().unwrap_or(f64::NAN);
     let mut date = date_iter.next().unwrap().unwrap_or_default();
     let mut capital_rate = capital_rate_iter.next().unwrap().unwrap_or(f64::NAN);
@@ -128,7 +128,7 @@ where
         if let Some(b) = bond_iter.next() {
             if let Some(b) = b {
                 if b != bond.code() && bond.bond_code != b {
-                    bond = CachedBond::new(b, None).unwrap();
+                    bond = CachedBond::new(b, None).unwrap_or_default();
                 }
             } else {
                 if null_bond_return_null {
@@ -578,8 +578,8 @@ fn bonds_calc_ytm_with_price(inputs: &[Series]) -> PolarsResult<Series> {
     let dirty_price = dirty_price_se.f64()?;
     let mut bond_iter = bond.iter();
     let mut date_iter = date_se.date()?.as_date_iter();
-    let mut bond = CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None)
-        .map_err(|e| polars_err!(ComputeError: "Failed to create bond: {}", e))?;
+    let mut bond =
+        CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None).unwrap_or_default();
     let mut dirty_price_iter = dirty_price.iter();
     let mut date = date_iter.next().unwrap().unwrap_or_default();
 
@@ -604,7 +604,7 @@ fn bonds_calc_ytm_with_price(inputs: &[Series]) -> PolarsResult<Series> {
         if let Some(b) = bond_iter.next() {
             if let Some(b) = b {
                 if b != bond.code() && bond.bond_code != b {
-                    bond = CachedBond::new(b, None).unwrap();
+                    bond = CachedBond::new(b, None).unwrap_or_default();
                 }
             } else {
                 result.push(None);
