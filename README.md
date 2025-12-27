@@ -1,5 +1,5 @@
 # Tea-Bond
-
+[![PyPI](https://img.shields.io/pypi/v/tea-bond)](pybond)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Tea-Bond 是一个高性能的 Rust 债券计算库，专门用于中国债券市场的量化分析。提供完整的债券定价、收益率计算、期现套利分析等功能，同时支持 Python 绑定。
@@ -51,7 +51,7 @@ tea-bond = { git = "https://github.com/teamon9161/tea-bond.git", branch="master"
 
 ### Python 安装
 ```bash
-pip install pybond
+pip install tea-bond
 ```
 
 ## 📖 使用示例
