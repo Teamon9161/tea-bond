@@ -261,11 +261,11 @@ fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> Pola
     use pyo3_polars::export::polars_core::utils::CustomIterTools;
     use tevec::export::polars::prelude::*;
     let keep_shape = kwargs.keep_shape.unwrap_or_default();
-    let (time, pos, open, finish_price, cash, multiplier) = (
-        &inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4], &inputs[5],
+    let (time, pos, open, finish_price, cash, multiplier, qty_tick) = (
+        &inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4], &inputs[5], &inputs[6],
     );
-    let (pos, open, finish_price, cash, multiplier) =
-        auto_cast!(Float64(pos, open, finish_price, cash, multiplier));
+    let (pos, open, finish_price, cash, multiplier, qty_tick) =
+        auto_cast!(Float64(pos, open, finish_price, cash, multiplier, qty_tick));
     if let Some(p) = finish_price.f64()?.iter().next() {
         kwargs.finish_price = p
     };
@@ -274,6 +274,9 @@ fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> Pola
     };
     if let Some(m) = multiplier.f64()?.iter().next() {
         kwargs.multiplier = m.unwrap_or(1.)
+    };
+    if let Some(q) = qty_tick.f64()?.iter().next() {
+        kwargs.qty_tick = q.unwrap_or(1.)
     };
     let res = match time.dtype() {
         DataType::Date => {
