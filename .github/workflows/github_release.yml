@@ -33,10 +33,14 @@ jobs:
           - os: windows-latest
             kind: windows
             target: x86_64
-          # macOS universal2 (x86_64 + arm64)
+          # macOS x86_64
+          - os: macos-13
+            kind: macos
+            target: x86_64
+          # macOS arm64
           - os: macos-latest
-            kind: macos_universal2
-            target: universal2
+            kind: macos
+            target: aarch64
 
     steps:
       - uses: actions/checkout@v4
@@ -78,9 +82,6 @@ jobs:
               echo "Missing package manager; install OpenSSL dev & pkg-config manually." >&2
               exit 1
             fi
-        env:
-          # Enable universal2 on macOS runners
-          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.kind == 'macos_universal2' && '10.13' || '' }}
 
       # Build sdist only once on manylinux_2_28
       - name: Build sdist
