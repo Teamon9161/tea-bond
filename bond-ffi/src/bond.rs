@@ -16,7 +16,13 @@ pub extern "C" fn create_bond(code_ptr: *mut u8, code_len: usize) -> *mut c_void
 
 #[unsafe(no_mangle)]
 pub extern "C" fn free_bond(bond: *mut c_void) {
-    let _bond = unsafe { Box::from_raw(bond as *mut CachedBond) };
+    if bond.is_null() {
+        return;
+    }
+    unsafe {
+        let _ = CachedBond::from_raw(bond as *const Bond);
+    }
+    // let _bond = unsafe { Box::from_raw(bond as *mut CachedBond) };
 }
 
 #[unsafe(no_mangle)]

@@ -5,7 +5,7 @@ edition.workspace = true
 
 [lib]
 name = "bond_ffi"
-crate-type = ["rlib", "cdylib", "staticlib"]
+crate-type = ["rlib", "staticlib"]
 
 [dependencies]
 tea-time = { workspace = true }
