@@ -103,12 +103,11 @@ impl TfEvaluator {
 
     /// 计算前一付息日和下一付息日
     #[inline]
-    pub fn with_nearest_cp_dates(mut self) -> Result<Self> {
+    pub fn with_nearest_cp_dates(mut self) -> Self {
         if self.cp_dates.is_none() {
-            let (pre_cp_date, next_cp_date) = self.bond.get_nearest_cp_date(self.date)?;
-            self.cp_dates = Some((pre_cp_date, next_cp_date));
+            self.cp_dates = self.bond.get_nearest_cp_date(self.date).ok();
         }
-        Ok(self)
+        self
     }
 
     /// 计算交割日的前一付息日和下一付息日
@@ -139,16 +138,16 @@ impl TfEvaluator {
     }
     /// 计算剩余付息次数
     #[inline]
-    pub fn with_remain_cp_num(self) -> Result<Self> {
+    pub fn with_remain_cp_num(self) -> Self {
         if self.remain_cp_num.is_none() {
-            let mut out = self.with_nearest_cp_dates()?;
-            out.remain_cp_num = Some(
-                out.bond
-                    .remain_cp_num(out.date, Some(out.cp_dates.unwrap().1))?,
-            );
-            Ok(out)
+            let mut out = self.with_nearest_cp_dates();
+            out.remain_cp_num = out
+                .bond
+                .remain_cp_num(out.date, out.cp_dates.map(|ds| ds.1))
+                .ok();
+            out
         } else {
-            Ok(self)
+            self
         }
     }
 
@@ -156,11 +155,8 @@ impl TfEvaluator {
     #[inline]
     pub fn with_accrued_interest(self) -> Result<Self> {
         if self.accrued_interest.is_none() {
-            let mut out = self.with_nearest_cp_dates()?;
-            out.accrued_interest = Some(
-                out.bond
-                    .calc_accrued_interest(out.date, Some(out.cp_dates.unwrap()))?,
-            );
+            let mut out = self.with_nearest_cp_dates();
+            out.accrued_interest = Some(out.bond.calc_accrued_interest(out.date, out.cp_dates)?);
             Ok(out)
         } else {
             Ok(self)
@@ -171,7 +167,7 @@ impl TfEvaluator {
     #[inline]
     pub fn with_dirty_price(self) -> Result<Self> {
         if self.dirty_price.is_none() {
-            let mut out = self.with_remain_cp_num()?;
+            let mut out = self.with_remain_cp_num();
             out.dirty_price = Some(out.bond.calc_dirty_price_with_ytm(
                 out.bond.ytm(),
                 out.date,
@@ -200,7 +196,7 @@ impl TfEvaluator {
     #[inline]
     pub fn with_duration(self) -> Result<Self> {
         if self.duration.is_none() {
-            let mut out = self.with_remain_cp_num()?;
+            let mut out = self.with_remain_cp_num();
             out.duration = Some(out.bond.calc_duration(
                 out.bond.ytm(),
                 out.date,
@@ -288,20 +284,20 @@ impl TfEvaluator {
     /// 计算期间付息
     pub fn with_remain_cp_to_deliver(self) -> Result<Self> {
         if self.remain_cp_to_deliver.is_none() {
-            let mut out = self.with_deliver_date()?.with_nearest_cp_dates()?;
+            let mut out = self.with_deliver_date()?.with_nearest_cp_dates();
             let deliver_date = out.deliver_date.unwrap();
             // 计算期间付息次数
             let n = out.bond.remain_cp_num_until(
                 out.date,
                 deliver_date,
-                Some(out.cp_dates.unwrap().1),
+                out.cp_dates.map(|ds| ds.1),
             )?;
             if n != 0 {
                 let coupon = out.bond.get_coupon();
                 let remain_cp_dates = out.bond.remain_cp_dates_until(
                     out.date,
                     deliver_date,
-                    Some(out.cp_dates.unwrap().1),
+                    out.cp_dates.map(|ds| ds.1),
                 )?;
                 ensure!(remain_cp_dates.len() == n as usize, "implement error");
                 out.remain_cp_to_deliver = Some(coupon * n as f64);
@@ -437,7 +433,7 @@ impl TfEvaluator {
 
     #[inline]
     pub fn calc_all(self) -> Result<Self> {
-        self.with_remain_cp_num()?
+        self.with_remain_cp_num()
             .with_clean_price()?
             .with_duration()?
             .with_f_b_spread()?

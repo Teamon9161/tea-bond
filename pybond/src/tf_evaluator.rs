@@ -119,12 +119,8 @@ impl PyTfEvaluator {
     }
 
     /// 计算前一付息日和下一付息日
-    fn with_nearest_cp_dates(&self) -> PyResult<Self> {
-        self.0
-            .clone()
-            .with_nearest_cp_dates()
-            .map_err(|e| PyValueError::new_err(e.to_string()))
-            .map(Self)
+    fn with_nearest_cp_dates(&self) -> Self {
+        Self(self.0.clone().with_nearest_cp_dates())
     }
 
     /// 计算交割日的前一付息日和下一付息日
@@ -146,12 +142,8 @@ impl PyTfEvaluator {
     }
 
     /// 计算剩余付息次数
-    fn with_remain_cp_num(&self) -> PyResult<Self> {
-        self.0
-            .clone()
-            .with_remain_cp_num()
-            .map_err(|e| PyValueError::new_err(e.to_string()))
-            .map(Self)
+    fn with_remain_cp_num(&self) -> Self {
+        Self(self.0.clone().with_remain_cp_num())
     }
 
     /// 计算应计利息
@@ -510,12 +502,12 @@ impl PyTfEvaluator {
 
     #[getter]
     /// 前一付息日和下一付息日
-    fn cp_dates(&mut self) -> PyResult<(NaiveDate, NaiveDate)> {
+    fn cp_dates(&mut self) -> Option<(NaiveDate, NaiveDate)> {
         if let Some(cp_dates) = self.0.cp_dates {
-            Ok(cp_dates)
+            Some(cp_dates)
         } else {
-            self.0 = self.with_nearest_cp_dates()?.0;
-            Ok(self.0.cp_dates.unwrap())
+            self.0 = self.with_nearest_cp_dates().0;
+            self.0.cp_dates
         }
     }
 
@@ -532,12 +524,12 @@ impl PyTfEvaluator {
 
     #[getter]
     /// 债券剩余付息次数
-    fn remain_cp_num(&mut self) -> PyResult<i32> {
+    fn remain_cp_num(&mut self) -> Option<i32> {
         if let Some(remain_cp_num) = self.0.remain_cp_num {
-            Ok(remain_cp_num)
+            Some(remain_cp_num)
         } else {
-            self.0 = self.with_remain_cp_num()?.0;
-            Ok(self.0.remain_cp_num.unwrap())
+            self.0 = self.with_remain_cp_num().0;
+            self.0.remain_cp_num
         }
     }
 

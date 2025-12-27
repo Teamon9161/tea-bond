@@ -4,8 +4,8 @@ use crate::utils::extract_date;
 use chrono::NaiveDate;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use tea_bond::{Future, FutureType};
 use std::str::FromStr;
+use tea_bond::{Future, FutureType};
 
 #[pyclass(name = "Future")]
 #[derive(Clone)]
@@ -47,10 +47,9 @@ impl PyFuture {
             None => None,
         };
         let future_type = match future_type {
-            Some(s) => Some(
-                FutureType::from_str(s)
-                    .map_err(|e| PyValueError::new_err(e.to_string()))?,
-            ),
+            Some(s) => {
+                Some(FutureType::from_str(s).map_err(|e| PyValueError::new_err(e.to_string()))?)
+            }
             None => None,
         };
         Future::trading_futures(start, end, future_type)

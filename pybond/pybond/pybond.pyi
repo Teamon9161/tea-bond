@@ -386,7 +386,7 @@ class TfEvaluator:
         """期货配对缴款日, 如果未计算会自动计算后返回"""
 
     @property
-    def cp_dates(self) -> tuple[date, date]:
+    def cp_dates(self) -> tuple[date, date] | None:
         """前一付息日和下一付息日, 如果未计算会自动计算后返回"""
 
     @property
@@ -394,7 +394,7 @@ class TfEvaluator:
         """期货交割日的前一付息日和下一付息日, 如果未计算会自动计算后返回"""
 
     @property
-    def remain_cp_num(self) -> int:
+    def remain_cp_num(self) -> int | None:
         """债券剩余付息次数, 如果未计算会自动计算后返回"""
 
     @property
