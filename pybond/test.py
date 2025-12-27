@@ -10,12 +10,12 @@ from pybond.pd import find_workday as pd_find_workday
 from pybond.pl import Bonds, TfEvaluators, find_workday, is_business_day
 from pybond.pnl import trading_from_pos
 
+from pybond import Ib, TfEvaluator
+
 os.environ["POLARS_VERBOSE"] = "1"
-from pybond import Bond, Ib, TfEvaluator
-
 # Bond(200004).remain_cp_dates_until("2025-01-02", "2025-09-16")
-
 # Bond(200005).accrued_interest("2025-09-16")
+
 
 df = pl.DataFrame(
     {

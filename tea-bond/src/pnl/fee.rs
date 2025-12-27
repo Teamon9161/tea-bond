@@ -5,13 +5,13 @@ use std::ops::Add;
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Fee {
     /// 按成交金额百分比：fee = rate * amount
-    Percent { rate: f64 },
+    Percent { fee: f64 },
 
     /// 按成交数量：fee = per_qty * qty
-    PerQty { per_qty: f64 },
+    PerQty { fee: f64 },
 
     /// 按笔数：fee = per_trade * trade_num
-    PerTrade { per_trade: f64 },
+    PerTrade { fee: f64 },
 
     /// 多个 Fee 相加
     Sum { items: Vec<Fee> },
@@ -21,6 +21,9 @@ pub enum Fee {
 
     /// 下限（最少多少钱）： fee = max(floor, inner_fee)
     Max { floor: f64, fee: Box<Fee> },
+
+    /// 固定手续费
+    Fixed { fee: f64 },
 
     /// 零手续费
     #[default]
@@ -37,11 +40,13 @@ impl Fee {
         match self {
             Fee::Zero => 0.0,
 
-            Fee::Percent { rate } => amount.abs() * rate,
+            Fee::Fixed { fee } => *fee,
 
-            Fee::PerQty { per_qty } => qty.abs() * per_qty,
+            Fee::Percent { fee } => amount.abs() * fee,
 
-            Fee::PerTrade { per_trade } => *per_trade * trade_num as f64,
+            Fee::PerQty { fee } => qty.abs() * fee,
+
+            Fee::PerTrade { fee } => *fee * trade_num as f64,
 
             Fee::Sum { items } => items.iter().map(|f| f.amount(qty, amount, trade_num)).sum(),
 

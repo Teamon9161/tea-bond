@@ -106,19 +106,14 @@ fn get_pnl_output_type(_input_fields: &[Field]) -> PolarsResult<Field> {
 #[derive(Deserialize)]
 pub struct PyBondTradePnlOpt {
     pub bond_info_path: Option<PathBuf>,
-    pub fee: Fee,
-    pub borrowing_cost: f64,
-    pub capital_rate: f64,
 }
 
 impl PyBondTradePnlOpt {
-    fn into_rs_opt(self, begin_state: PnlReport, multiplier: f64) -> BondTradePnlOpt {
+    fn into_rs_opt(self, begin_state: PnlReport, multiplier: f64, fee: Fee) -> BondTradePnlOpt {
         BondTradePnlOpt {
             bond_info_path: self.bond_info_path,
             multiplier,
-            fee: self.fee,
-            borrowing_cost: self.borrowing_cost,
-            capital_rate: self.capital_rate,
+            fee,
             begin_state,
         }
     }
@@ -126,7 +121,8 @@ impl PyBondTradePnlOpt {
 
 #[polars_expr(output_type_func=get_pnl_output_type)]
 fn calc_bond_trade_pnl(inputs: &[Series], kwargs: PyBondTradePnlOpt) -> PolarsResult<Series> {
-    let (symbol, time, qty, clean_price, clean_close, state, multiplier) = if inputs.len() == 7 {
+    let (symbol, time, qty, clean_price, clean_close, state, multiplier, fee) = if inputs.len() == 8
+    {
         (
             &inputs[0],
             inputs[1].clone(),
@@ -135,11 +131,13 @@ fn calc_bond_trade_pnl(inputs: &[Series], kwargs: PyBondTradePnlOpt) -> PolarsRe
             &inputs[4],
             &inputs[5],
             &inputs[6],
+            &inputs[7],
         )
     } else {
-        assert_eq!(inputs.len(), 5);
-        let (symbol, trade, clean_close, state, multiplier) =
-            (&inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4]);
+        assert_eq!(inputs.len(), 6);
+        let (symbol, trade, clean_close, state, multiplier, fee) = (
+            &inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4], &inputs[5],
+        );
         let time = trade.struct_()?.field_by_name("time")?;
         let qty = trade.struct_()?.field_by_name("qty")?;
         let clean_price = trade.struct_()?.field_by_name("price")?;
@@ -151,14 +149,22 @@ fn calc_bond_trade_pnl(inputs: &[Series], kwargs: PyBondTradePnlOpt) -> PolarsRe
             clean_close,
             state,
             multiplier,
+            fee,
         )
     };
-    let symbol = auto_cast!(String(symbol));
+    let (symbol, fee) = auto_cast!(String(symbol, fee));
     let symbol = if let Some(s) = symbol.str()?.iter().next() {
         s
     } else {
         return Ok(pnl_report_vec_to_series(&[]));
     };
+    let fee = fee
+        .str()?
+        .iter()
+        .next()
+        .flatten()
+        .map(|f| serde_json::from_str(f).unwrap())
+        .unwrap_or_default();
     let (qty, clean_price, clean_close, multiplier) =
         auto_cast!(Float64(&qty, &clean_price, clean_close, multiplier));
     let multiplier = if let Some(m) = multiplier.f64()?.iter().next() {
@@ -234,7 +240,7 @@ fn calc_bond_trade_pnl(inputs: &[Series], kwargs: PyBondTradePnlOpt) -> PolarsRe
         qty.f64()?,
         clean_price.f64()?,
         clean_close.f64()?,
-        &kwargs.into_rs_opt(begin_state, multiplier),
+        &kwargs.into_rs_opt(begin_state, multiplier, fee),
     )
     .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
     let out = pnl_report_vec_to_series(&profit_vec);

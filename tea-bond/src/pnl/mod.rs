@@ -30,12 +30,9 @@ pub struct PnlReport {
 
 #[derive(Deserialize)]
 pub struct BondTradePnlOpt {
-    // pub symbol: SmallStr,
     pub bond_info_path: Option<PathBuf>,
     pub multiplier: f64,
     pub fee: Fee,
-    pub borrowing_cost: f64,
-    pub capital_rate: f64,
     pub begin_state: PnlReport,
 }
 
