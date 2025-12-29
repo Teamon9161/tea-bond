@@ -367,6 +367,7 @@ impl TfEvaluator {
             Ok(self)
         }
     }
+
     /// 计算净基差
     ///
     /// 净基差=基差-持有收益
@@ -378,6 +379,46 @@ impl TfEvaluator {
         } else {
             Ok(self)
         }
+    }
+
+    pub fn dv01(self) -> Result<f64> {
+        let out = self.with_duration()?.with_dirty_price()?;
+        Ok(out.duration.unwrap() * out.dirty_price.unwrap())
+    }
+
+    pub fn future_dv01(self, ctd: Option<BondYtm>) -> Result<f64> {
+        let bond_ytm = if let Some(ctd) = ctd {
+            ctd
+        } else {
+            self.bond
+        };
+        let evt = TfEvaluator::new_with_reinvest_rate(
+            self.date,
+            self.future,
+            bond_ytm,
+            self.capital_rate,
+            self.reinvest_rate.unwrap_or(0.),
+        ).with_cf()?;
+        let cf = evt.cf.unwrap();
+        let ctd_dv = evt.dv01()?;
+        Ok(ctd_dv / cf)
+    }
+
+    /// dv中性转换因子
+    pub fn neutral_cf(self, ctd: BondYtm) -> Result<f64> {
+        let out = self.with_cf()?;
+        let dv01 = out.clone().dv01()?;
+        let future_dv01 = out.future_dv01(Some(ctd))?;
+        Ok(dv01 / future_dv01)
+    }
+
+    /// 计算dv中性净基差
+    ///
+    /// dv中性净基差= P - CF_Neutral * F - Carry
+    pub fn neutral_net_basis_spread(self, ctd: BondYtm) -> Result<f64> {
+        let out = self.with_clean_price()?.with_carry()?;
+        let neutral_cf = out.clone().neutral_cf(ctd)?;
+        Ok(out.clean_price.unwrap() - neutral_cf * out.future.price - out.carry.unwrap())
     }
 
     /// 计算内部收益率IRR

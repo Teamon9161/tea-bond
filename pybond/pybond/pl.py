@@ -23,6 +23,8 @@ class TfEvaluators:
         bond_ytm: IntoExpr = None,
         capital_rate: IntoExpr = None,
         reinvest_rate=None,
+        ctd_bond: IntoExpr = None,
+        ctd_ytm: IntoExpr = None,
     ):
         """
         Initialize TfEvaluators with default column expressions.
@@ -35,6 +37,8 @@ class TfEvaluators:
             bond_ytm: Bond yield to maturity column expression
             capital_rate: Capital cost rate column expression
             reinvest_rate: Reinvestment rate (optional)
+            ctd_bond: CTD bond code column expression (optional, for neutral_net_basis_spread)
+            ctd_ytm: CTD bond yield to maturity column expression (optional, for neutral_net_basis_spread)
         """
         self.future = parse_into_expr(
             future if future is not None else pl.lit(None).cast(str)
@@ -55,6 +59,12 @@ class TfEvaluators:
             capital_rate if capital_rate is not None else pl.lit(None)
         )
         self.reinvest_rate = reinvest_rate
+        self.ctd_bond = parse_into_expr(
+            ctd_bond if ctd_bond is not None else pl.lit(None).cast(str)
+        )
+        self.ctd_ytm = parse_into_expr(
+            ctd_ytm if ctd_ytm is not None else pl.lit(None)
+        )
 
     def _call_plugin(self, symbol: str):
         """Helper method to call plugin with consistent arguments."""
@@ -289,6 +299,32 @@ class TfEvaluators:
     @property
     def maturity_date(self):
         return self._call_plugin("bonds_maturity_date")
+
+    @property
+    def neutral_net_basis_spread(self):
+        """
+        Calculate DV-neutral net basis spread (DV中性净基差).
+
+        DV-neutral net basis spread = P - CF_Neutral * F - Carry
+
+        Returns:
+            Polars expression for DV-neutral net basis spread
+        """
+        return register_plugin(
+            args=[
+                self.future,
+                self.bond,
+                self.date,
+                self.future_price,
+                self.bond_ytm,
+                self.capital_rate,
+                self.ctd_bond,
+                self.ctd_ytm,
+            ],
+            kwargs={"reinvest_rate": self.reinvest_rate},
+            symbol="evaluators_neutral_net_basis_spread",
+            is_elementwise=False,
+        )
 
 
 class Bonds:

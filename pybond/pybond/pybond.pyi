@@ -408,3 +408,39 @@ class TfEvaluator:
     @property
     def future_ytm(self) -> float:
         """期货隐含收益率, 如果未计算会自动计算后返回"""
+
+    def dv01(self) -> float:
+        """计算DV01"""
+
+    def future_dv01(
+        self, ctd_bond: Bond | str | int | None = None, ctd_ytm: float = float("nan")
+    ) -> float:
+        """
+        计算期货DV01
+
+        Args:
+            ctd_bond: CTD债券代码, 如果为None则使用当前债券
+            ctd_ytm: CTD债券收益率
+        """
+
+    def neutral_cf(self, ctd_bond: Bond | str | int, ctd_ytm: float) -> float:
+        """
+        计算DV中性转换因子
+
+        Args:
+            ctd_bond: CTD债券代码
+            ctd_ytm: CTD债券收益率
+        """
+
+    def neutral_net_basis_spread(
+        self, ctd_bond: Bond | str | int, ctd_ytm: float
+    ) -> float:
+        """
+        计算DV中性净基差
+
+        dv中性净基差 = P - CF_Neutral * F - Carry
+
+        Args:
+            ctd_bond: CTD债券代码
+            ctd_ytm: CTD债券收益率
+        """

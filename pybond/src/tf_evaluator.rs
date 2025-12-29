@@ -583,6 +583,71 @@ impl PyTfEvaluator {
         self.0.cf = Some(cf);
         Ok(())
     }
+
+    /// 计算DV01
+    fn dv01(&self) -> PyResult<f64> {
+        self.0
+            .clone()
+            .dv01()
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
+    #[pyo3(signature = (ctd_bond=None, ctd_ytm=f64::NAN))]
+    /// 计算期货DV01
+    ///
+    /// Args:
+    ///     ctd_bond: CTD债券代码, 如果为None则使用当前债券
+    ///     ctd_ytm: CTD债券收益率
+    fn future_dv01(
+        &self,
+        ctd_bond: Option<&Bound<'_, PyAny>>,
+        ctd_ytm: f64,
+    ) -> PyResult<f64> {
+        let ctd = if let Some(ctd_bond) = ctd_bond {
+            let bond = get_bond(ctd_bond)?;
+            Some(BondYtm::new(bond.0, ctd_ytm))
+        } else {
+            None
+        };
+        self.0
+            .clone()
+            .future_dv01(ctd)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
+    /// 计算DV中性转换因子
+    ///
+    /// Args:
+    ///     ctd_bond: CTD债券代码
+    ///     ctd_ytm: CTD债券收益率
+    fn neutral_cf(&self, ctd_bond: &Bound<'_, PyAny>, ctd_ytm: f64) -> PyResult<f64> {
+        let bond = get_bond(ctd_bond)?;
+        let ctd = BondYtm::new(bond.0, ctd_ytm);
+        self.0
+            .clone()
+            .neutral_cf(ctd)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
+    /// 计算DV中性净基差
+    ///
+    /// dv中性净基差 = P - CF_Neutral * F - Carry
+    ///
+    /// Args:
+    ///     ctd_bond: CTD债券代码
+    ///     ctd_ytm: CTD债券收益率
+    fn neutral_net_basis_spread(
+        &self,
+        ctd_bond: &Bound<'_, PyAny>,
+        ctd_ytm: f64,
+    ) -> PyResult<f64> {
+        let bond = get_bond(ctd_bond)?;
+        let ctd = BondYtm::new(bond.0, ctd_ytm);
+        self.0
+            .clone()
+            .neutral_net_basis_spread(ctd)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
 }
 
 #[cfg(test)]

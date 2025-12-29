@@ -680,3 +680,185 @@ fn calendar_is_business_day(
     };
     Ok(res.into_series())
 }
+
+fn batch_eval_neutral_net_basis_spread_impl(
+    future: &StringChunked,
+    bond: &StringChunked,
+    date: &DateChunked,
+    future_price: &Float64Chunked,
+    bond_ytm: &Float64Chunked,
+    capital_rate: &Float64Chunked,
+    ctd_bond: &StringChunked,
+    ctd_ytm: &Float64Chunked,
+    reinvest_rate: Option<f64>,
+) -> PolarsResult<Vec<Option<f64>>> {
+    let reinvest_rate = Some(reinvest_rate.unwrap_or(0.0));
+    let len_vec = [
+        future_price.len(),
+        bond_ytm.len(),
+        bond.len(),
+        future.len(),
+        date.len(),
+        ctd_bond.len(),
+        ctd_ytm.len(),
+    ];
+    let len = *len_vec.iter().max().unwrap();
+    if *len_vec.iter().min().unwrap() == 0 {
+        return Ok(Default::default());
+    }
+
+    let mut future_iter = future.iter();
+    let mut future_price_iter = future_price.iter();
+    let mut bond_iter = bond.iter();
+    let mut bond_ytm_iter = bond_ytm.iter();
+    let mut capital_rate_iter = capital_rate.iter();
+    let mut date_iter = date.as_date_iter();
+    let mut ctd_bond_iter = ctd_bond.iter();
+    let mut ctd_ytm_iter = ctd_ytm.iter();
+
+    let mut result = Vec::with_capacity(len);
+    let mut future: Arc<Future> = Future::new(future_iter.next().unwrap().unwrap_or("")).into();
+    let mut future_price = future_price_iter.next().unwrap().unwrap_or(f64::NAN);
+    let mut bond =
+        CachedBond::new(bond_iter.next().unwrap().unwrap_or(""), None).unwrap_or_default();
+    let mut bond_ytm = bond_ytm_iter.next().unwrap().unwrap_or(f64::NAN);
+    let mut date = date_iter.next().unwrap().unwrap_or_default();
+    let mut capital_rate = capital_rate_iter.next().unwrap().unwrap_or(f64::NAN);
+    let mut ctd_bond_cached =
+        CachedBond::new(ctd_bond_iter.next().unwrap().unwrap_or(""), None).unwrap_or_default();
+    let mut ctd_ytm_val = ctd_ytm_iter.next().unwrap().unwrap_or(f64::NAN);
+
+    let mut evaluator = TfEvaluator {
+        date,
+        future: (future.clone(), future_price).into(),
+        bond: BondYtm::new(bond.clone(), bond_ytm),
+        capital_rate,
+        reinvest_rate,
+        ..Default::default()
+    };
+
+    if evaluator.future.code.is_empty()
+        || evaluator.bond.code().is_empty()
+        || ctd_bond_cached.code().is_empty()
+    {
+        result.push(None);
+    } else {
+        let ctd = BondYtm::new(ctd_bond_cached.clone(), ctd_ytm_val);
+        let value = evaluator
+            .clone()
+            .neutral_net_basis_spread(ctd)
+            .ok()
+            .filter(|v| !v.is_nan());
+        result.push(value);
+    }
+
+    for _ in 1..len {
+        if let Some(fp) = future_price_iter.next() {
+            future_price = fp.unwrap_or(f64::NAN);
+        };
+        if let Some(by) = bond_ytm_iter.next() {
+            bond_ytm = by.unwrap_or(f64::NAN);
+        };
+        if let Some(cy) = capital_rate_iter.next() {
+            capital_rate = cy.unwrap_or(f64::NAN);
+        };
+        if let Some(dt) = date_iter.next() {
+            date = dt.unwrap_or_default();
+        };
+        if let Some(f) = future_iter.next() {
+            if let Some(f) = f {
+                if future.code != f {
+                    future = Future::new(f).into()
+                }
+            } else {
+                result.push(None);
+                bond_iter.next();
+                ctd_bond_iter.next();
+                ctd_ytm_iter.next();
+                continue;
+            }
+        };
+        if let Some(b) = bond_iter.next() {
+            if let Some(b) = b {
+                if b != bond.code() && bond.bond_code != b {
+                    bond = CachedBond::new(b, None).unwrap_or_default();
+                }
+            } else {
+                result.push(None);
+                ctd_bond_iter.next();
+                ctd_ytm_iter.next();
+                continue;
+            }
+        };
+        if let Some(ctd_b) = ctd_bond_iter.next() {
+            if let Some(ctd_b) = ctd_b {
+                if ctd_b != ctd_bond_cached.code() && ctd_bond_cached.bond_code != ctd_b {
+                    ctd_bond_cached = CachedBond::new(ctd_b, None).unwrap_or_default();
+                }
+            } else {
+                result.push(None);
+                ctd_ytm_iter.next();
+                continue;
+            }
+        };
+        if let Some(cy) = ctd_ytm_iter.next() {
+            ctd_ytm_val = cy.unwrap_or(f64::NAN);
+        };
+
+        evaluator = evaluator.update_with_new_info(
+            date,
+            (future.clone(), future_price),
+            (bond.clone(), bond_ytm),
+            capital_rate,
+            reinvest_rate,
+        );
+
+        if evaluator.future.code.is_empty()
+            || evaluator.bond.code().is_empty()
+            || ctd_bond_cached.code().is_empty()
+        {
+            result.push(None);
+            continue;
+        }
+
+        let ctd = BondYtm::new(ctd_bond_cached.clone(), ctd_ytm_val);
+        let value = evaluator
+            .clone()
+            .neutral_net_basis_spread(ctd)
+            .ok()
+            .filter(|v| !v.is_nan());
+        result.push(value);
+    }
+    Ok(result)
+}
+
+#[polars_expr(output_type=Float64)]
+fn evaluators_neutral_net_basis_spread(
+    inputs: &[Series],
+    kwargs: EvaluatorBatchParams,
+) -> PolarsResult<Series> {
+    let (future, bond, date, future_price, bond_ytm, capital_rate, ctd_bond, ctd_ytm) = (
+        &inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4], &inputs[5], &inputs[6],
+        &inputs[7],
+    );
+    let (future_price, bond_ytm, capital_rate, ctd_ytm) =
+        auto_cast!(Float64(future_price, bond_ytm, capital_rate, ctd_ytm));
+    let date = auto_cast!(Date(date));
+    let bond = auto_cast!(String(bond));
+    let ctd_bond = auto_cast!(String(ctd_bond));
+
+    let result: Float64Chunked = batch_eval_neutral_net_basis_spread_impl(
+        future.str()?,
+        bond.str()?,
+        date.date()?,
+        future_price.f64()?,
+        bond_ytm.f64()?,
+        capital_rate.f64()?,
+        ctd_bond.str()?,
+        ctd_ytm.f64()?,
+        kwargs.reinvest_rate,
+    )?
+    .into_iter()
+    .collect_trusted();
+    Ok(result.into_series())
+}

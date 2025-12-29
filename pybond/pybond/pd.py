@@ -32,6 +32,8 @@ class TfEvaluators:
         bond_ytm: pd.Series | None = None,
         capital_rate: float | pd.Series | None = None,
         reinvest_rate: float | None = None,
+        ctd_bond: str | pd.Series | None = None,
+        ctd_ytm: pd.Series | None = None,
     ):
         """
         Initialize TfEvaluators with market data.
@@ -44,6 +46,8 @@ class TfEvaluators:
             bond_ytm: Bond yield to maturity
             capital_rate: Capital cost rate for carry calculations
             reinvest_rate: Reinvestment rate for coupon payments (optional)
+            ctd_bond: CTD bond code(s) (optional, for neutral_net_basis_spread)
+            ctd_ytm: CTD bond yield to maturity (optional, for neutral_net_basis_spread)
         """
         self.pl_df = pl.DataFrame(
             {
@@ -53,6 +57,8 @@ class TfEvaluators:
                 "future_price": future_price,
                 "bond_ytm": bond_ytm,
                 "capital_rate": capital_rate,
+                "ctd_bond": ctd_bond,
+                "ctd_ytm": ctd_ytm,
             }
         )
         self._evaluators = PlTfEvaluators(
@@ -60,6 +66,8 @@ class TfEvaluators:
             bond_ytm="bond_ytm",
             capital_rate="capital_rate",
             reinvest_rate=reinvest_rate,
+            ctd_bond="ctd_bond",
+            ctd_ytm="ctd_ytm",
         )
 
     @property
@@ -296,6 +304,20 @@ class TfEvaluators:
         return self.pl_df.select(remain_year=self._evaluators.remain_year)[
             "remain_year"
         ].to_pandas()
+
+    @property
+    def neutral_net_basis_spread(self):
+        """
+        Calculate DV-neutral net basis spread (DV中性净基差).
+
+        DV-neutral net basis spread = P - CF_Neutral * F - Carry
+
+        Returns:
+            pd.Series: DV-neutral net basis spread values
+        """
+        return self.pl_df.select(
+            neutral_net_basis_spread=self._evaluators.neutral_net_basis_spread
+        )["neutral_net_basis_spread"].to_pandas()
 
 
 class Bonds:
