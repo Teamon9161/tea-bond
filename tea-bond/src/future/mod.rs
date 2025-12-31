@@ -119,6 +119,29 @@ impl Future {
         // Ok(last_trading_date + Duration::days(4))
     }
 
+    /// 获取期货合约的首个交易日
+    ///
+    /// 对于首批上市合约,返回该品种的上市日期;
+    /// 对于后续合约,返回前3季度合约最后交易日的下一个交易日
+    pub fn first_trading_date(&self) -> Result<NaiveDate> {
+        let typ = self.future_type()?;
+        let offset = quarters_since_first(self, typ)?;
+        if offset < 3 {
+            Ok(typ.listing_start_date())
+        } else {
+            let prev = self.shift_by_quarter(-9)?;
+            Ok(CFFEX.find_workday(prev.last_trading_date()?, 1))
+        }
+    }
+
+    /// 获取期货合约的交易区间
+    ///
+    /// 返回 (首个交易日, 最后交易日)
+    #[inline]
+    pub fn trading_window(&self) -> Result<(NaiveDate, NaiveDate)> {
+        Ok((self.first_trading_date()?, self.last_trading_date()?))
+    }
+
     /// 获取指定时间段内该类型期货的所有交易合约
     ///
     /// 每个合约的交易区间为「上一个(前3个季度)合约最后交易日的下一个交易日」到「本合约最后交易日」。
@@ -172,19 +195,6 @@ impl Future {
     }
 }
 
-#[inline]
-fn trading_window(future: &Future, typ: FutureType) -> Result<(NaiveDate, NaiveDate)> {
-    let offset = quarters_since_first(future, typ)?;
-    let end = future.last_trading_date()?;
-    let start = if offset < 3 {
-        typ.listing_start_date()
-    } else {
-        let prev = future.shift_by_quarter(-9)?;
-        CFFEX.find_workday(prev.last_trading_date()?, 1)
-    };
-    Ok((start, end))
-}
-
 fn trading_futures_by_type(
     typ: FutureType,
     start: NaiveDate,
@@ -203,7 +213,7 @@ fn trading_futures_by_type(
     }
 
     loop {
-        let (s, _) = trading_window(&future, typ)?;
+        let (s, _) = future.trading_window()?;
         if s <= start || quarters_since_first(&future, typ)? == 0 {
             break;
         }
@@ -211,7 +221,7 @@ fn trading_futures_by_type(
     }
 
     loop {
-        let (s, e) = trading_window(&future, typ)?;
+        let (s, e) = future.trading_window()?;
         if s > end {
             break;
         }
@@ -339,6 +349,28 @@ mod tests {
     fn tl_quarterly_contract() {
         let f = Future::new("TL2506");
         assert_eq!(f.next_future().unwrap().code.as_str(), "TL2509");
+    }
+
+    #[test]
+    fn first_trading_date() {
+        // 首批合约返回上市日期
+        let f = Future::new("T1509");
+        assert_eq!(
+            f.first_trading_date().unwrap(),
+            NaiveDate::from_ymd_opt(2015, 3, 20).unwrap()
+        );
+        let f = Future::new("TF1312");
+        assert_eq!(
+            f.first_trading_date().unwrap(),
+            NaiveDate::from_ymd_opt(2013, 9, 6).unwrap()
+        );
+        // 后续合约返回前9个月合约最后交易日的下一个交易日
+        // T2509的前9个月合约是T2412, 其最后交易日是2024-12-13(周五), 下一交易日是2024-12-16(周一)
+        let f = Future::new("T2509");
+        assert_eq!(
+            f.first_trading_date().unwrap(),
+            NaiveDate::from_ymd_opt(2024, 12, 16).unwrap()
+        );
     }
 
     #[test]

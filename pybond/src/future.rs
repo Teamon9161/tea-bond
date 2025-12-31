@@ -113,6 +113,25 @@ impl PyFuture {
             .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
+    /// 获取期货合约的首个交易日
+    ///
+    /// 对于首批上市合约,返回该品种的上市日期;
+    /// 对于后续合约,返回前3季度合约最后交易日的下一个交易日
+    fn first_trading_date(&self) -> PyResult<NaiveDate> {
+        self.0
+            .first_trading_date()
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
+    /// 获取期货合约的交易区间
+    ///
+    /// 返回 (首个交易日, 最后交易日)
+    fn trading_window(&self) -> PyResult<(NaiveDate, NaiveDate)> {
+        self.0
+            .trading_window()
+            .map_err(|e| PyValueError::new_err(e.to_string()))
+    }
+
     fn code(&self) -> String {
         self.0.code.to_string()
     }
