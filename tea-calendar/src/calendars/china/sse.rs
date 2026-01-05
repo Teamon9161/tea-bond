@@ -32,7 +32,7 @@ impl Calendar for SSE {
                     || (y == 2021 && d == 1 && m == 1)
                     || (y == 2022 && d == 3 && m == 1)
                     || (y == 2023 && d == 2 && m == 1)
-                    || (y == 2026 && d <= 3 && m == 1)
+                    || (y == 2026 && d <= 2 && m == 1)
 
                     // Chinese New Year
                     || (y == 2004 && (19..=28).contains(&d) && m == 1)
@@ -59,7 +59,7 @@ impl Calendar for SSE {
                     || (y == 2023 && (23..=27).contains(&d) && m == 1)
                     || (y == 2024 && (d == 9 || (12..=16).contains(&d)) && m == 2)
                     || (y == 2025 && (((28..=31).contains(&d) && m == 1) || ((3..=4).contains(&d) && m == 2)))
-                    || (y == 2026 && (16..=23).contains(&d) && m == 2)
+                    || (y == 2026 && ((16..=20).contains(&d) || (d == 23)) && m == 2)
 
                     // Ching Ming Festival
                     || (y <= 2008 && d == 4 && m == 4)
