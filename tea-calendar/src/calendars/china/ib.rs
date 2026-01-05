@@ -165,6 +165,13 @@ pub const WORKING_WEEKENDS: &[NaiveDate] = &[
     date!(2025, 4, 27),
     date!(2025, 9, 28),
     date!(2025, 10, 11),
+    // 2026年
+    date!(2026, 1, 4),
+    date!(2026, 2, 14),
+    date!(2026, 2, 28),
+    date!(2026, 5, 9),
+    date!(2026, 9, 20),
+    date!(2026, 10, 10),
 ];
 
 impl Calendar for IB {
