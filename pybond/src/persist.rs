@@ -34,7 +34,15 @@ pub fn update_info_from_wind_sql_df(df: PyDataFrame) -> PyResult<()> {
     let df = df.0;
     let height = df.height();
 
-    let col = |name: &str| -> &Column { df.column(name).unwrap() };
+    let col = |name: &str| -> &Column {
+        if let Ok(c) = df.column(name) {
+            c
+        } else if let Ok(c) = df.column(&name.to_uppercase()) {
+            c
+        } else {
+            panic!("column {} not found in update info", name)
+        }
+    };
 
     // 自动类型对齐
     let s_windcode = auto_cast!(String(col("s_info_windcode")));
@@ -49,7 +57,6 @@ pub fn update_info_from_wind_sql_df(df: PyDataFrame) -> PyResult<()> {
     let b_maturitydate = auto_cast!(String(col("b_info_maturitydate")));
     let b_referyield = auto_cast!(Float64(col("b_tendrst_referyield")));
     let b_issueprice = auto_cast!(Float64(col("b_info_issueprice")));
-
     let iter = izip!(
         s_windcode.str().unwrap(),
         s_name.str().unwrap(),
@@ -93,10 +100,30 @@ pub fn update_info_from_wind_sql_df(df: PyDataFrame) -> PyResult<()> {
         let coupon = coupon.unwrap_or(505001000);
 
         let carry_date = carry_date
-            .map(|d| NaiveDate::parse_from_str(d, "%Y%m%d").unwrap())
+            .map(|d| {
+                if d.is_empty() {
+                    None
+                } else {
+                    Some(
+                        NaiveDate::parse_from_str(d, "%Y%m%d")
+                            .expect(&format!("Can not parse carry date: {d:?}")),
+                    )
+                }
+            })
+            .flatten()
             .unwrap_or_default();
         let maturity_date = maturity_date
-            .map(|d| NaiveDate::parse_from_str(d, "%Y%m%d").unwrap())
+            .map(|d| {
+                if d.is_empty() {
+                    None
+                } else {
+                    Some(
+                        NaiveDate::parse_from_str(d, "%Y%m%d")
+                            .expect(&format!("Can not parse maturity date: {d:?}")),
+                    )
+                }
+            })
+            .flatten()
             .unwrap_or_default();
 
         let row = WindSqlRow {

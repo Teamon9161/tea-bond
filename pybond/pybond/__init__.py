@@ -8,10 +8,17 @@ __version__ = get_version()
 
 
 def update_info(df):
-    if type(df).__module__.split(".")[0] == "pandas":
-        import polars as pl
+    import polars as pl
 
+    if type(df).__module__.split(".")[0] == "pandas":
         df = pl.from_pandas(df)
+    df.columns = [x.lower() for x in df.columns]
+    schema = df.schema
+    if schema.get("b_info_carrydate") != pl.String:
+        df = df.with_columns(pl.col("b_info_carrydate").dt.strftime("%Y%m%d"))
+    if schema.get("b_info_maturitydate") != pl.String:
+        df = df.with_columns(pl.col("b_info_maturitydate").dt.strftime("%Y%m%d"))
+
     return update_info_from_wind_sql_df(df)
 
 
