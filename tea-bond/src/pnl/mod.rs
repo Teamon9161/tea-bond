@@ -6,14 +6,14 @@ use std::path::PathBuf;
 pub use trade_from_signal::{TradeFromPosOpt, trading_from_pos};
 
 use crate::CachedBond;
-use chrono::{Days, NaiveDate};
+use chrono::NaiveDate;
 
 use anyhow::{Result, anyhow};
+use itertools::Either;
 use itertools::izip;
 use serde::Deserialize;
 use tea_calendar::Calendar;
 use tevec::prelude::{EPS, IsNone, Number, Vec1, Vec1View};
-pub const EPOCH: NaiveDate = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
 
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
 pub struct PnlReport {
@@ -26,6 +26,10 @@ pub struct PnlReport {
     pub coupon_paid: f64,
     pub amt: f64,
     pub fee: f64,
+    #[serde(default)]
+    pub avg_capital_rate: f64, // 平均资金成本
+    #[serde(default)]
+    pub capital: f64, // 累计资金
 }
 
 #[derive(Deserialize)]
@@ -34,6 +38,8 @@ pub struct BondTradePnlOpt {
     pub multiplier: f64,
     pub fee: Fee,
     pub begin_state: PnlReport,
+    #[serde(default)]
+    pub is_trs: Option<bool>,
 }
 
 pub fn calc_bond_trade_pnl<T, V, VT>(
@@ -42,23 +48,26 @@ pub fn calc_bond_trade_pnl<T, V, VT>(
     qty_vec: &V,
     clean_price_vec: &V,
     clean_close_vec: &V,
+    capital_rate_vec: Option<&V>,
     opt: &BondTradePnlOpt,
 ) -> Result<Vec<PnlReport>>
 where
     T: IsNone,
     T::Inner: Number,
     V: Vec1View<T>,
-    VT: Vec1View<Option<i32>>,
+    VT: Vec1View<Option<NaiveDate>>,
 {
     if qty_vec.is_empty() {
         return Ok(Vec::empty());
     }
     let multiplier = opt.multiplier;
+    let is_trs = opt.is_trs.unwrap_or(false);
     let mut state = opt.begin_state;
     let mut last_settle_time = None;
-    let mut last_cp_date = EPOCH;
+    let mut last_cp_date = Default::default();
     let mut accrued_interest = 0.;
     let mut next_day_coupon: f64 = 0.;
+    let mut duration_days = 0.; // 用于统计不同天的交易记录中间的天数间隔
     let symbol = if let Some(bond) = symbol {
         if bond.is_empty() {
             None
@@ -69,96 +78,143 @@ where
         None
     };
     let coupon_paid = symbol.as_ref().map(|bond| bond.get_coupon()).unwrap_or(0.);
+    let capital_rate_vec = match capital_rate_vec {
+        Some(v) => Either::Left(
+            v.titer()
+                .map(|v| if v.is_none() { 0. } else { v.unwrap().f64() }),
+        ),
+        None => Either::Right(std::iter::repeat(0.)),
+    };
     izip!(
         settle_time_vec.titer(),
         qty_vec.titer(),
         clean_price_vec.titer(),
         clean_close_vec.titer(),
+        capital_rate_vec
     )
-    .map(|(settle_time, qty, clean_price, clean_close)| {
-        let qty = if qty.is_none() {
-            0.
-        } else {
-            qty.unwrap().f64()
-        };
+    .map(
+        |(settle_time, qty, clean_price, clean_close, capital_rate)| {
+            let qty = if qty.is_none() {
+                0.
+            } else {
+                qty.unwrap().f64()
+            };
 
-        let (trade_price, close): (Option<f64>, Option<f64>) = if let Some(bond) = &symbol {
-            if !bond.is_zero_coupon() {
-                let settle_time = EPOCH
-                    .checked_add_days(Days::new(settle_time.ok_or_else(|| {
+            let (trade_price, close): (Option<f64>, Option<f64>) = if let Some(bond) = &symbol {
+                if !bond.is_zero_coupon() {
+                    let settle_time = settle_time.ok_or_else(|| {
                         anyhow!("Settle time should not be none when calc bond trade pnl")
-                    })? as u64))
-                    .unwrap();
-                if last_settle_time != Some(settle_time) {
-                    if next_day_coupon != 0. {
-                        state.coupon_paid += next_day_coupon;
-                        next_day_coupon = 0.;
+                    })?;
+                    // === 新的一天重新计算持仓的相关信息
+                    if last_settle_time != Some(settle_time) {
+                        // 计算中间持仓的资金
+                        duration_days = last_settle_time
+                            .map(|t| settle_time.signed_duration_since(t).num_days() as f64)
+                            .unwrap_or(0.);
+                        // if state.avg_capital_rate != 0. {
+                        //     println!(
+                        //         "bond:{}, last_settle_time: {:?}, settle_time: {:?}, duration_days: {}, state.avg_capital_rate: {}, state.pos: {}",
+                        //         bond.code(), last_settle_time, settle_time, duration_days, state.avg_capital_rate, state.pos)
+                        // }
+                        state.capital -= duration_days
+                            * state.avg_capital_rate
+                            * state.pos
+                            * bond.par_value
+                            * multiplier
+                            / 365.;
+                        if next_day_coupon != 0. {
+                            state.coupon_paid += next_day_coupon;
+                            next_day_coupon = 0.;
+                        }
+                        // 新的一天重新计算相关信息
+                        let cp_dates = bond.get_nearest_cp_date(settle_time)?;
+                        accrued_interest =
+                            bond.calc_accrued_interest(settle_time, Some(cp_dates))?;
+                        last_cp_date = bond.mkt.find_workday(cp_dates.0, 0);
+                        // 当天初始仓位会产生的票息
+                        if settle_time == last_cp_date {
+                            // 调节应计利息
+                            accrued_interest = coupon_paid;
+                            next_day_coupon += coupon_paid * multiplier * state.pos;
+                        }
+                        last_settle_time = Some(settle_time);
                     }
-                    // 新的一天重新计算相关信息
-                    let cp_dates = bond.get_nearest_cp_date(settle_time)?;
-                    accrued_interest = bond.calc_accrued_interest(settle_time, Some(cp_dates))?;
-                    last_cp_date = bond.mkt.find_workday(cp_dates.0, 0);
-                    // 当天初始仓位会产生的票息
-                    if settle_time == last_cp_date {
-                        // 调节应计利息
-                        accrued_interest = coupon_paid;
-                        next_day_coupon += coupon_paid * multiplier * state.pos;
+                    // === 交易当天付息调整
+                    if (settle_time == last_cp_date) & (qty != 0.) {
+                        next_day_coupon += coupon_paid * multiplier * qty;
                     }
-                    last_settle_time = Some(settle_time);
                 }
-                // 交易当天会产生付息
-                if (settle_time == last_cp_date) & (qty != 0.) {
-                    next_day_coupon += coupon_paid * multiplier * qty;
-                }
-            }
-            (
-                clean_price.map(|v| v.f64() + accrued_interest),
-                clean_close.map(|v| v.f64() + accrued_interest),
-            )
-        } else {
-            (clean_price.map(|v| v.f64()), clean_close.map(|v| v.f64()))
-        };
-        if qty != 0. {
-            let trade_price = trade_price
-                .ok_or_else(|| anyhow!("Trade price should not be none"))?
-                .f64();
-            let prev_pos = state.pos;
-            let trade_amt = qty * trade_price * multiplier; // with sign
-            state.pos += qty;
-            state.amt += trade_amt;
-            state.fee += opt.fee.amount(qty, trade_amt, 1); // Fee model will take into account the sign of the trade amount and quantity.
-            if prev_pos.abs() > EPS {
-                if qty.signum() != prev_pos.signum() {
-                    // 减仓
-                    let qty_chg = qty.abs().min(prev_pos.abs()) * prev_pos.signum();
-                    state.realized_pnl += (trade_price - state.pos_price) * multiplier * qty_chg;
-                    if qty.abs() > prev_pos.abs() {
-                        // 反向开仓
-                        state.pos_price = trade_price;
+                (
+                    clean_price.map(|v| v.f64() + accrued_interest),
+                    clean_close.map(|v| v.f64() + accrued_interest),
+                )
+            } else {
+                (clean_price.map(|v| v.f64()), clean_close.map(|v| v.f64()))
+            };
+            if qty != 0. {
+                let trade_price = trade_price
+                    .ok_or_else(|| anyhow!("Trade price should not be none"))?
+                    .f64();
+                let prev_pos = state.pos;
+                let trade_amt = qty * trade_price * multiplier; // with sign
+                state.pos += qty;
+                state.amt += trade_amt;
+                state.fee += opt.fee.amount(qty, trade_amt, 1); // Fee model will take into account the sign of the trade amount and quantity.
+                if prev_pos.abs() > EPS {
+                    if qty.signum() != prev_pos.signum() {
+                        // 减仓
+                        let qty_chg = qty.abs().min(prev_pos.abs()) * prev_pos.signum();
+                        state.realized_pnl +=
+                            (trade_price - state.pos_price) * multiplier * qty_chg;
+                        if qty.abs() > prev_pos.abs() {
+                            // 反向开仓
+                            state.pos_price = trade_price;
+                            state.avg_capital_rate = capital_rate;
+                        } else {
+                            if is_trs && capital_rate != 0. {
+                                state.avg_capital_rate = if state.pos.abs() < EPS {
+                                    0.
+                                } else {
+                                    (state.avg_capital_rate * prev_pos.abs()
+                                        - capital_rate.abs() * qty.abs())
+                                        / state.pos.abs()
+                                };
+                            }
+                        }
+                    } else {
+                        // 加仓
+                        state.pos_price = (state.pos_price * prev_pos.abs()
+                            + qty.abs() * trade_price)
+                            / state.pos.abs();
+                        state.avg_price = state.amt / (state.pos * multiplier);
+                        if capital_rate > 0. {
+                            state.avg_capital_rate = (state.avg_capital_rate * prev_pos.abs()
+                                + capital_rate.abs() * qty.abs())
+                                / state.pos.abs();
+                        }
+                    }
+                    if state.pos.abs() <= EPS {
+                        state.avg_price = 0.;
+                        state.pos_price = 0.;
+                        state.avg_capital_rate = 0.;
                     }
                 } else {
-                    state.pos_price = (state.pos_price * prev_pos.abs() + qty.abs() * trade_price)
-                        / state.pos.abs();
-                    state.avg_price = state.amt / (state.pos * multiplier)
+                    // 之前仓位是0
+                    state.avg_price = trade_price;
+                    state.pos_price = state.avg_price;
+                    state.avg_capital_rate = capital_rate;
                 }
-                if state.pos.abs() <= EPS {
-                    state.avg_price = 0.;
-                    state.pos_price = 0.;
-                    // state.amt = 0.;
-                }
-            } else {
-                // 之前仓位是0
-                state.avg_price = trade_price;
-                state.pos_price = state.avg_price;
             }
-        }
-        if let Some(close) = close {
-            let close = close.f64();
-            state.pnl = state.pos * close * multiplier + state.coupon_paid - state.amt - state.fee;
-            state.unrealized_pnl = state.pos * (close - state.pos_price) * multiplier;
-        }
-        // println!("PNL Report: {:?}", state);
-        Ok(state)
-    })
+            if let Some(close) = close {
+                let close = close.f64();
+                state.pnl =
+                    state.pos * close * multiplier + state.coupon_paid - state.amt - state.fee
+                        + state.capital;
+                state.unrealized_pnl = state.pos * (close - state.pos_price) * multiplier;
+            }
+            // println!("PNL Report: {:?}", state);
+            Ok(state)
+        },
+    )
     .collect()
 }

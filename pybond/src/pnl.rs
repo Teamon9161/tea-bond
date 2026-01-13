@@ -66,13 +66,21 @@ pub fn pnl_report_vec_to_series(reports: &[PnlReport]) -> Series {
         .iter()
         .map(|t| t.fee.to_opt())
         .collect_trusted_vec1();
+    let capital: Float64Chunked = reports
+        .iter()
+        .map(|t| t.capital.to_opt())
+        .collect_trusted_vec1();
+    let avg_capital_rate: Float64Chunked = reports
+        .iter()
+        .map(|t| t.avg_capital_rate.to_opt())
+        .collect_trusted_vec1();
     let res: StructChunked = StructChunked::from_series(
         "pnl_report".into(),
         pos.len(),
         [
             pos.into_series().with_name("pos".into()),
-            avg_price.into_series().with_name("avg_price".into()),
             pnl.into_series().with_name("pnl".into()),
+            avg_price.into_series().with_name("avg_price".into()),
             realized_pnl.into_series().with_name("realized_pnl".into()),
             pos_price.into_series().with_name("pos_price".into()),
             unrealized_pnl
@@ -81,6 +89,10 @@ pub fn pnl_report_vec_to_series(reports: &[PnlReport]) -> Series {
             coupon_paid.into_series().with_name("coupon_paid".into()),
             amt.into_series().with_name("amt".into()),
             fee.into_series().with_name("fee".into()),
+            capital.into_series().with_name("capital".into()),
+            avg_capital_rate
+                .into_series()
+                .with_name("avg_capital_rate".into()),
         ]
         .iter(),
     )
@@ -91,14 +103,16 @@ pub fn pnl_report_vec_to_series(reports: &[PnlReport]) -> Series {
 fn get_pnl_output_type(_input_fields: &[Field]) -> PolarsResult<Field> {
     let dtype = DataType::Struct(vec![
         Field::new("pos".into(), DataType::Float64),
-        Field::new("avg_price".into(), DataType::Float64),
         Field::new("pnl".into(), DataType::Float64),
+        Field::new("avg_price".into(), DataType::Float64),
         Field::new("realized_pnl".into(), DataType::Float64),
         Field::new("pos_price".into(), DataType::Float64),
         Field::new("unrealized_pnl".into(), DataType::Float64),
         Field::new("coupon_paid".into(), DataType::Float64),
         Field::new("amt".into(), DataType::Float64),
         Field::new("fee".into(), DataType::Float64),
+        Field::new("capital".into(), DataType::Float64),
+        Field::new("avg_capital_rate".into(), DataType::Float64),
     ]);
     Ok(Field::new("pnl_report".into(), dtype))
 }
@@ -106,6 +120,8 @@ fn get_pnl_output_type(_input_fields: &[Field]) -> PolarsResult<Field> {
 #[derive(Deserialize)]
 pub struct PyBondTradePnlOpt {
     pub bond_info_path: Option<PathBuf>,
+    #[serde(default)]
+    pub is_trs: Option<bool>,
 }
 
 impl PyBondTradePnlOpt {
@@ -115,43 +131,46 @@ impl PyBondTradePnlOpt {
             multiplier,
             fee,
             begin_state,
+            is_trs: self.is_trs,
         }
     }
 }
 
 #[polars_expr(output_type_func=get_pnl_output_type)]
 fn calc_bond_trade_pnl(inputs: &[Series], kwargs: PyBondTradePnlOpt) -> PolarsResult<Series> {
-    let (symbol, time, qty, clean_price, clean_close, state, multiplier, fee) = if inputs.len() == 8
-    {
-        (
-            &inputs[0],
-            inputs[1].clone(),
-            inputs[2].clone(),
-            inputs[3].clone(),
-            &inputs[4],
-            &inputs[5],
-            &inputs[6],
-            &inputs[7],
-        )
-    } else {
-        assert_eq!(inputs.len(), 6);
-        let (symbol, trade, clean_close, state, multiplier, fee) = (
-            &inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4], &inputs[5],
-        );
-        let time = trade.struct_()?.field_by_name("time")?;
-        let qty = trade.struct_()?.field_by_name("qty")?;
-        let clean_price = trade.struct_()?.field_by_name("price")?;
-        (
-            symbol,
-            time,
-            qty,
-            clean_price,
-            clean_close,
-            state,
-            multiplier,
-            fee,
-        )
-    };
+    let (symbol, time, qty, clean_price, clean_close, state, multiplier, fee, capital_rate) =
+        if inputs.len() == 9 {
+            (
+                &inputs[0],
+                inputs[1].clone(),
+                inputs[2].clone(),
+                inputs[3].clone(),
+                &inputs[4],
+                &inputs[5],
+                &inputs[6],
+                &inputs[7],
+                &inputs[8],
+            )
+        } else {
+            assert_eq!(inputs.len(), 7);
+            let (symbol, trade, clean_close, state, multiplier, fee, capital_rate) = (
+                &inputs[0], &inputs[1], &inputs[2], &inputs[3], &inputs[4], &inputs[5], &inputs[6],
+            );
+            let time = trade.struct_()?.field_by_name("time")?;
+            let qty = trade.struct_()?.field_by_name("qty")?;
+            let clean_price = trade.struct_()?.field_by_name("price")?;
+            (
+                symbol,
+                time,
+                qty,
+                clean_price,
+                clean_close,
+                state,
+                multiplier,
+                fee,
+                capital_rate,
+            )
+        };
     let (symbol, fee) = auto_cast!(String(symbol, fee));
     let symbol = if let Some(s) = symbol.str()?.iter().next() {
         s
@@ -165,14 +184,14 @@ fn calc_bond_trade_pnl(inputs: &[Series], kwargs: PyBondTradePnlOpt) -> PolarsRe
         .flatten()
         .map(|f| serde_json::from_str(f).unwrap())
         .unwrap_or_default();
-    let (qty, clean_price, clean_close, multiplier) =
-        auto_cast!(Float64(&qty, &clean_price, clean_close, multiplier));
-    let multiplier = if let Some(m) = multiplier.f64()?.iter().next() {
-        m
-    } else {
-        None
-    }
-    .unwrap_or(1.);
+    let (qty, clean_price, clean_close, multiplier, capital_rate) = auto_cast!(Float64(
+        &qty,
+        &clean_price,
+        clean_close,
+        multiplier,
+        capital_rate
+    ));
+    let multiplier = multiplier.f64()?.iter().next().flatten().unwrap_or(1.);
     let time = match time.dtype() {
         DataType::Date => time.clone(),
         _ => time.cast(&DataType::Date)?,
@@ -233,13 +252,43 @@ fn calc_bond_trade_pnl(inputs: &[Series], kwargs: PyBondTradePnlOpt) -> PolarsRe
             .f64()?
             .first()
             .unwrap_or(0.),
+        // added in 0.4.15 version, should be optional
+        avg_capital_rate: if let Ok(s) = state.field_by_name("avg_capital_rate") {
+            s.cast(&DataType::Float64)?.f64()?.first().unwrap_or(0.)
+        } else {
+            0.
+        },
+        // added in 0.4.15 version, should be optional
+        capital: if let Ok(s) = state.field_by_name("capital") {
+            s.cast(&DataType::Float64)?.f64()?.first().unwrap_or(0.)
+        } else {
+            0.
+        },
+    };
+    let len = qty.len();
+    let capital_rate: Option<std::borrow::Cow<Float64Chunked>> = if capital_rate.len() == 1 {
+        let cr = capital_rate.f64()?.first();
+        if let Some(cr) = cr {
+            if cr.is_nan() || cr == 0. {
+                None
+            } else {
+                Some(std::borrow::Cow::Owned(
+                    std::iter::repeat_n(Some(cr), len).collect(),
+                ))
+            }
+        } else {
+            None
+        }
+    } else {
+        Some(std::borrow::Cow::Borrowed(capital_rate.f64()?))
     };
     let profit_vec = pnl::calc_bond_trade_pnl(
         symbol,
-        time.date()?.physical(),
+        &time.date()?,
         qty.f64()?,
         clean_price.f64()?,
         clean_close.f64()?,
+        capital_rate.as_deref(),
         &kwargs.into_rs_opt(begin_state, multiplier, fee),
     )
     .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;

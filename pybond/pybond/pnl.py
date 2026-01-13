@@ -135,8 +135,11 @@ def calc_bond_trade_pnl(
     clean_close: IntoExpr = "close",
     bond_info_path: str | None = None,
     multiplier: IntoExpr | None = None,
+    capital_rate: IntoExpr | None = None,
     fee: IntoExpr | Fee | None = None,
     begin_state: IntoExpr | None = None,
+    *,
+    is_trs: bool = False,
 ) -> pl.Expr:
     """
     计算债券交易pnl
@@ -148,12 +151,14 @@ def calc_bond_trade_pnl(
     clean_close: 当前时间段的最新价格(净价)
     bond_info_path: 可以指定债券信息的存放⽂件夹, 不传⼊则使⽤默认路径.
     multiplier: 合约乘数, 例如对于债券, 1000的成交对应1000w, 合约乘数应为100, 默认为1
+    capital_rate: 资金成本, 例如0.016
     fee: 交易费⽤
     费⽤设置说明:
         TradeFee: 每笔成交⽀付的费⽤
         QtyFee: 每⼿需要⽀付的费⽤
         PercentFee: 按照成交⾦额百分⽐⽀付的费⽤
         费⽤⽀持相加, 例如 QtyFee(120) + TradeFee(20)
+    is_trs: 是否是TRS交易, TRS交易平仓时可以指定资金成本, 否则以加权平均计算
     """
     assert clean_close is not None
     if fee is None:
@@ -163,6 +168,7 @@ def calc_bond_trade_pnl(
     settle_time = parse_into_expr(settle_time)
     clean_close = parse_into_expr(clean_close)
     multiplier = parse_into_expr(multiplier)
+    capital_rate = parse_into_expr(capital_rate)
     if begin_state is not None and not isinstance(begin_state, dict):
         begin_state = parse_into_expr(begin_state)
     if bond_info_path is None:
@@ -182,12 +188,22 @@ def calc_bond_trade_pnl(
                 "coupon_paid": 0,
                 "amt": 0,
                 "fee": 0,
+                "avg_capital_rate": 0,
+                "capital": 0,
             }
         )
-    kwargs = {"bond_info_path": bond_info_path}
+    kwargs = {"bond_info_path": bond_info_path, "is_trs": is_trs}
     if all(x is None for x in [qty, clean_price]):
         # struct settle_time, contains trade info
-        args = [symbol, settle_time, clean_close, begin_state, multiplier, fee]
+        args = [
+            symbol,
+            settle_time,
+            clean_close,
+            begin_state,
+            multiplier,
+            fee,
+            capital_rate,
+        ]
     else:
         qty = parse_into_expr(qty)
         clean_price = parse_into_expr(clean_price)
@@ -200,6 +216,7 @@ def calc_bond_trade_pnl(
             begin_state,
             multiplier,
             fee,
+            capital_rate,
         ]
     return register_plugin(
         args=args,
@@ -215,8 +232,11 @@ def calc_trade_pnl(
     price: IntoExpr | None = None,
     close: IntoExpr = "close",
     multiplier: IntoExpr | None = None,
+    capital_rate: IntoExpr | None = None,
     fee: IntoExpr | Fee | None = None,
     begin_state: IntoExpr | None = None,
+    *,
+    is_trs: bool = False,
 ):
     """
     计算交易pnl
@@ -227,12 +247,14 @@ def calc_trade_pnl(
     clean_price: 成交的净价
     clean_close: 当前时间段的最新价格(净价)
     multiplier: 合约乘数, 例如对于债券, 1000的成交对应1000w, 合约乘数应为100, 默认为1
+    capital_rate: 资金成本, 例如0.016
     fee: 交易费⽤
     费⽤设置说明:
         TradeFee: 每笔成交⽀付的费⽤
         QtyFee: 每⼿需要⽀付的费⽤
         PercentFee: 按照成交⾦额百分⽐⽀付的费⽤
         费⽤⽀持相加, 例如 QtyFee(120) + TradeFee(20)
+    is_trs: 是否是TRS交易
     """
     return calc_bond_trade_pnl(
         symbol=pl.lit(""),
@@ -241,8 +263,10 @@ def calc_trade_pnl(
         clean_price=price,
         clean_close=close,
         multiplier=multiplier,
+        capital_rate=capital_rate,
         fee=fee,
         begin_state=begin_state,
+        is_trs=is_trs,
     )
 
 

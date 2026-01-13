@@ -28,5 +28,5 @@ reqwest = { version = "0.12", optional = true, features = [
 tokio = { version = "1", features = ["full"], optional = true }
 rand = { version = "0.9", optional = true }
 itertools = { version = "0.14", optional = true }
-tevec = { git = "https://github.com/teamon9161/tevec.git", rev = "bf76681", default-features = false, optional = true }
+tevec = { git = "https://github.com/teamon9161/tevec.git", rev = "db7a7b8", default-features = false, optional = true }
 duckdb = {version = "1.4", optional = true, features = ["chrono", "bundled"]}

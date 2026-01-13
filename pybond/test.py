@@ -8,7 +8,7 @@ from pybond.pd import Bonds as PdBonds
 from pybond.pd import TfEvaluators as PdTfEvaluators
 from pybond.pd import find_workday as pd_find_workday
 from pybond.pl import Bonds, TfEvaluators, find_workday, is_business_day
-from pybond.pnl import trading_from_pos
+from pybond.pnl import calc_bond_trade_pnl, trading_from_pos
 
 from pybond import Ib, TfEvaluator
 
