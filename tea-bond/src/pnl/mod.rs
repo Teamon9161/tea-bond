@@ -27,7 +27,7 @@ pub struct PnlReport {
     pub amt: f64,
     pub fee: f64,
     #[serde(default)]
-    pub avg_capital_rate: f64, // 平均资金成本
+    pub avg_capital_spread: f64, // 平均资金加点
     #[serde(default)]
     pub capital: f64, // 累计资金
 }
@@ -38,8 +38,6 @@ pub struct BondTradePnlOpt {
     pub multiplier: f64,
     pub fee: Fee,
     pub begin_state: PnlReport,
-    #[serde(default)]
-    pub is_trs: Option<bool>,
 }
 
 pub fn calc_bond_trade_pnl<T, V, VT>(
@@ -49,6 +47,7 @@ pub fn calc_bond_trade_pnl<T, V, VT>(
     clean_price_vec: &V,
     clean_close_vec: &V,
     capital_rate_vec: Option<&V>,
+    capital_spread_vec: Option<&V>,
     opt: &BondTradePnlOpt,
 ) -> Result<Vec<PnlReport>>
 where
@@ -61,9 +60,9 @@ where
         return Ok(Vec::empty());
     }
     let multiplier = opt.multiplier;
-    let is_trs = opt.is_trs.unwrap_or(false);
     let mut state = opt.begin_state;
     let mut last_settle_time = None;
+    let mut last_capital_rate = 0.;
     let mut last_cp_date = Default::default();
     let mut accrued_interest = 0.;
     let mut next_day_coupon: f64 = 0.;
@@ -85,15 +84,23 @@ where
         ),
         None => Either::Right(std::iter::repeat(0.)),
     };
+    let capital_spread_vec = match capital_spread_vec {
+        Some(v) => Either::Left(
+            v.titer()
+                .map(|v| if v.is_none() { 0. } else { v.unwrap().f64() }),
+        ),
+        None => Either::Right(std::iter::repeat(0.)),
+    };
     izip!(
         settle_time_vec.titer(),
         qty_vec.titer(),
         clean_price_vec.titer(),
         clean_close_vec.titer(),
-        capital_rate_vec
+        capital_rate_vec,
+        capital_spread_vec,
     )
     .map(
-        |(settle_time, qty, clean_price, clean_close, capital_rate)| {
+        |(settle_time, qty, clean_price, clean_close, capital_rate, capital_spread)| {
             let qty = if qty.is_none() {
                 0.
             } else {
@@ -111,13 +118,8 @@ where
                         duration_days = last_settle_time
                             .map(|t| settle_time.signed_duration_since(t).num_days() as f64)
                             .unwrap_or(0.);
-                        // if state.avg_capital_rate != 0. {
-                        //     println!(
-                        //         "bond:{}, last_settle_time: {:?}, settle_time: {:?}, duration_days: {}, state.avg_capital_rate: {}, state.pos: {}",
-                        //         bond.code(), last_settle_time, settle_time, duration_days, state.avg_capital_rate, state.pos)
-                        // }
                         state.capital -= duration_days
-                            * state.avg_capital_rate
+                            * (last_capital_rate + state.avg_capital_spread)
                             * state.pos
                             * bond.par_value
                             * multiplier
@@ -138,6 +140,9 @@ where
                             next_day_coupon += coupon_paid * multiplier * state.pos;
                         }
                         last_settle_time = Some(settle_time);
+                        if capital_rate != 0. {
+                            last_capital_rate = capital_rate;
+                        }
                     }
                     // === 交易当天付息调整
                     if (settle_time == last_cp_date) & (qty != 0.) {
@@ -169,14 +174,14 @@ where
                         if qty.abs() > prev_pos.abs() {
                             // 反向开仓
                             state.pos_price = trade_price;
-                            state.avg_capital_rate = capital_rate;
+                            state.avg_capital_spread = capital_spread;
                         } else {
-                            if is_trs && capital_rate != 0. {
-                                state.avg_capital_rate = if state.pos.abs() < EPS {
+                            if capital_spread != 0. {
+                                state.avg_capital_spread = if state.pos.abs() < EPS {
                                     0.
                                 } else {
-                                    (state.avg_capital_rate * prev_pos.abs()
-                                        - capital_rate.abs() * qty.abs())
+                                    (state.avg_capital_spread * prev_pos.abs()
+                                        - capital_spread.abs() * qty.abs())
                                         / state.pos.abs()
                                 };
                             }
@@ -187,22 +192,22 @@ where
                             + qty.abs() * trade_price)
                             / state.pos.abs();
                         state.avg_price = state.amt / (state.pos * multiplier);
-                        if capital_rate > 0. {
-                            state.avg_capital_rate = (state.avg_capital_rate * prev_pos.abs()
-                                + capital_rate.abs() * qty.abs())
+                        if capital_spread != 0. {
+                            state.avg_capital_spread = (state.avg_capital_spread * prev_pos.abs()
+                                + capital_spread.abs() * qty.abs())
                                 / state.pos.abs();
                         }
                     }
                     if state.pos.abs() <= EPS {
                         state.avg_price = 0.;
                         state.pos_price = 0.;
-                        state.avg_capital_rate = 0.;
+                        state.avg_capital_spread = 0.;
                     }
                 } else {
                     // 之前仓位是0
                     state.avg_price = trade_price;
                     state.pos_price = state.avg_price;
-                    state.avg_capital_rate = capital_rate;
+                    state.avg_capital_spread = capital_spread;
                 }
             }
             if let Some(close) = close {
