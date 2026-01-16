@@ -168,7 +168,10 @@ def calc_bond_trade_pnl(
     clean_close = parse_into_expr(clean_close)
     multiplier = parse_into_expr(multiplier)
     capital_rate = parse_into_expr(capital_rate)
-    capital_spread = parse_into_expr(capital_spread) * 0.0001
+    if capital_spread is not None:
+        capital_spread = parse_into_expr(capital_spread) * 0.0001
+    else:
+        capital_spread = pl.lit(None)
     if begin_state is not None and not isinstance(begin_state, dict):
         begin_state = parse_into_expr(begin_state)
     if bond_info_path is None:
