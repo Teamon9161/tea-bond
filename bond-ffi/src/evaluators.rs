@@ -284,9 +284,12 @@ pub extern "C" fn tf_evaluator_irr(evaluator: *mut TfEvaluator) -> f64 {
 
 /// 计算期货隐含收益率
 #[unsafe(no_mangle)]
-pub extern "C" fn tf_evaluator_future_ytm(evaluator: *mut TfEvaluator) -> f64 {
+pub extern "C" fn tf_evaluator_future_ytm(
+    evaluator: *mut TfEvaluator,
+    use_deliver_date: bool,
+) -> f64 {
     let evaluator = unsafe { &mut *evaluator };
-    match evaluator.clone().with_future_ytm() {
+    match evaluator.clone().with_future_ytm(use_deliver_date) {
         Ok(eval) => {
             *evaluator = eval;
             evaluator.future_ytm.unwrap_or(f64::NAN)

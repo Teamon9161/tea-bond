@@ -227,17 +227,17 @@ class TfEvaluators:
         """
         return self.pl_df.select(irr=self._evaluators.irr)["irr"].to_pandas()
 
-    @property
-    def future_ytm(self):
+    # @property
+    def future_ytm(self, use_deliver_date: bool = True):  # noqa: FBT001
         """
         Calculate futures implied yield to maturity (期货隐含收益率).
 
         Returns:
             pd.Series: Futures implied yield to maturity values
         """
-        return self.pl_df.select(future_ytm=self._evaluators.future_ytm)[
-            "future_ytm"
-        ].to_pandas()
+        return self.pl_df.select(
+            future_ytm=self._evaluators.future_ytm(use_deliver_date=use_deliver_date)
+        )["future_ytm"].to_pandas()
 
     @property
     def remain_cp_to_deliver(self):

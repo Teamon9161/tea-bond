@@ -455,17 +455,30 @@ impl TfEvaluator {
     }
 
     /// 计算期货隐含收益率
-    pub fn with_future_ytm(self) -> Result<Self> {
+    ///
+    /// `use_deliver_date`: 是否使用交割日进行计算
+    /// - `true`（默认）：使用 `deliver_date` 计算
+    /// - `false`：使用 `self.date` 计算，`tmp_dirty_price` 会加上 carry
+    pub fn with_future_ytm(self, use_deliver_date: bool) -> Result<Self> {
         if self.future_ytm.is_none() {
             let mut out = self.with_cf()?.with_deliver_date()?;
-            let deliver_date = out.deliver_date.unwrap();
-            let accrued_interest = out.bond.calc_accrued_interest(deliver_date, None)?;
-            let tmp_dirty_price = out.future.price * out.cf.unwrap() + accrued_interest;
-            out.future_ytm =
-                Some(
-                    out.bond
-                        .calc_ytm_with_price(tmp_dirty_price, deliver_date, None, None)?,
-                );
+            let calc_date = if use_deliver_date {
+                out.deliver_date.unwrap()
+            } else {
+                out.date
+            };
+            let accrued_interest = out.bond.calc_accrued_interest(calc_date, None)?;
+            let mut tmp_dirty_price = out.future.price * out.cf.unwrap() + accrued_interest;
+
+            if !use_deliver_date {
+                out = out.with_carry()?;
+                tmp_dirty_price += out.carry.unwrap();
+            }
+
+            out.future_ytm = Some(
+                out.bond
+                    .calc_ytm_with_price(tmp_dirty_price, calc_date, None, None)?,
+            );
             Ok(out)
         } else {
             Ok(self)
@@ -480,6 +493,6 @@ impl TfEvaluator {
             .with_f_b_spread()?
             .with_net_basis_spread()?
             .with_irr()?
-            .with_future_ytm()
+            .with_future_ytm(true)
     }
 }

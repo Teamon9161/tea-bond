@@ -62,11 +62,9 @@ class TfEvaluators:
         self.ctd_bond = parse_into_expr(
             ctd_bond if ctd_bond is not None else pl.lit(None).cast(str)
         )
-        self.ctd_ytm = parse_into_expr(
-            ctd_ytm if ctd_ytm is not None else pl.lit(None)
-        )
+        self.ctd_ytm = parse_into_expr(ctd_ytm if ctd_ytm is not None else pl.lit(None))
 
-    def _call_plugin(self, symbol: str):
+    def _call_plugin(self, symbol: str, **kwargs):
         """Helper method to call plugin with consistent arguments."""
         return register_plugin(
             args=[
@@ -77,7 +75,7 @@ class TfEvaluators:
                 self.bond_ytm,
                 self.capital_rate,
             ],
-            kwargs={"reinvest_rate": self.reinvest_rate},
+            kwargs={"reinvest_rate": self.reinvest_rate, **kwargs},
             symbol=symbol,
             is_elementwise=False,
         )
@@ -219,15 +217,17 @@ class TfEvaluators:
         """
         return self._call_plugin("evaluators_irr")
 
-    @property
-    def future_ytm(self):
+    # @property
+    def future_ytm(self, use_deliver_date: bool = True):
         """
         Calculate futures implied yield to maturity (期货隐含收益率).
 
         Returns:
             Polars expression for futures implied yield to maturity
         """
-        return self._call_plugin("evaluators_future_ytm")
+        return self._call_plugin(
+            "evaluators_future_ytm", use_deliver_date=use_deliver_date
+        )
 
     @property
     def remain_cp_to_deliver(self):

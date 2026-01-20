@@ -283,10 +283,11 @@ impl PyTfEvaluator {
     }
 
     /// 计算期货隐含收益率
-    fn with_future_ytm(&self) -> PyResult<Self> {
+    #[pyo3(signature = (use_deliver_date=true))]
+    fn with_future_ytm(&self, use_deliver_date: bool) -> PyResult<Self> {
         self.0
             .clone()
-            .with_future_ytm()
+            .with_future_ytm(use_deliver_date)
             .map_err(|e| PyValueError::new_err(e.to_string()))
             .map(Self)
     }
@@ -566,13 +567,14 @@ impl PyTfEvaluator {
         }
     }
 
-    #[getter]
+    // #[getter]
     /// 期货隐含收益率
-    fn future_ytm(&mut self) -> PyResult<f64> {
+    #[pyo3(signature = (use_deliver_date=true))]
+    fn future_ytm(&mut self, use_deliver_date: bool) -> PyResult<f64> {
         if let Some(future_ytm) = self.0.future_ytm {
             Ok(future_ytm)
         } else {
-            self.0 = self.with_future_ytm()?.0;
+            self.0 = self.with_future_ytm(use_deliver_date)?.0;
             Ok(self.0.future_ytm.unwrap())
         }
     }
@@ -598,11 +600,7 @@ impl PyTfEvaluator {
     /// Args:
     ///     ctd_bond: CTD债券代码, 如果为None则使用当前债券
     ///     ctd_ytm: CTD债券收益率
-    fn future_dv01(
-        &self,
-        ctd_bond: Option<&Bound<'_, PyAny>>,
-        ctd_ytm: f64,
-    ) -> PyResult<f64> {
+    fn future_dv01(&self, ctd_bond: Option<&Bound<'_, PyAny>>, ctd_ytm: f64) -> PyResult<f64> {
         let ctd = if let Some(ctd_bond) = ctd_bond {
             let bond = get_bond(ctd_bond)?;
             Some(BondYtm::new(bond.0, ctd_ytm))
@@ -636,11 +634,7 @@ impl PyTfEvaluator {
     /// Args:
     ///     ctd_bond: CTD债券代码
     ///     ctd_ytm: CTD债券收益率
-    fn neutral_net_basis_spread(
-        &self,
-        ctd_bond: &Bound<'_, PyAny>,
-        ctd_ytm: f64,
-    ) -> PyResult<f64> {
+    fn neutral_net_basis_spread(&self, ctd_bond: &Bound<'_, PyAny>, ctd_ytm: f64) -> PyResult<f64> {
         let bond = get_bond(ctd_bond)?;
         let ctd = BondYtm::new(bond.0, ctd_ytm);
         self.0

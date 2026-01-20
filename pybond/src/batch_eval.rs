@@ -10,6 +10,8 @@ use tevec::export::polars::prelude::*;
 #[derive(Deserialize)]
 struct EvaluatorBatchParams {
     pub reinvest_rate: Option<f64>,
+    #[serde(default)]
+    pub use_deliver_date: Option<bool>,
 }
 
 macro_rules! auto_cast {
@@ -409,10 +411,11 @@ fn evaluators_irr(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResu
 
 #[polars_expr(output_type=Float64)]
 fn evaluators_future_ytm(inputs: &[Series], kwargs: EvaluatorBatchParams) -> PolarsResult<Series> {
+    let use_deliver_date = kwargs.use_deliver_date.unwrap_or(true);
     let result: Float64Chunked = batch_eval(
         inputs,
         kwargs,
-        |e: TfEvaluator| e.with_future_ytm(),
+        |e: TfEvaluator| e.with_future_ytm(use_deliver_date),
         |e: &TfEvaluator| e.future_ytm.filter(|v| !v.is_nan()),
         true,
         true,

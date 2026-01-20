@@ -320,7 +320,7 @@ class TfEvaluator:
     def with_irr(self) -> TfEvaluator:
         """计算内部收益率IRR"""
 
-    def with_future_ytm(self) -> TfEvaluator:
+    def with_future_ytm(self, use_deliver_date: bool = True) -> TfEvaluator:
         """计算期货隐含收益率"""
 
     def calc_all(self) -> TfEvaluator:
@@ -420,8 +420,7 @@ class TfEvaluator:
     def remain_cp_to_deliver_wm(self) -> float:
         """加权平均到交割的期间付息, 如果未计算会自动计算后返回"""
 
-    @property
-    def future_ytm(self) -> float:
+    def future_ytm(self, use_deliver_date: bool = True) -> float:
         """期货隐含收益率, 如果未计算会自动计算后返回"""
 
     def dv01(self) -> float:

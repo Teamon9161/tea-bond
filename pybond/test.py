@@ -4,17 +4,26 @@ import os
 import numpy as np
 import polars as pl
 from IPython.display import display
+
+from pybond import Ib, TfEvaluator
 from pybond.pd import Bonds as PdBonds
 from pybond.pd import TfEvaluators as PdTfEvaluators
 from pybond.pd import find_workday as pd_find_workday
 from pybond.pl import Bonds, TfEvaluators, find_workday, is_business_day
 from pybond.pnl import calc_bond_trade_pnl, trading_from_pos
 
-from pybond import Ib, TfEvaluator
-
 os.environ["POLARS_VERBOSE"] = "1"
 # Bond(200004).remain_cp_dates_until("2025-01-02", "2025-09-16")
 # Bond(200005).accrued_interest("2025-09-16")
+
+# TfEvaluator(
+#     "TL2603",
+#     "210005",
+#     "2026-01-20",
+#     future_price=111.27,
+#     bond_ytm=2.365 / 100,
+#     capital_rate=0.016,
+# ).future_ytm(False)
 
 
 df = pl.DataFrame(
