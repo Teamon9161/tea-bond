@@ -237,8 +237,6 @@ def calc_trade_pnl(
     price: IntoExpr | None = None,
     close: IntoExpr = "close",
     multiplier: IntoExpr | None = None,
-    capital_rate: IntoExpr | None = None,
-    capital_spread: IntoExpr | None = None,
     fee: IntoExpr | Fee | None = None,
     begin_state: IntoExpr | None = None,
 ):
@@ -248,11 +246,9 @@ def calc_trade_pnl(
     time: 交易时间,
         如果time传入代表Trade的struct Series(包含time, price, qty三个field), 则可以不传qty和clean_price
     qty: 成交量, 正负号表⽰⽅向
-    clean_price: 成交的净价
-    clean_close: 当前时间段的最新价格(净价)
+    price: 成交价格
+    close: 当前时间段的最新价格(净价)
     multiplier: 合约乘数, 例如对于债券, 1000的成交对应1000w, 合约乘数应为100, 默认为1
-    capital_rate: 资金成本, 例如0.016
-    capital_spread: TRS资金加多少bp, 例如20
     fee: 交易费⽤
     费⽤设置说明:
         TradeFee: 每笔成交⽀付的费⽤
@@ -267,8 +263,6 @@ def calc_trade_pnl(
         clean_price=price,
         clean_close=close,
         multiplier=multiplier,
-        capital_rate=capital_rate,
-        capital_spread=capital_spread,
         fee=fee,
         begin_state=begin_state,
     )
