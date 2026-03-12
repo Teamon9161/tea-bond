@@ -387,18 +387,15 @@ impl TfEvaluator {
     }
 
     pub fn future_dv01(self, ctd: Option<BondYtm>) -> Result<f64> {
-        let bond_ytm = if let Some(ctd) = ctd {
-            ctd
-        } else {
-            self.bond
-        };
+        let bond_ytm = if let Some(ctd) = ctd { ctd } else { self.bond };
         let evt = TfEvaluator::new_with_reinvest_rate(
             self.date,
             self.future,
             bond_ytm,
             self.capital_rate,
             self.reinvest_rate.unwrap_or(0.),
-        ).with_cf()?;
+        )
+        .with_cf()?;
         let cf = evt.cf.unwrap();
         let ctd_dv = evt.dv01()?;
         Ok(ctd_dv / cf)
@@ -475,10 +472,11 @@ impl TfEvaluator {
                 tmp_dirty_price += out.carry.unwrap();
             }
 
-            out.future_ytm = Some(
-                out.bond
-                    .calc_ytm_with_price(tmp_dirty_price, calc_date, None, None)?,
-            );
+            out.future_ytm =
+                Some(
+                    out.bond
+                        .calc_ytm_with_price(tmp_dirty_price, calc_date, None, None)?,
+                );
             Ok(out)
         } else {
             Ok(self)

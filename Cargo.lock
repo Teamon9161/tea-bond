@@ -3776,7 +3776,7 @@ dependencies = [
 [[package]]
 name = "tea-core"
 version = "0.6.1"
-source = "git+https://github.com/teamon9161/tevec.git?rev=db7a7b8#db7a7b809ae28a4f7d28c37534eda2593ebad9e7"
+source = "git+https://github.com/teamon9161/tevec.git?rev=f9d242d#f9d242d47945e88b2aa2b048fb422af55d5b3764"
 dependencies = [
  "num-traits",
  "tea-deps",
@@ -3787,17 +3787,18 @@ dependencies = [
 [[package]]
 name = "tea-deps"
 version = "0.6.1"
-source = "git+https://github.com/teamon9161/tevec.git?rev=db7a7b8#db7a7b809ae28a4f7d28c37534eda2593ebad9e7"
+source = "git+https://github.com/teamon9161/tevec.git?rev=f9d242d#f9d242d47945e88b2aa2b048fb422af55d5b3764"
 dependencies = [
  "chrono",
  "polars",
  "polars-arrow",
+ "rust_decimal",
 ]
 
 [[package]]
 name = "tea-dtype"
 version = "0.6.1"
-source = "git+https://github.com/teamon9161/tevec.git?rev=db7a7b8#db7a7b809ae28a4f7d28c37534eda2593ebad9e7"
+source = "git+https://github.com/teamon9161/tevec.git?rev=f9d242d#f9d242d47945e88b2aa2b048fb422af55d5b3764"
 dependencies = [
  "num-traits",
  "tea-deps",
@@ -3807,7 +3808,7 @@ dependencies = [
 [[package]]
 name = "tea-dyn"
 version = "0.6.1"
-source = "git+https://github.com/teamon9161/tevec.git?rev=db7a7b8#db7a7b809ae28a4f7d28c37534eda2593ebad9e7"
+source = "git+https://github.com/teamon9161/tevec.git?rev=f9d242d#f9d242d47945e88b2aa2b048fb422af55d5b3764"
 dependencies = [
  "tea-core",
  "tea-deps",
@@ -3818,7 +3819,7 @@ dependencies = [
 [[package]]
 name = "tea-error"
 version = "0.6.1"
-source = "git+https://github.com/teamon9161/tevec.git?rev=db7a7b8#db7a7b809ae28a4f7d28c37534eda2593ebad9e7"
+source = "git+https://github.com/teamon9161/tevec.git?rev=f9d242d#f9d242d47945e88b2aa2b048fb422af55d5b3764"
 dependencies = [
  "tea-deps",
  "thiserror 2.0.17",
@@ -3827,7 +3828,7 @@ dependencies = [
 [[package]]
 name = "tea-macros"
 version = "0.6.1"
-source = "git+https://github.com/teamon9161/tevec.git?rev=db7a7b8#db7a7b809ae28a4f7d28c37534eda2593ebad9e7"
+source = "git+https://github.com/teamon9161/tevec.git?rev=f9d242d#f9d242d47945e88b2aa2b048fb422af55d5b3764"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3837,7 +3838,7 @@ dependencies = [
 [[package]]
 name = "tea-time"
 version = "0.6.1"
-source = "git+https://github.com/teamon9161/tevec.git?rev=db7a7b8#db7a7b809ae28a4f7d28c37534eda2593ebad9e7"
+source = "git+https://github.com/teamon9161/tevec.git?rev=f9d242d#f9d242d47945e88b2aa2b048fb422af55d5b3764"
 dependencies = [
  "chrono",
  "tea-deps",
@@ -3860,7 +3861,7 @@ dependencies = [
 [[package]]
 name = "tevec"
 version = "0.6.1"
-source = "git+https://github.com/teamon9161/tevec.git?rev=db7a7b8#db7a7b809ae28a4f7d28c37534eda2593ebad9e7"
+source = "git+https://github.com/teamon9161/tevec.git?rev=f9d242d#f9d242d47945e88b2aa2b048fb422af55d5b3764"
 dependencies = [
  "derive_more",
  "tea-core",
