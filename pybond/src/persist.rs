@@ -28,6 +28,26 @@ macro_rules! auto_cast {
     };
 }
 
+/// 解析日期字符串，支持三种格式：
+/// - `"20330911"`     (Wind SQL YYYYMMDD)
+/// - `"2033-09-11"`   (Polars Date → String)
+/// - `"2033-09-11 00:00:00"` (Polars Datetime → String)
+fn parse_date_flexible(d: &str, field: &str) -> Option<NaiveDate> {
+    if d.is_empty() {
+        return None;
+    }
+    // YYYYMMDD
+    if let Ok(date) = NaiveDate::parse_from_str(d, "%Y%m%d") {
+        return Some(date);
+    }
+    // YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS（取前10位）
+    let prefix = if d.len() >= 10 { &d[..10] } else { d };
+    if let Ok(date) = NaiveDate::parse_from_str(prefix, "%Y-%m-%d") {
+        return Some(date);
+    }
+    panic!("Can not parse {field}: {d:?}");
+}
+
 #[pyfunction]
 pub fn update_info_from_wind_sql_df(df: PyDataFrame) -> PyResult<()> {
     // use tevec::export::polars::prelude::Series;
@@ -100,29 +120,11 @@ pub fn update_info_from_wind_sql_df(df: PyDataFrame) -> PyResult<()> {
         let coupon = coupon.unwrap_or(505001000);
 
         let carry_date = carry_date
-            .map(|d| {
-                if d.is_empty() {
-                    None
-                } else {
-                    Some(
-                        NaiveDate::parse_from_str(d, "%Y%m%d")
-                            .expect(&format!("Can not parse carry date: {d:?}")),
-                    )
-                }
-            })
+            .map(|d| parse_date_flexible(d, "carry date"))
             .flatten()
             .unwrap_or_default();
         let maturity_date = maturity_date
-            .map(|d| {
-                if d.is_empty() {
-                    None
-                } else {
-                    Some(
-                        NaiveDate::parse_from_str(d, "%Y%m%d")
-                            .expect(&format!("Can not parse maturity date: {d:?}")),
-                    )
-                }
-            })
+            .map(|d| parse_date_flexible(d, "maturity date"))
             .flatten()
             .unwrap_or_default();
 
