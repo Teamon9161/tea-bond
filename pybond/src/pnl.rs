@@ -360,7 +360,6 @@ fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> Pola
         DataType::Date => {
             let trade_vec =
                 pnl::trading_from_pos(time.date()?.physical(), pos.f64()?, open.f64()?, &kwargs);
-
             let time = if keep_shape {
                 time.clone()
             } else {

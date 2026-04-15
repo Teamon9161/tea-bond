@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use itertools::izip;
+use itertools::{Either, izip};
 use serde::Deserialize;
 use tevec::prelude::{EPS, IsNone, Number, Vec1View};
 
@@ -74,6 +74,26 @@ fn quantize_inside(q: f64, tick: f64) -> f64 {
     }
 }
 
+fn to_opt_f64<T: IsNone>(v: T) -> Option<f64>
+where
+    T::Inner: Number,
+{
+    if v.is_none() { None } else { Some(v.unwrap().f64()) }
+}
+
+fn broadcast<'a, T, V>(vec: &'a V) -> Either<std::iter::Repeat<Option<f64>>, impl Iterator<Item = Option<f64>> + 'a>
+where
+    T: IsNone + 'a,
+    T::Inner: Number,
+    V: Vec1View<T>,
+{
+    if vec.len() == 1 {
+        Either::Left(std::iter::repeat(to_opt_f64(vec.titer().next().unwrap())))
+    } else {
+        Either::Right(vec.titer().map(to_opt_f64))
+    }
+}
+
 #[allow(clippy::collapsible_if)]
 pub fn trading_from_pos<DT, T, VT, V>(
     time_vec: &VT,
@@ -99,10 +119,12 @@ where
     // 记录最后一个可用 (time, price)，用于 stop_on_finish
     let mut last_tp: Option<(DT, f64)> = None;
 
-    izip!(time_vec.titer(), pos_vec.titer(), open_vec.titer()).for_each(|(time, pos, open)| {
-        if pos.not_none() && open.not_none() {
-            let pos = pos.unwrap().f64();
-            let price = open.unwrap().f64();
+    // pos_vec / open_vec 长度为 1 时广播为常量，支持标量字面量传入
+    let pos_iter = broadcast(pos_vec);
+    let open_iter = broadcast(open_vec);
+
+    izip!(time_vec.titer(), pos_iter, open_iter).for_each(|(time, pos, open)| {
+        if let (Some(pos), Some(price)) = (pos, open) {
             // 记录最新可用的时间与价格
             last_tp = Some((time.clone(), price));
 
