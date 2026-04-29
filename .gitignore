@@ -6,3 +6,7 @@ bonds_info/
 .idea/
 # **/Cargo.lock
 **/target/
+
+# HAM — AI agent scaffolding (local, do not commit)
+.ham/
+# end HAM
