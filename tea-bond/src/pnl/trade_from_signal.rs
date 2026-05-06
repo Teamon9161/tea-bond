@@ -78,10 +78,16 @@ fn to_opt_f64<T: IsNone>(v: T) -> Option<f64>
 where
     T::Inner: Number,
 {
-    if v.is_none() { None } else { Some(v.unwrap().f64()) }
+    if v.is_none() {
+        None
+    } else {
+        Some(v.unwrap().f64())
+    }
 }
 
-fn broadcast<'a, T, V>(vec: &'a V) -> Either<std::iter::Repeat<Option<f64>>, impl Iterator<Item = Option<f64>> + 'a>
+fn broadcast<'a, T, V>(
+    vec: &'a V,
+) -> Either<std::iter::Repeat<Option<f64>>, impl Iterator<Item = Option<f64>> + 'a>
 where
     T: IsNone + 'a,
     T::Inner: Number,
