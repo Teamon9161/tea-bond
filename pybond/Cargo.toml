@@ -2,11 +2,13 @@
 name = "pybond"
 version = { workspace = true }
 edition = { workspace = true }
+exclude = ["**/CLAUDE.md", "CLAUDE.md"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "pybond"
 crate-type = ["cdylib"]
+
 
 [features]
 default = ["download", "pnl", "batch", "decimal", "persist"]
