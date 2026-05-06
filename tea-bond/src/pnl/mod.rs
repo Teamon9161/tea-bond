@@ -119,8 +119,8 @@ where
                             .map(|t| settle_time.signed_duration_since(t).num_days() as f64)
                             .unwrap_or(0.);
                         state.capital -= duration_days
-                            * (last_capital_rate + state.avg_capital_spread)
-                            * state.pos
+                            * (last_capital_rate * state.pos
+                                + state.avg_capital_spread * state.pos.abs())
                             * bond.par_value
                             * multiplier
                             / 365.;
