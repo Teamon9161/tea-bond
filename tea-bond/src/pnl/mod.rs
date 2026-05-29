@@ -5,7 +5,7 @@ pub use fee::Fee;
 use std::path::PathBuf;
 pub use trade_from_signal::{TradeFromPosOpt, trading_from_pos};
 
-use crate::CachedBond;
+use crate::{Bond, CachedBond};
 use chrono::NaiveDate;
 
 use anyhow::{Result, anyhow};
@@ -14,6 +14,88 @@ use itertools::izip;
 use serde::Deserialize;
 use tea_calendar::Calendar;
 use tevec::prelude::{EPS, IsNone, Number, Vec1, Vec1View};
+
+fn coupon_payment_count_between(
+    bond: &Bond,
+    from_exclusive: NaiveDate,
+    to_exclusive: NaiveDate,
+) -> Result<usize> {
+    if from_exclusive >= to_exclusive {
+        return Ok(0);
+    }
+    if bond.inst_freq <= 0 {
+        return Ok(0);
+    }
+    let (mut cp_date, _) = bond.get_nearest_cp_date(from_exclusive)?;
+    let offset = bond.get_cp_offset()?;
+    let mut count = 0;
+    while cp_date <= to_exclusive {
+        let payment_date = bond.mkt.find_workday(cp_date, 0);
+        if payment_date > from_exclusive && payment_date < to_exclusive {
+            count += 1;
+        }
+        cp_date = cp_date + offset;
+    }
+    Ok(count)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Market;
+    use tea_calendar::Calendar;
+
+    #[test]
+    fn coupon_payment_count_uses_adjusted_workday_open_interval() {
+        let bond = Bond {
+            mkt: Market::IB,
+            carry_date: NaiveDate::from_ymd_opt(2024, 9, 15).unwrap(),
+            maturity_date: NaiveDate::from_ymd_opt(2031, 9, 15).unwrap(),
+            inst_freq: 1,
+            ..Default::default()
+        };
+
+        let before_nominal = NaiveDate::from_ymd_opt(2025, 9, 12).unwrap();
+        let payment_day = NaiveDate::from_ymd_opt(2025, 9, 15).unwrap();
+        let after_payment = NaiveDate::from_ymd_opt(2025, 9, 16).unwrap();
+
+        assert_eq!(
+            coupon_payment_count_between(&bond, before_nominal, payment_day).unwrap(),
+            0
+        );
+        assert_eq!(
+            coupon_payment_count_between(&bond, before_nominal, after_payment).unwrap(),
+            1
+        );
+        assert_eq!(
+            coupon_payment_count_between(&bond, payment_day, after_payment).unwrap(),
+            0
+        );
+    }
+
+    #[test]
+    fn coupon_payment_count_checks_previous_nominal_coupon_date() {
+        let bond = Bond {
+            mkt: Market::IB,
+            carry_date: NaiveDate::from_ymd_opt(2024, 5, 31).unwrap(),
+            maturity_date: NaiveDate::from_ymd_opt(2031, 5, 31).unwrap(),
+            inst_freq: 1,
+            ..Default::default()
+        };
+
+        let nominal_coupon_date = NaiveDate::from_ymd_opt(2025, 5, 31).unwrap();
+        let after_payment = NaiveDate::from_ymd_opt(2025, 6, 4).unwrap();
+
+        assert_eq!(
+            bond.mkt.find_workday(nominal_coupon_date, 0),
+            NaiveDate::from_ymd_opt(2025, 6, 3).unwrap()
+        );
+        assert_eq!(
+            coupon_payment_count_between(&bond, nominal_coupon_date, after_payment).unwrap(),
+            1
+        );
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
 pub struct PnlReport {
@@ -124,6 +206,12 @@ where
                             * bond.par_value
                             * multiplier
                             / 365.;
+                        if let Some(last_settle_time) = last_settle_time {
+                            let coupon_count =
+                                coupon_payment_count_between(bond, last_settle_time, settle_time)?;
+                            state.coupon_paid +=
+                                coupon_count as f64 * coupon_paid * multiplier * state.pos;
+                        }
                         if next_day_coupon != 0. {
                             state.coupon_paid += next_day_coupon;
                             next_day_coupon = 0.;
