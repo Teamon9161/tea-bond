@@ -3,7 +3,7 @@ mod trade_from_signal;
 
 pub use fee::Fee;
 use std::path::PathBuf;
-pub use trade_from_signal::{TradeFromPosOpt, trading_from_pos};
+pub use trade_from_signal::{QtyRoundMode, TradeFromPosOpt, trading_from_pos};
 
 use crate::{Bond, CachedBond};
 use chrono::NaiveDate;

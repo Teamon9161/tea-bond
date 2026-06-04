@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import polars as pl
 
@@ -278,6 +278,7 @@ def trading_from_pos(
     qty_tick: IntoExpr = 1.0,
     min_adjust_amt: float = 0.0,
     *,
+    qty_round_mode: Literal["floor", "round"] = "floor",
     stop_on_finish: bool = False,
     keep_shape: bool = False,
 ) -> pl.Expr:
@@ -289,6 +290,7 @@ def trading_from_pos(
     cash: 总资⾦, ⽤于计算实际开仓⼿数
     multiplier: 合约乘数, 默认为1
     qty_tick: 最⼩开仓⼿数, 例如0.01, 0.1, 1, 100
+    qty_round_mode: 手数取整模式, floor=按绝对手数向下取整, round=四舍五入
     stop_on_finish: 当前标的没有数据后是否平仓
     finish_price: 当前标的没数据时的平仓价格, ⽀持polars表达式
     keep_shape: 是否维持表达式的长度, 不保留则只返回实际发生的交易
@@ -306,6 +308,7 @@ def trading_from_pos(
         "cash": None,  # 会从表达式中获取
         "multiplier": 0.0,  # 会从表达式中获取
         "qty_tick": 1.0,  # 会从表达式中获取
+        "qty_round_mode": qty_round_mode,
         "stop_on_finish": stop_on_finish,
         "finish_price": None,  # 会从表达式中获取
         "min_adjust_amt": float(min_adjust_amt),
