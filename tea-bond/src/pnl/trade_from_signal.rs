@@ -61,6 +61,8 @@ pub struct TradeFromPosOpt {
     pub min_adjust_amt: Option<f64>,
     #[serde(default)]
     pub keep_shape: Option<bool>,
+    #[serde(default)]
+    pub compound: bool,
 }
 
 const INIT_TRADE_COUNT: usize = 512;
@@ -135,6 +137,10 @@ where
     let mut trades = Vec::with_capacity(INIT_TRADE_COUNT);
     let keep_shape = opt.keep_shape.unwrap_or(false);
 
+    // 浮动本金(复利): 用持仓的净价 mark-to-market 自洽地滚动 equity，初值为 cash
+    let mut equity = cash;
+    let mut last_price: Option<f64> = None;
+
     // 记录最后一个可用 (time, price)，用于 stop_on_finish
     let mut last_tp: Option<(DT, f64)> = None;
 
@@ -147,9 +153,19 @@ where
             // 记录最新可用的时间与价格
             last_tp = Some((time.clone(), price));
 
+            // 复利: 先用进入本 bar 时的持仓对净价变动做 mark-to-market，再用更新后的 equity 定手数
+            if opt.compound {
+                if let Some(lp) = last_price {
+                    equity += open_qty * (price - lp) * opt.multiplier;
+                }
+                last_price = Some(price);
+            }
+            // sizing 基准: compound 用浮动 equity(钳制非负)，否则用固定 cash
+            let base = if opt.compound { equity.max(0.) } else { cash };
+
             // 先用目标仓位计算目标手数，再用真实持仓手数补齐差额。
             let target_qty = if pos.abs() > EPS {
-                let raw_qty = pos * cash / (price * opt.multiplier);
+                let raw_qty = pos * base / (price * opt.multiplier);
                 quantize(raw_qty, opt.qty_tick, opt.qty_round_mode)
             } else {
                 0.0
@@ -211,6 +227,7 @@ mod tests {
             finish_price: None,
             min_adjust_amt: None,
             keep_shape: Some(true),
+            compound: false,
         }
     }
 
@@ -261,6 +278,35 @@ mod tests {
         let trades = trading_from_pos(&time, &pos, &open, &opt(QtyRoundMode::Round));
 
         assert_eq!(qtys(trades), vec![Some(2000.0), Some(-4000.0)]);
+    }
+
+    #[test]
+    fn compound_grows_position_after_realized_gain() {
+        // 实现盈利后再开仓: 复利下手数更大
+        let time = vec![1, 2, 3];
+        let pos = vec![1.0, 0.0, 1.0];
+        let open = vec![10.0, 20.0, 20.0];
+
+        let mut opt = opt(QtyRoundMode::Floor);
+        opt.cash = Some(100.0);
+        opt.multiplier = 1.0;
+        opt.qty_tick = 0.0; // 不取整，便于精确断言
+
+        // 固定本金: bar3 用 100/20 = 5 手
+        opt.compound = false;
+        let trades = trading_from_pos(&time, &pos, &open, &opt);
+        assert_eq!(
+            qtys(trades),
+            vec![Some(10.0), Some(-10.0), Some(5.0)]
+        );
+
+        // 复利: bar1 建 10 手; bar2 价 10→20 equity 100→200 后平仓; bar3 用 200/20 = 10 手
+        opt.compound = true;
+        let trades = trading_from_pos(&time, &pos, &open, &opt);
+        assert_eq!(
+            qtys(trades),
+            vec![Some(10.0), Some(-10.0), Some(10.0)]
+        );
     }
 
     #[test]

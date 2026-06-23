@@ -35,16 +35,9 @@ class Fee(pl.Expr):
     def __add__(self, other: Fee | int | float):
         left_items = self._fee_dict["items"] if self.kind == "sum" else [self._fee_dict]
         if isinstance(other, Fee):
-            right_items = (
-                other._fee_dict["items"] if other.kind == "sum" else [other._fee_dict]
-            )
+            right_items = other._fee_dict["items"] if other.kind == "sum" else [other._fee_dict]
             return Fee({"kind": "sum", "items": left_items + right_items})
-        elif isinstance(other, (int, float)) and self.kind in [
-            "fixed",
-            "per_trade",
-            "per_qty",
-            "percent",
-        ]:
+        elif isinstance(other, int | float) and self.kind in ["fixed", "per_trade", "per_qty", "percent"]:
             _dict = self._fee_dict.copy()
             _dict["fee"] += other
             return Fee(_dict)
@@ -198,37 +191,12 @@ def calc_bond_trade_pnl(
     kwargs = {"bond_info_path": bond_info_path}
     if all(x is None for x in [qty, clean_price]):
         # struct settle_time, contains trade info
-        args = [
-            symbol,
-            settle_time,
-            clean_close,
-            begin_state,
-            multiplier,
-            fee,
-            capital_rate,
-            capital_spread,
-        ]
+        args = [symbol, settle_time, clean_close, begin_state, multiplier, fee, capital_rate, capital_spread]
     else:
         qty = parse_into_expr(qty)
         clean_price = parse_into_expr(clean_price)
-        args = [
-            symbol,
-            settle_time,
-            qty,
-            clean_price,
-            clean_close,
-            begin_state,
-            multiplier,
-            fee,
-            capital_rate,
-            capital_spread,
-        ]
-    return register_plugin(
-        args=args,
-        kwargs=kwargs,
-        symbol="calc_bond_trade_pnl",
-        is_elementwise=False,
-    )
+        args = [symbol, settle_time, qty, clean_price, clean_close, begin_state, multiplier, fee, capital_rate, capital_spread]
+    return register_plugin(args=args, kwargs=kwargs, symbol="calc_bond_trade_pnl", is_elementwise=False)
 
 
 def calc_trade_pnl(
@@ -281,6 +249,7 @@ def trading_from_pos(
     qty_round_mode: Literal["floor", "round"] = "floor",
     stop_on_finish: bool = False,
     keep_shape: bool = False,
+    compound: bool = False,
 ) -> pl.Expr:
     """
     生成交易记录
@@ -294,6 +263,8 @@ def trading_from_pos(
     stop_on_finish: 当前标的没有数据后是否平仓
     finish_price: 当前标的没数据时的平仓价格, ⽀持polars表达式
     keep_shape: 是否维持表达式的长度, 不保留则只返回实际发生的交易
+    compound: 是否使⽤浮动本⾦(复利), True 时 equity 随持仓净价盈亏滚动, 赚钱⾃动加仓;
+        默认 False 为固定本⾦(cumsum)。注意: equity 仅按净价 mark-to-market, 不含票息/⼿续费/资⾦成本
     """
     time = parse_into_expr(time)
     pos = parse_into_expr(pos)
@@ -313,10 +284,8 @@ def trading_from_pos(
         "finish_price": None,  # 会从表达式中获取
         "min_adjust_amt": float(min_adjust_amt),
         "keep_shape": bool(keep_shape),
+        "compound": bool(compound),
     }
     return register_plugin(
-        args=[time, pos, open, finish_price, cash, multiplier, qty_tick],
-        kwargs=kwargs,
-        symbol="trading_from_pos",
-        is_elementwise=False,
+        args=[time, pos, open, finish_price, cash, multiplier, qty_tick], kwargs=kwargs, symbol="trading_from_pos", is_elementwise=False
     )
