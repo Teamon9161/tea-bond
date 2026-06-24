@@ -256,7 +256,7 @@ def trading_from_pos(
     time: ⽤于⽣成成交时间, ⽀持任意可以转为polars表达式的输⼊
     pos: 当前时间的实际仓位, -1 ~ 1, 表⽰百分⽐
     open: 当前周期的开仓价格
-    cash: 总资⾦, ⽤于计算实际开仓⼿数
+    cash: 总资⾦, ⽤于计算实际开仓⼿数; 标量会广播, 序列则逐行使用
     multiplier: 合约乘数, 默认为1
     qty_tick: 最⼩开仓⼿数, 例如0.01, 0.1, 1, 100
     qty_round_mode: 手数取整模式, floor=按绝对手数向下取整, round=四舍五入
@@ -276,7 +276,6 @@ def trading_from_pos(
     finish_price = parse_into_expr(finish_price)
     cash = parse_into_expr(cash)
     kwargs = {
-        "cash": None,  # 会从表达式中获取
         "multiplier": 0.0,  # 会从表达式中获取
         "qty_tick": 1.0,  # 会从表达式中获取
         "qty_round_mode": qty_round_mode,

@@ -49,7 +49,6 @@ impl<T: PartialEq + Debug> std::ops::Add<Option<Trade<T>>> for Trade<T> {
 
 #[derive(Deserialize)]
 pub struct TradeFromPosOpt {
-    pub cash: Option<f64>,
     pub multiplier: f64,
     pub qty_tick: f64,
     #[serde(default)]
@@ -122,6 +121,7 @@ pub fn trading_from_pos<DT, T, VT, V>(
     time_vec: &VT,
     pos_vec: &V,
     open_vec: &V,
+    cash_vec: &V,
     opt: &TradeFromPosOpt,
 ) -> Vec<Option<Trade<DT>>>
 where
@@ -132,36 +132,41 @@ where
     V: Vec1View<T>,
 {
     let mut open_qty: f64 = 0.;
-    let cash = opt.cash.unwrap();
     let min_adjust_amt = opt.min_adjust_amt.unwrap_or(0.);
     let mut trades = Vec::with_capacity(INIT_TRADE_COUNT);
     let keep_shape = opt.keep_shape.unwrap_or(false);
 
-    // 浮动本金(复利): 用持仓的净价 mark-to-market 自洽地滚动 equity，初值为 cash
-    let mut equity = cash;
+    // 复利时累计持仓按净价变动产生的盈亏；当期 sizing 基准为 cash + 累计盈亏。
+    // cash 为标量时与原有浮动本金逻辑一致，为序列时可叠加外部资金变化。
+    let mut accumulated_pnl = 0.;
     let mut last_price: Option<f64> = None;
 
     // 记录最后一个可用 (time, price)，用于 stop_on_finish
     let mut last_tp: Option<(DT, f64)> = None;
 
-    // pos_vec / open_vec 长度为 1 时广播为常量，支持标量字面量传入
+    // pos_vec / open_vec / cash_vec 长度为 1 时广播为常量，支持标量字面量传入
     let pos_iter = broadcast(pos_vec);
     let open_iter = broadcast(open_vec);
+    let cash_iter = broadcast(cash_vec);
 
-    izip!(time_vec.titer(), pos_iter, open_iter).for_each(|(time, pos, open)| {
-        if let (Some(pos), Some(price)) = (pos, open) {
+    izip!(time_vec.titer(), pos_iter, open_iter, cash_iter).for_each(|(time, pos, open, cash)| {
+        if let (Some(pos), Some(price), Some(cash)) = (pos, open, cash) {
             // 记录最新可用的时间与价格
             last_tp = Some((time.clone(), price));
 
-            // 复利: 先用进入本 bar 时的持仓对净价变动做 mark-to-market，再用更新后的 equity 定手数
+            // 复利: 先用进入本 bar 时的持仓对净价变动做 mark-to-market，再定手数
             if opt.compound {
                 if let Some(lp) = last_price {
-                    equity += open_qty * (price - lp) * opt.multiplier;
+                    accumulated_pnl += open_qty * (price - lp) * opt.multiplier;
                 }
                 last_price = Some(price);
             }
-            // sizing 基准: compound 用浮动 equity(钳制非负)，否则用固定 cash
-            let base = if opt.compound { equity.max(0.) } else { cash };
+            // sizing 基准: compound 叠加累计盈亏并钳制非负，否则直接使用当期 cash
+            let base = if opt.compound {
+                (cash + accumulated_pnl).max(0.)
+            } else {
+                cash
+            };
 
             // 先用目标仓位计算目标手数，再用真实持仓手数补齐差额。
             let target_qty = if pos.abs() > EPS {
@@ -219,7 +224,6 @@ mod tests {
 
     fn opt(qty_round_mode: QtyRoundMode) -> TradeFromPosOpt {
         TradeFromPosOpt {
-            cash: Some(100_000.0),
             multiplier: 1.0,
             qty_tick: 1000.0,
             qty_round_mode,
@@ -243,8 +247,9 @@ mod tests {
         let time = vec![1, 2, 3, 4, 5];
         let pos = vec![0.19, 0.38, 0.57, 0.76, 0.95];
         let open = vec![10.0; 5];
+        let cash = vec![100_000.0];
 
-        let trades = trading_from_pos(&time, &pos, &open, &opt(QtyRoundMode::Floor));
+        let trades = trading_from_pos(&time, &pos, &open, &cash, &opt(QtyRoundMode::Floor));
 
         assert_eq!(
             qtys(trades),
@@ -263,8 +268,9 @@ mod tests {
         let time = vec![1, 2];
         let pos = vec![0.19, -0.19];
         let open = vec![10.0, 10.0];
+        let cash = vec![100_000.0];
 
-        let trades = trading_from_pos(&time, &pos, &open, &opt(QtyRoundMode::Floor));
+        let trades = trading_from_pos(&time, &pos, &open, &cash, &opt(QtyRoundMode::Floor));
 
         assert_eq!(qtys(trades), vec![Some(1000.0), Some(-2000.0)]);
     }
@@ -274,8 +280,9 @@ mod tests {
         let time = vec![1, 2];
         let pos = vec![0.16, -0.16];
         let open = vec![10.0, 10.0];
+        let cash = vec![100_000.0];
 
-        let trades = trading_from_pos(&time, &pos, &open, &opt(QtyRoundMode::Round));
+        let trades = trading_from_pos(&time, &pos, &open, &cash, &opt(QtyRoundMode::Round));
 
         assert_eq!(qtys(trades), vec![Some(2000.0), Some(-4000.0)]);
     }
@@ -286,27 +293,21 @@ mod tests {
         let time = vec![1, 2, 3];
         let pos = vec![1.0, 0.0, 1.0];
         let open = vec![10.0, 20.0, 20.0];
+        let cash = vec![100.0];
 
         let mut opt = opt(QtyRoundMode::Floor);
-        opt.cash = Some(100.0);
         opt.multiplier = 1.0;
         opt.qty_tick = 0.0; // 不取整，便于精确断言
 
         // 固定本金: bar3 用 100/20 = 5 手
         opt.compound = false;
-        let trades = trading_from_pos(&time, &pos, &open, &opt);
-        assert_eq!(
-            qtys(trades),
-            vec![Some(10.0), Some(-10.0), Some(5.0)]
-        );
+        let trades = trading_from_pos(&time, &pos, &open, &cash, &opt);
+        assert_eq!(qtys(trades), vec![Some(10.0), Some(-10.0), Some(5.0)]);
 
         // 复利: bar1 建 10 手; bar2 价 10→20 equity 100→200 后平仓; bar3 用 200/20 = 10 手
         opt.compound = true;
-        let trades = trading_from_pos(&time, &pos, &open, &opt);
-        assert_eq!(
-            qtys(trades),
-            vec![Some(10.0), Some(-10.0), Some(10.0)]
-        );
+        let trades = trading_from_pos(&time, &pos, &open, &cash, &opt);
+        assert_eq!(qtys(trades), vec![Some(10.0), Some(-10.0), Some(10.0)]);
     }
 
     #[test]
@@ -314,11 +315,55 @@ mod tests {
         let time = vec![1, 2];
         let pos = vec![0.11, 0.21];
         let open = vec![10.0, 10.0];
+        let cash = vec![100_000.0];
         let mut opt = opt(QtyRoundMode::Floor);
         opt.min_adjust_amt = Some(15_000.0);
 
-        let trades = trading_from_pos(&time, &pos, &open, &opt);
+        let trades = trading_from_pos(&time, &pos, &open, &cash, &opt);
 
         assert_eq!(qtys(trades), vec![None, Some(2000.0)]);
+    }
+
+    #[test]
+    fn broadcasts_scalar_cash() {
+        let time = vec![1, 2, 3];
+        let pos = vec![0.1, 0.2, 0.3];
+        let open = vec![10.0; 3];
+        let cash = vec![100_000.0];
+
+        let trades = trading_from_pos(&time, &pos, &open, &cash, &opt(QtyRoundMode::Floor));
+
+        assert_eq!(qtys(trades), vec![Some(1000.0), Some(1000.0), Some(1000.0)]);
+    }
+
+    #[test]
+    fn zips_cash_series() {
+        let time = vec![1, 2, 3];
+        let pos = vec![1.0; 3];
+        let open = vec![10.0; 3];
+        let cash = vec![10_000.0, 20_000.0, 15_000.0];
+
+        let trades = trading_from_pos(&time, &pos, &open, &cash, &opt(QtyRoundMode::Floor));
+
+        assert_eq!(
+            qtys(trades),
+            vec![Some(1000.0), Some(1000.0), Some(-1000.0)]
+        );
+    }
+
+    #[test]
+    fn compound_adds_pnl_to_current_cash() {
+        let time = vec![1, 2, 3];
+        let pos = vec![1.0; 3];
+        let open = vec![10.0, 20.0, 20.0];
+        let cash = vec![100.0, 150.0, 200.0];
+        let mut opt = opt(QtyRoundMode::Floor);
+        opt.multiplier = 1.0;
+        opt.qty_tick = 0.0;
+        opt.compound = true;
+
+        let trades = trading_from_pos(&time, &pos, &open, &cash, &opt);
+
+        assert_eq!(qtys(trades), vec![Some(10.0), Some(2.5), Some(2.5)]);
     }
 }

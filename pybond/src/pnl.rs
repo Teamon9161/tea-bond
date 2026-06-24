@@ -347,9 +347,6 @@ fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> Pola
     if let Some(p) = finish_price.f64()?.iter().next() {
         kwargs.finish_price = p
     };
-    if let Some(c) = cash.f64()?.iter().next() {
-        kwargs.cash = c
-    };
     if let Some(m) = multiplier.f64()?.iter().next() {
         kwargs.multiplier = m.unwrap_or(1.)
     };
@@ -358,8 +355,13 @@ fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> Pola
     };
     let res = match time.dtype() {
         DataType::Date => {
-            let trade_vec =
-                pnl::trading_from_pos(time.date()?.physical(), pos.f64()?, open.f64()?, &kwargs);
+            let trade_vec = pnl::trading_from_pos(
+                time.date()?.physical(),
+                pos.f64()?,
+                open.f64()?,
+                cash.f64()?,
+                &kwargs,
+            );
             let time = if keep_shape {
                 time.clone()
             } else {
@@ -393,8 +395,13 @@ fn trading_from_pos(inputs: &[Series], mut kwargs: pnl::TradeFromPosOpt) -> Pola
         }
         _ => {
             let time_ca = time.datetime()?;
-            let trade_vec =
-                pnl::trading_from_pos(time_ca.physical(), pos.f64()?, open.f64()?, &kwargs);
+            let trade_vec = pnl::trading_from_pos(
+                time_ca.physical(),
+                pos.f64()?,
+                open.f64()?,
+                cash.f64()?,
+                &kwargs,
+            );
             let time = if keep_shape {
                 time.clone()
             } else {
