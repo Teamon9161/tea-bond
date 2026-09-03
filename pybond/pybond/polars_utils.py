@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import polars as pl
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from polars.type_aliases import IntoExpr, PolarsDataType
 
 
@@ -58,19 +55,7 @@ def register_plugin(
     is_elementwise: bool,
     kwargs: dict[str, Any] | None = None,
     args: list[IntoExpr],
-    # lib: str | Path,
 ) -> pl.Expr:
-    global lib
-    if parse_version(pl.__version__) < parse_version("0.20.16"):
-        assert isinstance(args[0], pl.Expr)
-        assert isinstance(lib, str)
-        return args[0].register_plugin(
-            lib=lib,
-            symbol=symbol,
-            args=args[1:],
-            kwargs=kwargs,
-            is_elementwise=is_elementwise,
-        )
     from polars.plugins import register_plugin_function
 
     return register_plugin_function(
@@ -82,17 +67,4 @@ def register_plugin(
     )
 
 
-def parse_version(version: Sequence[str | int]) -> tuple[int, ...]:
-    # Simple version parser; split into a tuple of ints for comparison.
-    # vendored from Polars
-    if isinstance(version, str):
-        version = version.split(".")
-    return tuple(int(re.sub(r"\D", "", str(v))) for v in version)
-
-
-if parse_version(pl.__version__) < parse_version("0.20.16"):
-    from polars.utils.udfs import _get_shared_lib_location
-
-    lib: str | Path = _get_shared_lib_location(__file__)
-else:
-    lib = Path(__file__).parent
+lib = Path(__file__).parent
