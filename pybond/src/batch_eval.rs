@@ -3,9 +3,17 @@ use pyo3_polars::derive::polars_expr;
 use pyo3_polars::export::polars_core::utils::CustomIterTools;
 use serde::Deserialize;
 use tea_bond::export::calendar::Calendar;
-use tea_bond::{BondYtm, CachedBond, Future, Market, TfEvaluator};
+use tea_bond::{Bond, BondYtm, CachedBond, Future, Market, TfEvaluator};
 use tevec::export::arrow as polars_arrow;
 use tevec::export::polars::prelude::*;
+
+/// Dedupe and batch-download whatever bond codes in `chunks` aren't cached
+/// locally yet, so the row-by-row evaluation below never has to silently
+/// tolerate missing bond info.
+fn ensure_bonds_cached(chunks: &[&StringChunked]) -> PolarsResult<()> {
+    Bond::ensure_cached(chunks.iter().flat_map(|ck| ck.iter().flatten()))
+        .map_err(|e| PolarsError::ComputeError(e.to_string().into()))
+}
 
 #[derive(Deserialize)]
 struct EvaluatorBatchParams {
@@ -181,9 +189,11 @@ where
         auto_cast!(Float64(future_price, bond_ytm, capital_rate));
     let date = auto_cast!(Date(date));
     let bond = auto_cast!(String(bond));
+    let bond_ck = bond.str()?;
+    ensure_bonds_cached(&[bond_ck])?;
     batch_eval_impl(
         future.str()?,
-        bond.str()?,
+        bond_ck,
         date.date()?,
         future_price.f64()?,
         bond_ytm.f64()?,
@@ -578,6 +588,7 @@ fn bonds_calc_ytm_with_price(inputs: &[Series]) -> PolarsResult<Series> {
         return Ok(Default::default());
     }
     let bond = bond_se.str()?;
+    ensure_bonds_cached(&[bond])?;
     let dirty_price = dirty_price_se.f64()?;
     let mut bond_iter = bond.iter();
     let mut date_iter = date_se.date()?.as_date_iter();
@@ -849,15 +860,18 @@ fn evaluators_neutral_net_basis_spread(
     let date = auto_cast!(Date(date));
     let bond = auto_cast!(String(bond));
     let ctd_bond = auto_cast!(String(ctd_bond));
+    let bond_ck = bond.str()?;
+    let ctd_bond_ck = ctd_bond.str()?;
+    ensure_bonds_cached(&[bond_ck, ctd_bond_ck])?;
 
     let result: Float64Chunked = batch_eval_neutral_net_basis_spread_impl(
         future.str()?,
-        bond.str()?,
+        bond_ck,
         date.date()?,
         future_price.f64()?,
         bond_ytm.f64()?,
         capital_rate.f64()?,
-        ctd_bond.str()?,
+        ctd_bond_ck,
         ctd_ytm.f64()?,
         kwargs.reinvest_rate,
     )?
