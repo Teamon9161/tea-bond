@@ -101,8 +101,11 @@ impl CachedBond {
 
     /// Creates a `CachedBond` from a bond (or an `Arc<Bond>`) and caches it.
     ///
-    /// If the bond is already cached, it returns the cached instance. Otherwise,
-    /// it caches the bond and returns the new instance.
+    /// The passed-in `bond` is treated as authoritative: it overwrites whatever
+    /// was previously cached under this code. Callers only construct a `Bond`
+    /// value when they actually have fresh data for it (e.g. after a download
+    /// or a JSON parse), so a stale cache entry must never win over it — that
+    /// would make re-downloading to fix bad cached info silently a no-op.
     ///
     /// # Arguments
     /// * `bond` - A bond or an `Arc<Bond>` to cache.
@@ -112,12 +115,7 @@ impl CachedBond {
     #[inline]
     pub fn from_bond(bond: impl Into<Arc<Bond>>) -> Self {
         let bond = bond.into();
-        let code = bond.bond_code();
-        if let Ok(cached_bond) = Bond::read_disk(code) {
-            Self(cached_bond)
-        } else {
-            bond.save_disk(false).unwrap();
-            Self(bond)
-        }
+        bond.save_disk(false).unwrap();
+        Self(bond)
     }
 }

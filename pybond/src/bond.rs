@@ -65,7 +65,13 @@ impl PyBond {
     #[pyo3(signature = (path=None))]
     fn save(&self, path: Option<PathBuf>) -> PyResult<()> {
         let path = Bond::get_json_save_path(self.bond_code(), path.as_deref());
-        self.0.save_json(path).map_err(Into::into)
+        self.0.save_json(path)?;
+        // Also refresh the in-process cache (`Bond::read`'s `read_disk` check runs
+        // before it ever looks at the JSON file), otherwise a re-download that
+        // overwrites the file on disk is invisible to `Bond(code)` for the rest
+        // of this process.
+        self.0.save_disk(false)?;
+        Ok(())
     }
 
     #[classmethod]
