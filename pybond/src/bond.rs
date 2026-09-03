@@ -29,6 +29,11 @@ impl Deref for PyBond {
 pub fn download_bond(code: &str) -> PyResult<PyBond> {
     let rt = tea_bond::export::tokio::runtime::Runtime::new()?;
     let bond = rt.block_on(async { Bond::download(code).await })?;
+    // Refresh the cache with this genuinely fresh download *before* converting
+    // to PyBond: CachedBond::from_bond (which the conversion below goes through)
+    // prefers whatever's already cached, so without this a redownload meant to
+    // fix bad cached info would just hand back the stale entry.
+    bond.save_disk(false)?;
     Ok(bond.into())
 }
 
