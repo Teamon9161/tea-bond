@@ -99,7 +99,8 @@ class Bond(_BondRS):
         WindPy module is available and falls back to Rust otherwise.
 
         If the source is 'rust', the Rust layer downloads from the local Wind terminal on
-        Windows / Linux, and falls back to China Money (IB) / SSE (SH) when Wind is unavailable.
+        Windows / Linux. There is no public-API fallback: if Wind is unavailable, or the
+        platform has no Wind support at all, this raises instead of silently degrading.
 
         Args:
             code (str): The bond code in the format 'XXXXXX.YY'. The code must include a dot.
@@ -118,7 +119,7 @@ class Bond(_BondRS):
             AssertionError: If the code is not in the correct format or if the source is invalid.
         """
         if source is None:
-            # Windows / Linux 交给 rust 侧（内部优先走 Wind，失败再回退公开接口），
+            # Windows / Linux 交给 rust 侧（直接走 Wind，没有公开接口兜底），
             # 其余平台 rust 侧连不上 Wind，有 WindPy 就先用 WindPy
             if RUST_WIND_AVAILABLE:
                 source = "rust"
@@ -133,8 +134,8 @@ class Bond(_BondRS):
             login()
             fetch_symbols([code], save=save, save_folder=path)
         else:
-            # let rust side handle the download
-            print(f"download {code}")
+            # let rust side handle the download; Bond::download() already
+            # announces the attempt, no need to print it again here
             bond = download_bond(code)
             if save:
                 bond.save(path)
