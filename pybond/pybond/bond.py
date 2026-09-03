@@ -99,8 +99,8 @@ class Bond(_BondRS):
         WindPy module is available and falls back to Rust otherwise.
 
         If the source is 'rust', the Rust layer downloads from the local Wind terminal on
-        Windows / Linux. There is no public-API fallback: if Wind is unavailable, or the
-        platform has no Wind support at all, this raises instead of silently degrading.
+        Windows / Linux. If that fails, the error is printed and, when WindPy is available,
+        this falls back to downloading via WindPy instead of raising immediately.
 
         Args:
             code (str): The bond code in the format 'XXXXXX.YY'. The code must include a dot.
@@ -119,7 +119,7 @@ class Bond(_BondRS):
             AssertionError: If the code is not in the correct format or if the source is invalid.
         """
         if source is None:
-            # Windows / Linux 交给 rust 侧（直接走 Wind，没有公开接口兜底），
+            # Windows / Linux 交给 rust 侧（直接走 Wind，失败了且装了 WindPy 才退回 WindPy），
             # 其余平台 rust 侧连不上 Wind，有 WindPy 就先用 WindPy
             if RUST_WIND_AVAILABLE:
                 source = "rust"
@@ -127,19 +127,28 @@ class Bond(_BondRS):
                 source = "wind" if WIND_AVAILABLE else "rust"
         assert "." in code, "code should be in the format of XXXXXX.YY"
         assert source in ("wind", "rust")
-        if source == "wind":
-            from .download import fetch_symbols, login
-
-            print(f"Start downloading bond info for {code} from Wind")
-            login()
-            fetch_symbols([code], save=save, save_folder=path)
-        else:
+        if source == "rust":
             # let rust side handle the download; Bond::download() already
             # announces the attempt, no need to print it again here
-            bond = download_bond(code)
-            if save:
-                bond.save(path)
-            return bond
+            try:
+                bond = download_bond(code)
+            except Exception as e:
+                if not WIND_AVAILABLE:
+                    raise
+                print(f"Rust download failed for {code}: {e}")
+                print(f"Falling back to WindPy for {code}")
+                source = "wind"
+            else:
+                if save:
+                    bond.save(path)
+                return bond
+
+        # source == "wind", either requested directly or as a fallback above
+        from .download import fetch_symbols, login
+
+        print(f"Start downloading bond info for {code} from Wind")
+        login()
+        fetch_symbols([code], save=save, save_folder=path)
 
     def accrued_interest(
         self, date: date, cp_dates: tuple[date, date] | None = None
