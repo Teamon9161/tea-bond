@@ -10,6 +10,8 @@ pub struct WindSqlRow {
     pub s_info_windcode: SmallStr,
     pub s_info_name: SmallStr,
     pub b_info_par: f64,
+    /// 当前面值(剩余本金), 摊还型债券会小于发行面值, 为 None 时退回 b_info_par
+    pub b_info_curpar: Option<f64>,
     pub b_info_coupon: i32,
     pub b_info_interesttype: Option<i32>,
     pub b_info_couponrate: Option<f64>,
@@ -27,6 +29,7 @@ impl Default for WindSqlRow {
             s_info_windcode: "".into(),
             s_info_name: "".into(),
             b_info_par: 100.0,
+            b_info_curpar: None,
             b_info_coupon: 505001000,
             b_info_interesttype: None,
             b_info_couponrate: Some(0.03),
@@ -109,7 +112,8 @@ impl TryFrom<WindSqlRow> for Bond {
             bond_code: row.s_info_windcode,
             mkt: market,
             abbr: row.s_info_name,
-            par_value: row.b_info_par,
+            // 定价用的是当前剩余本金, 与 Wind 下载路径的 latestpar 口径一致
+            par_value: row.b_info_curpar.unwrap_or(row.b_info_par),
             cp_type,
             interest_type: get_interest_type(row.b_info_interesttype)?,
             cp_rate: get_coupon_rate(row.b_info_couponrate, row.b_tendrst_referyield),

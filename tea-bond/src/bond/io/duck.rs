@@ -21,6 +21,7 @@ impl TryFrom<&Row<'_>> for WindSqlRow {
             s_info_windcode: value.get::<_, Arc<str>>("s_info_windcode")?.as_ref().into(),
             s_info_name: value.get::<_, Arc<str>>("s_info_name")?.as_ref().into(),
             b_info_par: value.get("b_info_par")?,
+            b_info_curpar: value.get("b_info_curpar")?,
             b_info_coupon: value.get("b_info_coupon")?,
             b_info_interesttype: value
                 .get::<_, Option<f64>>("b_info_interesttype")?
@@ -61,13 +62,21 @@ impl Bond {
         {
             bail!("Invalid table name: {table}");
         }
+        // 老表可能没有 b_info_curpar 这一列, 缺列时退回不带该列的查询
         let sql = format!(
-            "select s_info_windcode, s_info_name, b_info_par, b_info_coupon, b_info_interesttype, b_info_couponrate, b_info_spread, b_info_interestfrequency, b_info_carrydate, b_info_maturitydate, b_tendrst_referyield, b_info_issueprice from {table} where s_info_windcode = ?"
+            "select s_info_windcode, s_info_name, b_info_par, b_info_curpar, b_info_coupon, b_info_interesttype, b_info_couponrate, b_info_spread, b_info_interestfrequency, b_info_carrydate, b_info_maturitydate, b_tendrst_referyield, b_info_issueprice from {table} where s_info_windcode = ?"
         );
-        con.query_row(&sql, params![code], |row| {
-            let row: WindSqlRow = row.try_into()?;
-            Ok(row.try_into().unwrap())
-        })
-        .with_context(|| format!("Can not find bond {} in duckdb", code))
+        let fallback_sql = format!(
+            "select s_info_windcode, s_info_name, b_info_par, NULL as b_info_curpar, b_info_coupon, b_info_interesttype, b_info_couponrate, b_info_spread, b_info_interestfrequency, b_info_carrydate, b_info_maturitydate, b_tendrst_referyield, b_info_issueprice from {table} where s_info_windcode = ?"
+        );
+        let query = |sql: &str| {
+            con.query_row(sql, params![code.as_ref()], |row| {
+                let row: WindSqlRow = row.try_into()?;
+                Ok(row.try_into().unwrap())
+            })
+        };
+        query(&sql)
+            .or_else(|_| query(&fallback_sql))
+            .with_context(|| format!("Can not find bond {} in duckdb", code))
     }
 }

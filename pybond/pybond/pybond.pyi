@@ -81,6 +81,10 @@ class Bond:
     def day_count(self) -> str:
         """计息基准"""
 
+    @property
+    def issue_price(self) -> float | None:
+        """发行价"""
+
     def is_zero_coupon(self) -> bool:
         """是否为零息债券"""
 

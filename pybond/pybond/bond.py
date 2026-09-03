@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -13,6 +14,9 @@ if TYPE_CHECKING:
 
 
 WIND_AVAILABLE = find_spec("WindPy") is not None
+# Windows / Linux 上 rust 侧内置了 Wind 下载（拿得到发行价等字段），
+# 拿不到时它自己会回退到公开接口，所以不必再走 WindPy
+RUST_WIND_AVAILABLE = sys.platform in ("win32", "linux")
 
 if os.environ.get("BONDS_INFO_PATH") is not None:
     bonds_info_environ_flag = True
@@ -90,11 +94,12 @@ class Bond(_BondRS):
         Download bond information from a specified source.
 
         This method downloads bond information for a given bond code from either Wind or Rust.
-        If no source is specified, it defaults to Wind if the WindPy module is available; otherwise,
-        it falls back to Rust.
+        If no source is specified, it defaults to Rust on Windows / Linux, where the Rust layer
+        talks to the local Wind terminal itself; on other platforms it defaults to Wind when the
+        WindPy module is available and falls back to Rust otherwise.
 
-        If the source is 'rust', the method will download IB bond information from China Money and
-        SH bond information from SSE (Shanghai Stock Exchange).
+        If the source is 'rust', the Rust layer downloads from the local Wind terminal on
+        Windows / Linux, and falls back to China Money (IB) / SSE (SH) when Wind is unavailable.
 
         Args:
             code (str): The bond code in the format 'XXXXXX.YY'. The code must include a dot.
@@ -113,8 +118,12 @@ class Bond(_BondRS):
             AssertionError: If the code is not in the correct format or if the source is invalid.
         """
         if source is None:
-            # 优先从wind下载
-            source = "wind" if WIND_AVAILABLE else "rust"
+            # Windows / Linux 交给 rust 侧（内部优先走 Wind，失败再回退公开接口），
+            # 其余平台 rust 侧连不上 Wind，有 WindPy 就先用 WindPy
+            if RUST_WIND_AVAILABLE:
+                source = "rust"
+            else:
+                source = "wind" if WIND_AVAILABLE else "rust"
         assert "." in code, "code should be in the format of XXXXXX.YY"
         assert source in ("wind", "rust")
         if source == "wind":

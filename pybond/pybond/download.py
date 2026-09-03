@@ -60,7 +60,7 @@ def fetch_symbols(
         symbols = [s for s in symbols if not (save_folder / f"{s}.json").exists()]
     data = w.wss(
         symbols,
-        "sec_name,carrydate,maturitydate,interesttype,couponrate,paymenttype,actualbenchmark,coupon,interestfrequency,latestpar",
+        "sec_name,carrydate,maturitydate,interesttype,couponrate,paymenttype,actualbenchmark,coupon,interestfrequency,latestpar,issue_issueprice",
         f"tradeDate={date.today()}",
     ).Data
     returns = []
@@ -83,6 +83,8 @@ def fetch_symbols(
         m["carry_date"] = data[1][i].strftime("%Y-%m-%d")  # 起息日
         m["maturity_date"] = data[2][i].strftime("%Y-%m-%d")  # 到期日
         m["day_count"] = data[6][i]  # 实际基准
+        issue_price = data[10][i]  # 发行价
+        m["issue_price"] = float(issue_price) if issue_price is not None else None
         returns.append(m)
         print(m)
         if save:
@@ -90,7 +92,7 @@ def fetch_symbols(
                 save_folder.mkdir(parents=True)
             path = save_folder / f"{symbol}.json"
             save_json(path, m)
-        return returns
+    return returns
 
 
 WAIT_LOGIN = False

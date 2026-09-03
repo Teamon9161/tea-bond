@@ -68,6 +68,14 @@ pub fn update_info_from_wind_sql_df(df: PyDataFrame) -> PyResult<()> {
     let s_windcode = auto_cast!(String(col("s_info_windcode")));
     let s_name = auto_cast!(String(col("s_info_name")));
     let b_par = auto_cast!(Float64(col("b_info_par")));
+    // 当前面值是可选列，老的 wind_sql 表可能没有
+    let b_curpar: Vec<Option<f64>> = df
+        .column("b_info_curpar")
+        .or_else(|_| df.column("B_INFO_CURPAR"))
+        .ok()
+        .and_then(|c| c.cast(&DataType::Float64).ok())
+        .map(|c| c.f64().unwrap().into_iter().collect())
+        .unwrap_or_else(|| vec![None; height]);
     let b_coupon = auto_cast!(Int32(col("b_info_coupon")));
     let b_interesttype = auto_cast!(Int32(col("b_info_interesttype")));
     let b_couponrate = auto_cast!(Float64(col("b_info_couponrate")));
@@ -90,6 +98,7 @@ pub fn update_info_from_wind_sql_df(df: PyDataFrame) -> PyResult<()> {
         b_maturitydate.str().unwrap(),
         b_referyield.f64().unwrap(),
         b_issueprice.f64().unwrap(),
+        b_curpar.iter().copied(),
     );
 
     for (
@@ -107,6 +116,7 @@ pub fn update_info_from_wind_sql_df(df: PyDataFrame) -> PyResult<()> {
             maturity_date,
             refer_yield,
             issue_price,
+            cur_par,
         ),
     ) in iter.enumerate()
     {
@@ -132,6 +142,7 @@ pub fn update_info_from_wind_sql_df(df: PyDataFrame) -> PyResult<()> {
             s_info_windcode: windcode.into_owned().into(),
             s_info_name: name.into_owned().into(),
             b_info_par: par,
+            b_info_curpar: cur_par,
             b_info_coupon: coupon,
             b_info_interesttype: interest_type,
             b_info_couponrate: coupon_rate,

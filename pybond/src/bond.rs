@@ -321,6 +321,21 @@ impl PyBond {
         Ok(())
     }
 
+    /// 发行价
+    #[getter]
+    pub fn issue_price(&self) -> Option<f64> {
+        self.0.issue_price
+    }
+
+    #[setter]
+    pub fn set_issue_price(&mut self, issue_price: Option<f64>) {
+        let raw = self.0.as_mut_ptr();
+        unsafe {
+            let bond = &mut *raw;
+            bond.issue_price = issue_price;
+        }
+    }
+
     /// 是否为零息债券
     pub fn is_zero_coupon(&self) -> bool {
         self.0.is_zero_coupon()

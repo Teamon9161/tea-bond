@@ -6,7 +6,9 @@ exclude = ["**/CLAUDE.md", "CLAUDE.md"]              # 不再需要排除 pybond
 
 [features]
 default = ["download"]
-download = ["reqwest", "tokio", "rand"]
+download = ["reqwest", "tokio", "rand", "wind"]
+# 通过本机 Wind 终端下载债券信息，仅 Windows / Linux 有效
+wind = ["dep:wind_rs"]
 pnl = ["tevec", "itertools"]
 batch = ["tevec", "itertools"]
 duckdb = ["dep:duckdb"]
@@ -30,3 +32,6 @@ rand = { version = "0.9", optional = true }
 itertools = { version = "0.14", optional = true }
 tevec = { git = "https://github.com/teamon9161/tevec.git", rev = "f9d242d", default-features = false, optional = true }
 duckdb = {version = "1.4", optional = true, features = ["chrono", "bundled"]}
+
+[target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
+wind_rs = { git = "https://github.com/Teamon9161/wind_rs.git", rev = "4fe115e", optional = true }
