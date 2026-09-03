@@ -17,11 +17,21 @@ where
     assert!(upper > lower);
     let mut lower = lower;
     let mut upper = upper;
-    let move_lower_on_negative = f(upper) >= f(lower);
+    let (f_lower, f_upper) = (f(lower), f(upper));
+    if f_lower.is_nan() || f_upper.is_nan() {
+        // 输入数据缺失（如行情或债券信息缺失）导致目标函数无法求值，
+        // 直接返回NaN，避免NaN参与比较时退化为恒真/恒假从而收敛到区间端点
+        return f64::NAN;
+    }
+    let move_lower_on_negative = f_upper >= f_lower;
 
     while upper - lower > epsilon {
         let mid = (lower + upper) / 2.0;
         let f_mid = f(mid);
+
+        if f_mid.is_nan() {
+            return f64::NAN;
+        }
 
         if f_mid == 0.0 {
             return mid;
@@ -50,5 +60,14 @@ mod test {
         let f = |x: f64| -x.powi(2) + 2.0;
         let ytm = bisection_find_ytm(f, 0.0, 2.0, None);
         assert!((ytm - 1.41421356237).abs() <= 1e-10);
+    }
+
+    #[test]
+    fn test_bisection_find_ytm_nan_input() {
+        // 模拟行情/债券信息缺失导致目标函数恒为NaN的情况，
+        // 应返回NaN而不是收敛到区间端点
+        let f = |x: f64| x.powi(2) - f64::NAN;
+        let ytm = bisection_find_ytm(f, 0.0, 2.0, None);
+        assert!(ytm.is_nan());
     }
 }
