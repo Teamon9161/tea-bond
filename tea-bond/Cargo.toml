@@ -34,4 +34,4 @@ tevec = { git = "https://github.com/teamon9161/tevec.git", rev = "f9d242d", defa
 duckdb = {version = "1.4", optional = true, features = ["chrono", "bundled"]}
 
 [target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
-wind_rs = { git = "https://github.com/Teamon9161/wind_rs.git", rev = "4fe115e", optional = true }
+wind_rs = { git = "https://github.com/Teamon9161/wind_rs.git", rev = "65644f349057004d3d0fff9907ec48c5e223786c", optional = true }
