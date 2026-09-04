@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 WIND_AVAILABLE = find_spec("WindPy") is not None
 # Windows / Linux 上 rust 侧内置了 Wind 下载（拿得到发行价等字段），
-# 拿不到时它自己会回退到公开接口，所以不必再走 WindPy
+# 所以不必再走 WindPy；公开接口回退已移除，rust 侧失败会直接报错
 RUST_WIND_AVAILABLE = sys.platform in ("win32", "linux")
 
 if os.environ.get("BONDS_INFO_PATH") is not None:
