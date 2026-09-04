@@ -4385,7 +4385,7 @@ dependencies = [
 [[package]]
 name = "wind_rs"
 version = "0.1.0"
-source = "git+https://github.com/Teamon9161/wind_rs.git?rev=4fe115e#4fe115ea8944726211d328298ea5774ad2346b90"
+source = "git+https://github.com/Teamon9161/wind_rs.git?rev=65644f349057004d3d0fff9907ec48c5e223786c#65644f349057004d3d0fff9907ec48c5e223786c"
 dependencies = [
  "chrono",
 ]
