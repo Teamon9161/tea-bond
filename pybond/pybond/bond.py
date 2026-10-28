@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .pybond import Bond as _BondRS
-from .pybond import Future, download_bond
+from .pybond import Future, download_bond, reload_bond_json
 
 if TYPE_CHECKING:
     from datetime import date
@@ -148,7 +148,14 @@ class Bond(_BondRS):
 
         print(f"Start downloading bond info for {code} from Wind")
         login()
+        if save:
+            # fetch_symbols 默认存到当前目录下的 bonds_info，与 rust 侧默认路径不一致
+            path = bonds_info_path if path is None else Path(path)
         fetch_symbols([code], save=save, save_folder=path)
+        if save:
+            # fetch_symbols 只写了 json，还要把它刷进 bonds_info.map，
+            # 否则新进程会先读到 map 里的旧数据
+            reload_bond_json(code, path)
 
     def accrued_interest(
         self, date: date, cp_dates: tuple[date, date] | None = None

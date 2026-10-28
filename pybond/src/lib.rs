@@ -31,6 +31,7 @@ pub fn get_version() -> &'static str {
 fn pybond(m: &Bound<'_, PyModule>) -> PyResult<()> {
     #[cfg(feature = "download")]
     m.add_function(wrap_pyfunction!(bond::download_bond, m)?)?;
+    m.add_function(wrap_pyfunction!(bond::reload_bond_json, m)?)?;
     m.add_function(wrap_pyfunction!(get_version, m)?)?;
     #[cfg(feature = "persist")]
     m.add_function(wrap_pyfunction!(persist::update_info_from_wind_sql_df, m)?)?;

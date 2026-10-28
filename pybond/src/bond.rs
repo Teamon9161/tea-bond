@@ -37,6 +37,17 @@ pub fn download_bond(code: &str) -> PyResult<PyBond> {
     Ok(bond.into())
 }
 
+/// Re-read a bond's JSON file (bypassing the bond map cache) and write it into
+/// the map cache, flushing the map to disk. Used after the WindPy download path,
+/// which only writes the JSON file.
+#[pyfunction]
+#[pyo3(signature = (code, path=None))]
+pub fn reload_bond_json(code: &str, path: Option<PathBuf>) -> PyResult<()> {
+    let bond = Bond::read_json(code, path.as_deref(), false)?;
+    bond.save_disk(true)?;
+    Ok(())
+}
+
 #[pymethods]
 impl PyBond {
     /// Create a new Bond instance
@@ -71,11 +82,11 @@ impl PyBond {
     fn save(&self, path: Option<PathBuf>) -> PyResult<()> {
         let path = Bond::get_json_save_path(self.bond_code(), path.as_deref());
         self.0.save_json(path)?;
-        // Also refresh the in-process cache (`Bond::read`'s `read_disk` check runs
-        // before it ever looks at the JSON file), otherwise a re-download that
-        // overwrites the file on disk is invisible to `Bond(code)` for the rest
-        // of this process.
-        self.0.save_disk(false)?;
+        // Also refresh the bond map cache (`Bond::read`'s `read_disk` check runs
+        // before it ever looks at the JSON file) and flush it to disk: a new
+        // process loads the map file first, so without the flush a re-download
+        // that overwrites the JSON is still shadowed by the stale map entry.
+        self.0.save_disk(true)?;
         Ok(())
     }
 
