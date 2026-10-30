@@ -143,8 +143,11 @@ def calc_bond_trade_pnl(
     clean_close: 当前时间段的最新价格(净价)
     bond_info_path: 可以指定债券信息的存放⽂件夹, 不传⼊则使⽤默认路径.
     multiplier: 合约乘数, 例如对于债券, 1000的成交对应1000w, 合约乘数应为100, 默认为1
-    capital_rate: 资金成本, 例如0.016
-    capital_spread: TRS资金加多少bp, 例如20
+    capital_rate: 资金成本, 例如0.016; 可逐行给 (如 FR007 序列), 每段持仓用段首那一行的利率.
+        空值或 0 表示沿用上一个利率.
+    capital_spread: TRS资金加多少bp, 例如20 (可为负); 只在开仓/加仓行生效, 减仓不改剩余仓位的加点.
+        资金成本按持仓的全价成本 (pos_price × 乘数) 以 ACT/365 计息, 多头付、空头收利率, 加点两边都付;
+        只对债券 (含零息/贴现) 计, 期货 (symbol 为空) 不计.
     fee: 交易费⽤
     费⽤设置说明:
         TradeFee: 每笔成交⽀付的费⽤

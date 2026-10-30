@@ -130,6 +130,122 @@ mod tests {
         // 盈亏口径不受影响: 10@100→5@110 实现 50, 10@105→-15@120 实现 150, -5@120→5@115 实现 25
         assert_eq!(reports[6].realized_pnl, 225.);
     }
+
+    /// 在临时目录写一只假券的基础信息, 返回目录 (代码取不存在的, 免得与真实缓存混淆)。
+    fn fake_bond_dir(code: &str, json: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join("tea_bond_pnl_capital_test");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(format!("{code}.json")), json).unwrap();
+        dir
+    }
+
+    fn opt_with(dir: PathBuf, multiplier: f64) -> BondTradePnlOpt {
+        BondTradePnlOpt {
+            bond_info_path: Some(dir),
+            multiplier,
+            fee: Fee::Zero,
+            begin_state: PnlReport::default(),
+        }
+    }
+
+    fn d(y: i32, m: u32, day: u32) -> Option<NaiveDate> {
+        NaiveDate::from_ymd_opt(y, m, day)
+    }
+
+    #[test]
+    fn capital_accrues_on_zero_coupon_bonds() {
+        let code = "PNLCAPZC.IB";
+        let dir = fake_bond_dir(
+            code,
+            r#"{"bond_code":"PNLCAPZC.IB","mkt":"IB","abbr":"zc","par_value":100.0,
+                "cp_type":"ZeroCoupon","interest_type":"Zero","cp_rate":0.0,"base_rate":null,
+                "rate_spread":null,"inst_freq":0,"carry_date":"2025-09-25",
+                "maturity_date":"2025-12-25","day_count":"ActAct"}"#,
+        );
+        // 1000 万面额 (qty 1000 × 乘数 100) 按 99.5 买入, 2% 融资持有 31 天
+        let time = vec![d(2025, 10, 1), d(2025, 11, 1)];
+        let qty = vec![Some(1000.), Some(0.)];
+        let price = vec![Some(99.5), Some(99.6)];
+        let rate = vec![Some(0.02), Some(0.02)];
+        let reports = calc_bond_trade_pnl(
+            Some(code),
+            &time,
+            &qty,
+            &price,
+            &price,
+            Some(&rate),
+            None,
+            &opt_with(dir, 100.),
+        )
+        .unwrap();
+        let want = -31. * 0.02 * 1000. * 99.5 * 100. / 365.;
+        assert!(
+            (reports[1].capital - want).abs() < 1e-6,
+            "{}",
+            reports[1].capital
+        );
+    }
+
+    #[test]
+    fn capital_base_is_dirty_cost_not_face() {
+        let code = "PNLCAPCB.IB";
+        let dir = fake_bond_dir(
+            code,
+            r#"{"bond_code":"PNLCAPCB.IB","mkt":"IB","abbr":"cb","par_value":100.0,
+                "cp_type":"CouponBear","interest_type":"Fixed","cp_rate":0.0165,"base_rate":null,
+                "rate_spread":null,"inst_freq":1,"carry_date":"2025-06-18",
+                "maturity_date":"2035-06-18","day_count":"ActAct"}"#,
+        );
+        // 净价 105 买入, FR007 1.5% + 20bp, 持有 10 天 (不跨付息日)
+        let time = vec![d(2026, 3, 2), d(2026, 3, 12)];
+        let qty = vec![Some(1000.), Some(0.)];
+        let price = vec![Some(105.), Some(105.)];
+        let rate = vec![Some(0.015), Some(0.015)];
+        let spread = vec![Some(0.002), None];
+        let reports = calc_bond_trade_pnl(
+            Some(code),
+            &time,
+            &qty,
+            &price,
+            &price,
+            Some(&rate),
+            Some(&spread),
+            &opt_with(dir, 100.),
+        )
+        .unwrap();
+        let dirty = reports[0].pos_price;
+        assert!(dirty > 105.5, "成本应是全价, 得到 {dirty}");
+        let want = -10. * (0.015 + 0.002) * 1000. * dirty * 100. / 365.;
+        assert!(
+            (reports[1].capital - want).abs() < 1e-6,
+            "{}",
+            reports[1].capital
+        );
+    }
+
+    #[test]
+    fn capital_spread_is_signed_and_kept_on_reduce() {
+        // 开 1000@+20bp, 加 1000@−40bp → 均值 −10bp; 平 1000 时平仓行带什么加点都不改剩余仓位的加点
+        let time: Vec<Option<NaiveDate>> =
+            vec![d(2026, 3, 2), d(2026, 3, 3), d(2026, 3, 4), d(2026, 3, 5)];
+        let qty = vec![Some(1000.), Some(1000.), Some(-1000.), Some(-500.)];
+        let price = vec![Some(100.); 4];
+        let spread = vec![Some(0.002), Some(-0.004), Some(0.01), None];
+        let opt = BondTradePnlOpt {
+            bond_info_path: None,
+            multiplier: 1.,
+            fee: Fee::Zero,
+            begin_state: PnlReport::default(),
+        };
+        let reports =
+            calc_bond_trade_pnl(None, &time, &qty, &price, &price, None, Some(&spread), &opt)
+                .unwrap();
+        let spreads: Vec<f64> = reports
+            .iter()
+            .map(|r| (r.avg_capital_spread * 1e4).round())
+            .collect();
+        assert_eq!(spreads, [20., -10., -10., -10.]);
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
@@ -225,22 +341,33 @@ where
             };
 
             let (trade_price, close): (Option<f64>, Option<f64>) = if let Some(bond) = &symbol {
-                if !bond.is_zero_coupon() {
-                    let settle_time = settle_time.ok_or_else(|| {
-                        anyhow!("Settle time should not be none when calc bond trade pnl")
-                    })?;
-                    // === 新的一天重新计算持仓的相关信息
-                    if last_settle_time != Some(settle_time) {
-                        // 计算中间持仓的资金
-                        duration_days = last_settle_time
-                            .map(|t| settle_time.signed_duration_since(t).num_days() as f64)
-                            .unwrap_or(0.);
-                        state.capital -= duration_days
-                            * (last_capital_rate * state.pos
-                                + state.avg_capital_spread * state.pos.abs())
-                            * bond.par_value
-                            * multiplier
-                            / 365.;
+                let zero_coupon = bond.is_zero_coupon();
+                let settle_time = match settle_time {
+                    Some(t) => Some(t),
+                    // 零息券过去整段跳过, 没有结算日也能算价差; 只是这样就记不了资金成本
+                    None if zero_coupon => None,
+                    None => {
+                        return Err(anyhow!(
+                            "Settle time should not be none when calc bond trade pnl"
+                        ));
+                    }
+                };
+                // === 新的一天重新计算持仓的相关信息
+                if let Some(settle_time) = settle_time
+                    && last_settle_time != Some(settle_time)
+                {
+                    // 上一段持仓的资金成本. 计息基数是持仓的全价成本 (pos_price, 即融入的金额),
+                    // 不是面额; 零息/贴现券同样计 —— 过去这段写在付息债分支里, 零息券一分不扣.
+                    duration_days = last_settle_time
+                        .map(|t| settle_time.signed_duration_since(t).num_days() as f64)
+                        .unwrap_or(0.);
+                    state.capital -= duration_days
+                        * (last_capital_rate * state.pos
+                            + state.avg_capital_spread * state.pos.abs())
+                        * state.pos_price
+                        * multiplier
+                        / 365.;
+                    if !zero_coupon {
                         if let Some(last_settle_time) = last_settle_time {
                             let coupon_count =
                                 coupon_payment_count_between(bond, last_settle_time, settle_time)?;
@@ -262,15 +389,15 @@ where
                             accrued_interest = coupon_paid;
                             next_day_coupon += coupon_paid * multiplier * state.pos;
                         }
-                        last_settle_time = Some(settle_time);
-                        if capital_rate != 0. {
-                            last_capital_rate = capital_rate;
-                        }
                     }
-                    // === 交易当天付息调整
-                    if (settle_time == last_cp_date) & (qty != 0.) {
-                        next_day_coupon += coupon_paid * multiplier * qty;
+                    last_settle_time = Some(settle_time);
+                    if capital_rate != 0. {
+                        last_capital_rate = capital_rate;
                     }
+                }
+                // === 交易当天付息调整
+                if !zero_coupon && (settle_time == Some(last_cp_date)) & (qty != 0.) {
+                    next_day_coupon += coupon_paid * multiplier * qty;
                 }
                 (
                     clean_price.map(|v| v.f64() + accrued_interest),
@@ -298,25 +425,19 @@ where
                             // 反向开仓
                             state.pos_price = trade_price;
                             state.avg_capital_spread = capital_spread;
-                        } else {
-                            if capital_spread != 0. {
-                                state.avg_capital_spread = if state.pos.abs() < EPS {
-                                    0.
-                                } else {
-                                    (state.avg_capital_spread * prev_pos.abs()
-                                        - capital_spread.abs() * qty.abs())
-                                        / state.pos.abs()
-                                };
-                            }
                         }
+                        // 减仓: 剩下那部分的加点不变, 与 pos_price 同口径 (按均值平, 不按批次).
+                        // 过去拿平仓行的加点去倒扣均值, 平仓行带的加点与均值不同就会把剩余仓位的
+                        // 加点改坏, 甚至扣成负数.
                     } else {
                         // 加仓
                         state.pos_price = (state.pos_price * prev_pos.abs()
                             + qty.abs() * trade_price)
                             / state.pos.abs();
                         if capital_spread != 0. {
+                            // 加点带符号 (FR007 − 10bp 是负加点); 过去取了绝对值
                             state.avg_capital_spread = (state.avg_capital_spread * prev_pos.abs()
-                                + capital_spread.abs() * qty.abs())
+                                + capital_spread * qty.abs())
                                 / state.pos.abs();
                         }
                     }
