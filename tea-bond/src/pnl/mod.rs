@@ -224,6 +224,46 @@ mod tests {
     }
 
     #[test]
+    fn same_day_trades_accrue_once_and_any_row_sets_the_rate() {
+        let code = "PNLCAPCB.IB";
+        let dir = fake_bond_dir(
+            code,
+            r#"{"bond_code":"PNLCAPCB.IB","mkt":"IB","abbr":"cb","par_value":100.0,
+                "cp_type":"CouponBear","interest_type":"Fixed","cp_rate":0.0165,"base_rate":null,
+                "rate_spread":null,"inst_freq":1,"carry_date":"2025-06-18",
+                "maturity_date":"2035-06-18","day_count":"ActAct"}"#,
+        );
+        // 同一天三笔: 买 500 (+20bp, 不带利率) / 买 500 (带 1.5%) / 卖 200; 十天后一行估值
+        let time = vec![d(2026, 3, 2), d(2026, 3, 2), d(2026, 3, 2), d(2026, 3, 12)];
+        let qty = vec![Some(500.), Some(500.), Some(-200.), Some(0.)];
+        let price = vec![Some(105.), Some(105.2), Some(105.1), Some(105.)];
+        let rate = vec![None, Some(0.015), None, None];
+        let spread = vec![Some(0.002), None, None, None];
+        let reports = calc_bond_trade_pnl(
+            Some(code),
+            &time,
+            &qty,
+            &price,
+            &price,
+            Some(&rate),
+            Some(&spread),
+            &opt_with(dir, 100.),
+        )
+        .unwrap();
+        for r in &reports[..3] {
+            assert_eq!(r.capital, 0.);
+        }
+        let cost = reports[2].pos_price;
+        assert_eq!(reports[2].pos, 800.);
+        let want = -10. * (0.015 + 0.002) * 800. * cost * 100. / 365.;
+        assert!(
+            (reports[3].capital - want).abs() < 1e-6,
+            "{} vs {want}",
+            reports[3].capital
+        );
+    }
+
+    #[test]
     fn capital_spread_is_signed_and_kept_on_reduce() {
         // 开 1000@+20bp, 加 1000@−40bp → 均值 −10bp; 平 1000 时平仓行带什么加点都不改剩余仓位的加点
         let time: Vec<Option<NaiveDate>> =
@@ -391,9 +431,10 @@ where
                         }
                     }
                     last_settle_time = Some(settle_time);
-                    if capital_rate != 0. {
-                        last_capital_rate = capital_rate;
-                    }
+                }
+                // 利率在上一段结转之后才换, 当天任一行给的都算 (过去只认当天第一行)
+                if capital_rate != 0. {
+                    last_capital_rate = capital_rate;
                 }
                 // === 交易当天付息调整
                 if !zero_coupon && (settle_time == Some(last_cp_date)) & (qty != 0.) {
