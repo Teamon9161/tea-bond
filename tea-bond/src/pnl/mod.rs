@@ -95,6 +95,41 @@ mod tests {
             1
         );
     }
+
+    #[test]
+    fn avg_price_tracks_open_cost_through_reduce_reverse_and_reopen() {
+        // (qty, price): 开 10@100, 减 5@110, 加 5@110, 反手 -15@120, 平 5@115, 重开 5@100, 加 5@100
+        let trades = [
+            (10., 100.),
+            (-5., 110.),
+            (5., 110.),
+            (-15., 120.),
+            (5., 115.),
+            (5., 100.),
+            (5., 100.),
+        ];
+        let day = NaiveDate::from_ymd_opt(2025, 1, 2).unwrap();
+        let time: Vec<Option<NaiveDate>> = (0..trades.len())
+            .map(|i| Some(day + chrono::Duration::days(i as i64)))
+            .collect();
+        let qty: Vec<Option<f64>> = trades.iter().map(|t| Some(t.0)).collect();
+        let price: Vec<Option<f64>> = trades.iter().map(|t| Some(t.1)).collect();
+        let opt = BondTradePnlOpt {
+            bond_info_path: None,
+            multiplier: 1.,
+            fee: Fee::Zero,
+            begin_state: PnlReport::default(),
+        };
+        let reports =
+            calc_bond_trade_pnl(None, &time, &qty, &price, &price, None, None, &opt).unwrap();
+        let pos_price: Vec<f64> = reports.iter().map(|r| r.pos_price).collect();
+        assert_eq!(pos_price, [100., 100., 105., 120., 0., 100., 100.]);
+        for r in &reports {
+            assert_eq!(r.avg_price, r.pos_price);
+        }
+        // 盈亏口径不受影响: 10@100→5@110 实现 50, 10@105→-15@120 实现 150, -5@120→5@115 实现 25
+        assert_eq!(reports[6].realized_pnl, 225.);
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
@@ -279,7 +314,6 @@ where
                         state.pos_price = (state.pos_price * prev_pos.abs()
                             + qty.abs() * trade_price)
                             / state.pos.abs();
-                        state.avg_price = state.amt / (state.pos * multiplier);
                         if capital_spread != 0. {
                             state.avg_capital_spread = (state.avg_capital_spread * prev_pos.abs()
                                 + capital_spread.abs() * qty.abs())
@@ -287,17 +321,19 @@ where
                         }
                     }
                     if state.pos.abs() <= EPS {
-                        state.avg_price = 0.;
                         state.pos_price = 0.;
                         state.avg_capital_spread = 0.;
                     }
                 } else {
                     // 之前仓位是0
-                    state.avg_price = trade_price;
-                    state.pos_price = state.avg_price;
+                    state.pos_price = trade_price;
                     state.avg_capital_spread = capital_spread;
                 }
             }
+            // avg_price 保留为 pos_price 的别名(当前持仓的开仓均价), 只为输出结构不变.
+            // 旧实现只在加仓时写成 amt / (pos * multiplier), 减仓/反手不更新, 且 amt
+            // 从序列起点累计, 平仓后重开再加仓会把之前所有回合的盈亏摊进来.
+            state.avg_price = state.pos_price;
             if let Some(close) = close {
                 let close = close.f64();
                 state.pnl =
